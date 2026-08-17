@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "skills": {
+    "docker": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "docker/SKILL.md",
+      "computedHash": "b2f646b339642b2597a244b0f508b4712ce0fa7bb3c7ad982e0bd11fddcc5630"
+    },
+    "eslint-prettier-config": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "skillPath": "foundation/eslint-prettier-config/SKILL.md",
+      "computedHash": "dd1365afc6c06f6c8555d0624669e70c6873057da70a92b045e948329dc1b906"
+    },
+    "firebase-auth-basics": {
+      "source": "firebase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/firebase-auth-basics/SKILL.md",
+      "computedHash": "25070123c29d59098ac817dee0eee36a73b4a822e6bb925a0ebccab0c78cf1e9"
+    },
+    "git-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit/SKILL.md",
+      "computedHash": "2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21"
+    },
+    "git-workflow": {
+      "source": "netresearch/git-workflow-skill",
+      "sourceType": "github",
+      "skillPath": "skills/git-workflow/SKILL.md",
+      "computedHash": "05fc36a6ee258716de9af461ac2e146e2170aaae13369ed5557d8421d0c169bb"
+    },
+    "nestjs": {
+      "source": "full-stack-skills/nodejs-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs/SKILL.md",
+      "computedHash": "ef71da38d5a597e14f433019518c44cee3b17ddf3bbf1ee51a5ad89c4bac0d4b"
+    },
+    "postgresql-best-practices": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "postgresql-best-practices/SKILL.md",
+      "computedHash": "6667a273249881de45d74185b090c5b581abbd2b10e7c10eee1ac6f087c0f73a"
+    },
+    "prisma-cli": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-cli/SKILL.md",
+      "computedHash": "129e77cba93984b88d66cf0f66d5788f5487431f17f189a1ab2d839976874e3b"
+    },
+    "prisma-database-setup": {
+      "source": "prisma/skills",
+      "sourceType": "github",
+      "skillPath": "prisma-database-setup/SKILL.md",
+      "computedHash": "6a991a2530a6da7131e3fc71c353e8278702d0146b8b6e1d2fdfc2d3d0a21bd2"
+    },
+    "react-vite-expert": {
+      "source": "questfortech-investments/claude-code-skills",
+      "sourceType": "github",
+      "skillPath": "react-vite-expert/SKILL.md",
+      "computedHash": "d8c575facdc8b9a6d55baa7eb35aad79ff50eb5dc1c6b8e15d36fc34e0f43ef5"
+    }
+  }
+}
