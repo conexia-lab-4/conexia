@@ -66,6 +66,17 @@
   /* Semantic aliases */
   --color-text: var(--color-grey-500);
   --color-background: var(--color-page-bg);
+
+  /* Alias legacy (usados por App.css, la landing placeholder de Vite) */
+  --accent: var(--color-primary-600);
+  --accent-bg: var(--color-primary-100);
+  --accent-border: var(--color-primary-400);
+  --border: var(--color-grey-200);
+  --text-h: var(--color-text);
+  --social-bg: var(--color-grey-100);
+  --shadow:
+          rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
+          rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 }
 
 body {
