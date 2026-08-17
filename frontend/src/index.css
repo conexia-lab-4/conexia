@@ -32,6 +32,16 @@
   --ls-h6: 0em;
   --ls-body: 0em;
 
+  --lh-h1: 68px;
+  --lh-h2: 58px;
+  --lh-h3: 39px;
+  --lh-h4: 34px;
+  --lh-h5: 29px;
+  --lh-h6: 22px;
+  --lh-body-1: 19px;
+  --lh-body-2: 17px;
+  --lh-body-3: 15px;
+
   /* Color Palette */
   --color-primary-100: #f4f8fc;
   --color-primary-200: #e2edf8;
@@ -89,78 +99,78 @@ body {
 .text-h1 {
   font-size: var(--fs-h1);
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: var(--lh-h1);
   letter-spacing: var(--ls-h1);
 }
 .text-h2 {
   font-size: var(--fs-h2);
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: var(--lh-h2);
   letter-spacing: var(--ls-h2);
 }
 .text-h3 {
   font-size: var(--fs-h3);
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: var(--lh-h3);
   letter-spacing: var(--ls-h3);
 }
 .text-h4 {
   font-size: var(--fs-h4);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-h4);
   letter-spacing: var(--ls-h4);
 }
 .text-h4-bold {
   font-size: var(--fs-h4);
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: var(--lh-h4);
   letter-spacing: var(--ls-h4);
 }
 .text-h5 {
   font-size: var(--fs-h5);
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: var(--lh-h5);
   letter-spacing: var(--ls-h5);
 }
 .text-h6 {
   font-size: var(--fs-h6);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-h6);
   letter-spacing: var(--ls-h6);
 }
 .text-body-1 {
   font-size: var(--fs-body-1);
   font-weight: var(--fw-regular);
-  line-height: 1;
+  line-height: var(--lh-body-1);
   letter-spacing: var(--ls-body);
 }
 .text-body-1-bold {
   font-size: var(--fs-body-1);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-body-1);
   letter-spacing: var(--ls-body);
 }
 .text-body-2 {
   font-size: var(--fs-body-2);
   font-weight: var(--fw-regular);
-  line-height: 1;
+  line-height: var(--lh-body-2);
   letter-spacing: var(--ls-body);
 }
 .text-body-2-bold {
   font-size: var(--fs-body-2);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-body-2);
   letter-spacing: var(--ls-body);
 }
 .text-body-3 {
   font-size: var(--fs-body-3);
   font-weight: var(--fw-regular);
-  line-height: 1;
+  line-height: var(--lh-body-3);
   letter-spacing: var(--ls-body);
 }
 .text-body-3-bold {
   font-size: var(--fs-body-3);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-body-3);
   letter-spacing: var(--ls-body);
 }
