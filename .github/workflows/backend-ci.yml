@@ -16,6 +16,22 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: conexia
+          POSTGRES_PASSWORD: conexia
+          POSTGRES_DB: conexia_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://conexia:conexia@localhost:5432/conexia_db?schema=public
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,9 +45,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-      
+
       - name: Generate Prisma Client
         run: npx prisma generate
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
 
       - name: Lint
         run: npm run lint
@@ -44,3 +63,6 @@ jobs:
 
       - name: Test
         run: npm run test
+
+
+
