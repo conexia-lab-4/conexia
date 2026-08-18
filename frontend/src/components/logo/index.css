@@ -1,0 +1,14 @@
+.logo {
+    display: block;
+    object-fit: contain;
+}
+
+.logo--small {
+    width: 66px;
+    height: 52px;
+}
+
+.logo--big {
+    width: 323px;
+    height: 93px;
+}
