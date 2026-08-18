@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -21,9 +22,7 @@ export class FirebaseAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException(
-        'Missing or invalid authorization header',
-      );
+      throw new UnauthorizedException('Missing or invalid authorization header');
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -33,6 +32,10 @@ export class FirebaseAuthGuard implements CanActivate {
       decodedToken = await this.firebaseAdmin.auth().verifyIdToken(idToken);
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    if (!decodedToken.email_verified) {
+      throw new ForbiddenException('Email not verified');
     }
 
     const { uid, email } = decodedToken;
