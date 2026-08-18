@@ -8,7 +8,9 @@
 
 :root {
   /* Typography */
-  --font-primary: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-primary:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
 
   --fw-regular: 400;
   --fw-semibold: 600;
@@ -85,8 +87,7 @@
   --text-h: var(--color-text);
   --social-bg: var(--color-grey-100);
   --shadow:
-          rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
-          rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 }
 
 body {
