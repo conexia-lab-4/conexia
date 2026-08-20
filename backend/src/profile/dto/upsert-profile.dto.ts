@@ -25,7 +25,7 @@ export class UpsertProfileDto {
   campus: string;
 
   @IsBoolean()
-  hasCar: boolean;
+  hasCar!: boolean;
 
   @IsOptional()
   @IsInt()
