@@ -10,22 +10,22 @@ import {
 export class UpsertProfileDto {
   @IsString()
   @IsNotEmpty()
-  university: string;
+  university!: string;
 
   @IsString()
   @IsNotEmpty()
-  career: string;
+  career!: string;
 
   @IsInt()
   @Min(1)
-  year: number;
+  year!: number;
 
   @IsString()
   @IsNotEmpty()
-  campus: string;
+  campus!: string;
 
   @IsBoolean()
-  hasCar: boolean;
+  hasCar!: boolean;
 
   @IsOptional()
   @IsInt()
