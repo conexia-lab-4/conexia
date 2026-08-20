@@ -23,7 +23,6 @@ model StudentProfile {
   career                 String
   year                   Int
   campus                 String
-  hasCar                 Boolean  @default(false)
   availableSeats         Int?
   questionnaireCompleted Boolean  @default(false)
   createdAt              DateTime @default(now())

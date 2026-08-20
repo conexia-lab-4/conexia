@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/current-user.decorator';
 import { ProfileService } from './profile.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
 
@@ -10,15 +11,15 @@ export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
   @Get()
-  getProfile(@Req() request: Request & { user: { id: string } }) {
-    return this.profileService.getProfile(request.user.id);
+  getProfile(@CurrentUser() user: AuthenticatedUser) {
+    return this.profileService.getProfile(user.id);
   }
 
   @Put()
   upsertProfile(
-    @Req() request: Request & { user: { id: string } },
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpsertProfileDto,
   ) {
-    return this.profileService.upsertProfile(request.user.id, dto);
+    return this.profileService.upsertProfile(user.id, dto);
   }
 }

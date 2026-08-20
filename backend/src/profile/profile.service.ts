@@ -19,7 +19,7 @@ export class ProfileService {
       throw new NotFoundException('El usuario todavía no completó su perfil');
     }
 
-    return profile;
+    return { ...profile, hasCar: profile.availableSeats !== null };
   }
 
   async upsertProfile(userId: string, dto: UpsertProfileDto) {
@@ -35,14 +35,13 @@ export class ProfileService {
       );
     }
 
-    return this.prisma.studentProfile.upsert({
+    const profile = await this.prisma.studentProfile.upsert({
       where: { userId },
       update: {
         university: dto.university,
         career: dto.career,
         year: dto.year,
         campus: dto.campus,
-        hasCar: dto.hasCar,
         availableSeats: dto.hasCar ? dto.availableSeats : null,
         questionnaireCompleted: dto.questionnaireCompleted ?? false,
       },
@@ -52,10 +51,11 @@ export class ProfileService {
         career: dto.career,
         year: dto.year,
         campus: dto.campus,
-        hasCar: dto.hasCar,
         availableSeats: dto.hasCar ? dto.availableSeats : null,
         questionnaireCompleted: dto.questionnaireCompleted ?? false,
       },
     });
+
+    return { ...profile, hasCar: profile.availableSeats !== null };
   }
 }
