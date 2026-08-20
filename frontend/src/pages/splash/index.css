@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap');
+
+.splash {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-grey-100);
+}
+
+.splash__ellipse {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--color-primary-300);
+  box-shadow: 0px 4px 7px rgba(0, 0, 0, 0.25);
+}
+
+.splash__ellipse--top {
+  width: min(140px, 25vw);
+  aspect-ratio: 140 / 129;
+  right: 0;
+  top: -4.6%;
+  transform: translateX(29.3%);
+}
+
+.splash__ellipse--bottom {
+  width: min(272px, 45vw);
+  aspect-ratio: 272 / 251;
+  left: 0;
+  bottom: -5%;
+  transform: translateX(-25.7%);
+}
+
+.splash__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 1;
+  padding: 0 32px;
+}
+
+.splash__tagline {
+  font-family: 'Poppins', var(--font-primary);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  text-align: center;
+  color: var(--color-black);
+}
+
+.splash {
+  animation: splash-fade-in 400ms ease;
+  transition: opacity 400ms ease;
+}
+
+.splash--fading {
+  opacity: 0;
+}
+
+@keyframes splash-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
