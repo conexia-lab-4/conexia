@@ -26,8 +26,7 @@ describe('ProfileController', () => {
 
   it('la ruta está protegida por FirebaseAuthGuard', () => {
     const guards = Reflect.getMetadata('__guards__', ProfileController) as
-      | (new () => unknown)[]
-      | undefined;
+      (new () => unknown)[] | undefined;
 
     expect(guards).toContain(FirebaseAuthGuard);
   });
@@ -54,6 +53,9 @@ describe('ProfileController', () => {
 
     await controller.upsertProfile(request, dto);
 
-    expect(serviceMock.upsertProfile).toHaveBeenCalledWith('user-autenticado', dto);
+    expect(serviceMock.upsertProfile).toHaveBeenCalledWith(
+      'user-autenticado',
+      dto,
+    );
   });
 });

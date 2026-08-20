@@ -3,10 +3,18 @@ import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
 
+type StudentProfileRecord = UpsertProfileDto & {
+  id: string;
+  userId: string;
+};
+
 describe('ProfileService', () => {
   let service: ProfileService;
   let prismaMock: {
-    studentProfile: { findUnique: jest.Mock; upsert: jest.Mock };
+    studentProfile: {
+      findUnique: jest.Mock<Promise<StudentProfileRecord | null>, [unknown]>;
+      upsert: jest.Mock<Promise<StudentProfileRecord>, [unknown]>;
+    };
   };
   const userId = 'user-123';
 
@@ -23,8 +31,8 @@ describe('ProfileService', () => {
   beforeEach(() => {
     prismaMock = {
       studentProfile: {
-        findUnique: jest.fn(),
-        upsert: jest.fn(),
+        findUnique: jest.fn<Promise<StudentProfileRecord | null>, [unknown]>(),
+        upsert: jest.fn<Promise<StudentProfileRecord>, [unknown]>(),
       },
     };
     service = new ProfileService(prismaMock as unknown as PrismaService);
@@ -32,7 +40,11 @@ describe('ProfileService', () => {
 
   describe('getProfile', () => {
     it('devuelve el perfil cuando existe', async () => {
-      const profile = { id: 'profile-1', userId, ...validDto };
+      const profile: StudentProfileRecord = {
+        id: 'profile-1',
+        userId,
+        ...validDto,
+      };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
       const result = await service.getProfile(userId);
@@ -46,13 +58,19 @@ describe('ProfileService', () => {
     it('lanza NotFoundException cuando el usuario no tiene perfil', async () => {
       prismaMock.studentProfile.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProfile(userId)).rejects.toThrow(NotFoundException);
+      await expect(service.getProfile(userId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('upsertProfile', () => {
     it('crea/actualiza el perfil con datos válidos', async () => {
-      const created = { id: 'profile-1', userId, ...validDto };
+      const created: StudentProfileRecord = {
+        id: 'profile-1',
+        userId,
+        ...validDto,
+      };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
       const result = await service.upsertProfile(userId, validDto);
@@ -60,8 +78,25 @@ describe('ProfileService', () => {
       expect(result).toEqual(created);
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
-        update: expect.objectContaining({ availableSeats: 3 }),
-        create: expect.objectContaining({ userId, availableSeats: 3 }),
+        update: {
+          university: validDto.university,
+          career: validDto.career,
+          year: validDto.year,
+          campus: validDto.campus,
+          hasCar: validDto.hasCar,
+          availableSeats: validDto.availableSeats,
+          questionnaireCompleted: validDto.questionnaireCompleted,
+        },
+        create: {
+          userId,
+          university: validDto.university,
+          career: validDto.career,
+          year: validDto.year,
+          campus: validDto.campus,
+          hasCar: validDto.hasCar,
+          availableSeats: validDto.availableSeats,
+          questionnaireCompleted: validDto.questionnaireCompleted,
+        },
       });
     });
 
@@ -85,19 +120,37 @@ describe('ProfileService', () => {
 
     it('guarda availableSeats en null cuando hasCar es false', async () => {
       const dto = { ...validDto, hasCar: false, availableSeats: undefined };
-      prismaMock.studentProfile.upsert.mockResolvedValue({
+      const created: StudentProfileRecord = {
         id: 'profile-1',
         userId,
         ...dto,
-        availableSeats: null,
-      });
+        availableSeats: undefined,
+      };
+      prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
       await service.upsertProfile(userId, dto);
 
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
-        update: expect.objectContaining({ availableSeats: null }),
-        create: expect.objectContaining({ availableSeats: null }),
+        update: {
+          university: dto.university,
+          career: dto.career,
+          year: dto.year,
+          campus: dto.campus,
+          hasCar: false,
+          availableSeats: null,
+          questionnaireCompleted: dto.questionnaireCompleted,
+        },
+        create: {
+          userId,
+          university: dto.university,
+          career: dto.career,
+          year: dto.year,
+          campus: dto.campus,
+          hasCar: false,
+          availableSeats: null,
+          questionnaireCompleted: dto.questionnaireCompleted,
+        },
       });
     });
   });
