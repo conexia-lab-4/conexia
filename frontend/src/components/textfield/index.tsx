@@ -45,7 +45,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           .join(' ')}
       >
         {label && (
-          <label htmlFor={inputId} className="textfield__label text-body-2">
+          <label htmlFor={inputId} className="textfield__label text-label">
             {label}
           </label>
         )}
