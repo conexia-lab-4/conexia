@@ -3,27 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { TextField } from '../../components/textfield';
 import { Button } from '../../components/button';
 import './index.css';
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M13 5 6 12l7 7" stroke="#000" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6Z"
-        stroke="#9FC1E5"
-        strokeWidth="1.5"
-      />
-      <circle cx="10" cy="10" r="2.5" stroke="#9FC1E5" strokeWidth="1.5" />
-    </svg>
-  );
-}
+import { IconEyeOff } from '../../assets/icons/IconEyeOff.tsx';
+import { IconEye } from '../../assets/icons/IconEye.tsx';
+import { IconBack } from '../../assets/icons/IconBack.tsx';
 
 interface LoginFormErrors {
   email?: string;
@@ -84,7 +66,7 @@ export function Login() {
           onClick={() => navigate(-1)}
           aria-label="Volver"
         >
-          <BackIcon />
+          <IconBack size={20} color="black" />{' '}
         </button>
         <button
           type="button"
@@ -110,7 +92,7 @@ export function Login() {
             onChange={(e) => setEmail(e.target.value)}
             variant={errors.email ? 'error' : 'default'}
             helperText={errors.email}
-            placeholder="This is a long text"
+            placeholder="example@mail.edu.ar"
           />
           <TextField
             label="Contraseña"
@@ -120,8 +102,14 @@ export function Login() {
             onChange={(e) => setPassword(e.target.value)}
             variant={errors.password ? 'error' : 'default'}
             helperText={errors.password}
-            placeholder="This is a long text"
-            rightIcon={<EyeIcon />}
+            placeholder="Ingresa tu contraseña"
+            rightIcon={
+              showPassword ? (
+                <IconEyeOff size={20} color="var(--color-primary-400)" />
+              ) : (
+                <IconEye size={20} color="var(--color-primary-400)" />
+              )
+            }
             onClickIcon={() => setShowPassword((prev) => !prev)}
           />
           {submitError && (

@@ -1,26 +1,16 @@
 import { Routes, Route } from 'react-router-dom';
 import { Splash } from './pages/splash';
 import { Landing } from './pages/landing';
-
-function LoginPlaceholder() {
-  return (
-    <div style={{ padding: 40 }}>Login (placeholder, en construcción)</div>
-  );
-}
-
-function RegisterPlaceholder() {
-  return (
-    <div style={{ padding: 40 }}>Registro (placeholder, en construcción)</div>
-  );
-}
+import { Login } from './pages/login';
+import { Register } from './pages/register';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/landing" element={<Landing />} />
-      <Route path="/login" element={<LoginPlaceholder />} />
-      <Route path="/register" element={<RegisterPlaceholder />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
     </Routes>
   );
 }

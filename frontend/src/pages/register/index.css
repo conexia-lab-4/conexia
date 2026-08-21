@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap');
 
-.login {
+.register {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9,7 +9,7 @@
   background: var(--color-page-bg);
 }
 
-.login__topbar {
+.register__topbar {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -19,7 +19,7 @@
   box-sizing: border-box;
 }
 
-.login__back {
+.register__back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -31,12 +31,12 @@
   cursor: pointer;
 }
 
-.login__back svg {
+.register__back svg {
   width: 100%;
   height: 100%;
 }
 
-.login__link {
+.register__link {
   border: none;
   background: none;
   padding: 0;
@@ -48,9 +48,8 @@
   color: var(--color-black);
 }
 
-.login__intro {
+.register__intro {
   width: 100%;
-  max-width: 100%;
   padding: 60px 30px 60px;
   box-sizing: border-box;
   display: flex;
@@ -58,28 +57,28 @@
   gap: 10px;
 }
 
-.login__card {
+.register__card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 44px;
   width: 100%;
   flex: 1;
-  padding: 100px 24px 32px;
+  padding: 64px 24px 32px;
   box-sizing: border-box;
   background: var(--color-white);
   box-shadow: 7px 4px 4px rgba(0, 0, 0, 0.25);
   border-radius: 60px 60px 0 0;
 }
 
-.login__form {
+.register__form {
   display: flex;
   flex-direction: column;
-  gap: 50px;
+  gap: 40px;
   width: 100%;
   max-width: 353px;
 }
 
-.login__error {
+.register__error {
   color: var(--color-error-500);
 }
