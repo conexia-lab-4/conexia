@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { FirebaseAuthGuard } from './firebase-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -19,7 +23,9 @@ describe('FirebaseAuthGuard', () => {
 
   beforeEach(() => {
     verifyIdTokenMock = jest.fn();
-    firebaseAdminMock = { auth: jest.fn(() => ({ verifyIdToken: verifyIdTokenMock })) };
+    firebaseAdminMock = {
+      auth: jest.fn(() => ({ verifyIdToken: verifyIdTokenMock })),
+    };
     prismaMock = { user: { upsert: jest.fn() } };
 
     guard = new FirebaseAuthGuard(
@@ -31,14 +37,18 @@ describe('FirebaseAuthGuard', () => {
   it('rechaza una request sin token', async () => {
     const context = buildContext(undefined);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('rechaza una request con token inválido', async () => {
     verifyIdTokenMock.mockRejectedValue(new Error('invalid token'));
     const context = buildContext('Bearer token-invalido');
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('rechaza una request con token válido pero email no verificado', async () => {
@@ -49,7 +59,9 @@ describe('FirebaseAuthGuard', () => {
     });
     const context = buildContext('Bearer token-valido');
 
-    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(prismaMock.user.upsert).not.toHaveBeenCalled();
   });
 
@@ -59,7 +71,10 @@ describe('FirebaseAuthGuard', () => {
       email: '[email protected]',
       email_verified: true,
     });
-    prismaMock.user.upsert.mockResolvedValue({ id: 'uid-123', email: '[email protected]' });
+    prismaMock.user.upsert.mockResolvedValue({
+      id: 'uid-123',
+      email: '[email protected]',
+    });
     const context = buildContext('Bearer token-valido');
 
     const result = await guard.canActivate(context);
