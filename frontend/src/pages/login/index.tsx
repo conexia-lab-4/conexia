@@ -58,7 +58,7 @@ export function Login() {
   };
 
   return (
-    <div className="login">
+    <div className="login app-container">
       <div className="login__topbar">
         <button
           type="button"

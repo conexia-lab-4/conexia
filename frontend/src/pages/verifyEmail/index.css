@@ -1,0 +1,54 @@
+.verify-email {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--color-page-bg);
+}
+
+.verify-email__intro {
+  width: 100%;
+  padding: 110px 30px 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.verify-email__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  flex: 1;
+  padding: 120px 24px 32px;
+  box-sizing: border-box;
+  background: var(--color-white);
+  box-shadow: 4px 0px 4px rgba(0, 0, 0, 0.25);
+  border-radius: 60px 60px 0 0;
+}
+
+.verify-email__text {
+  width: 100%;
+  max-width: 600px;
+}
+
+.verify-email__feedback {
+  width: 100%;
+  max-width: 600px;
+  color: var(--color-text);
+}
+
+.verify-email__error {
+  width: 100%;
+  max-width: 600px;
+  color: var(--color-error-500);
+}
+
+/*.verify-email__content {*/
+/*    display: flex;*/
+/*    flex-direction: column;*/
+/*    gap: 15px;*/
+/*}*/

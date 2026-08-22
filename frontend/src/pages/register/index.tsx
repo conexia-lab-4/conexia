@@ -65,6 +65,7 @@ export function Register() {
     try {
       // TODO: integrar con Firebase Auth (ticket aparte)
       await new Promise((resolve) => setTimeout(resolve, 800));
+      navigate('/verify-email');
     } catch {
       setSubmitError('No pudimos completar el registro. Intentá de nuevo.');
     } finally {
@@ -73,7 +74,7 @@ export function Register() {
   };
 
   return (
-    <div className="register">
+    <div className="register app-container">
       <div className="register__topbar">
         <button
           type="button"
