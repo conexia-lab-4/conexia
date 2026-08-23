@@ -12,8 +12,8 @@ model User {
   id        String   @id
   email     String   @unique
   createdAt DateTime @default(now())
-
   studentProfile StudentProfile?
+  materias Materia[]
 }
 
 model StudentProfile {
@@ -30,3 +30,37 @@ model StudentProfile {
 
   user User @relation(fields: [userId], references: [id])
 }
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+model Materia {
+  id String @id @default(uuid())
+  userId String 
+  nombre String 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  horarios Horario[]
+}
+
+model Horario {
+  id String @id @default(uuid())
+  materiaId String
+  diaSemana DiaSemana
+  horaInicio String 
+  horaFin String 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  materia Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+}  
+
