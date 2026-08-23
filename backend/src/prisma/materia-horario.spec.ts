@@ -10,7 +10,7 @@ describe('Materia y Horario persistence', () => {
     await prisma.user.upsert({
       where: { id: testUserId },
       update: {},
-      create: { id: testUserId, email: '[email protected]' },
+      create: { id: testUserId, email: `${testUserId}@example.com` },
     });
   });
 
