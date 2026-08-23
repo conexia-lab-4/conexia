@@ -31,12 +31,10 @@ describe('StudentProfile persistence', () => {
         career: 'Ingeniería en Informática',
         year: 3,
         campus: 'Ciudad Universitaria',
-        hasCar: false,
         availableSeats: null,
         questionnaireCompleted: false,
       },
     });
-
     expect(profile.id).toBeDefined();
     expect(profile.userId).toBe(testUserId);
     expect(profile.availableSeats).toBeNull();
@@ -66,7 +64,7 @@ describe('StudentProfile persistence', () => {
     ).rejects.toThrow();
   });
 
-  it('permite availableSeats con un número cuando hasCar es true', async () => {
+  it('permite availableSeats con un número (equivalente a tener auto)', async () => {
     const profile = await prisma.studentProfile.create({
       data: {
         userId: testUserId,
@@ -74,11 +72,9 @@ describe('StudentProfile persistence', () => {
         career: 'Ingeniería en Informática',
         year: 3,
         campus: 'Ciudad Universitaria',
-        hasCar: true,
         availableSeats: 3,
       },
     });
-
     expect(profile.availableSeats).toBe(3);
   });
 
