@@ -13,6 +13,10 @@ function QuestionnairePlaceholder() {
   );
 }
 
+function HomePlaceholder() {
+  return <div style={{ padding: 40 }}>Home (placeholder, en construcción)</div>;
+}
+
 function App() {
   return (
     <Routes>
@@ -22,6 +26,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/questionnaire" element={<QuestionnairePlaceholder />} />
+      <Route path="/home" element={<HomePlaceholder />} />
     </Routes>
   );
 }

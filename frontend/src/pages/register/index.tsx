@@ -6,6 +6,9 @@ import './index.css';
 import { IconEyeOff } from '../../assets/icons/IconEyeOff.tsx';
 import { IconEye } from '../../assets/icons/IconEye.tsx';
 import { IconBack } from '../../assets/icons/IconBack.tsx';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { getAuthErrorMessage } from '../../lib/authErrors';
 
 interface RegisterFormErrors {
   nombre?: string;
@@ -43,10 +46,13 @@ export function Register() {
     }
     // TODO: validar dominio institucional (ticket aparte)
 
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
     if (!password) {
       nextErrors.password = 'La contraseña es obligatoria';
-    } else if (password.length < 6) {
-      nextErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (!passwordRegex.test(password)) {
+      nextErrors.password =
+        'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un carácter especial';
     }
 
     setErrors(nextErrors);
@@ -63,11 +69,17 @@ export function Register() {
 
     setIsSubmitting(true);
     try {
-      // TODO: integrar con Firebase Auth (ticket aparte)
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      await updateProfile(credential.user, {
+        displayName: `${nombre} ${apellido}`,
+      });
       navigate('/verify-email');
-    } catch {
-      setSubmitError('No pudimos completar el registro. Intentá de nuevo.');
+    } catch (err) {
+      setSubmitError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

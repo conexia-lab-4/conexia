@@ -6,6 +6,9 @@ import './index.css';
 import { IconEyeOff } from '../../assets/icons/IconEyeOff.tsx';
 import { IconEye } from '../../assets/icons/IconEye.tsx';
 import { IconBack } from '../../assets/icons/IconBack.tsx';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { getAuthErrorMessage } from '../../lib/authErrors';
 
 interface LoginFormErrors {
   email?: string;
@@ -48,10 +51,10 @@ export function Login() {
 
     setIsSubmitting(true);
     try {
-      // TODO: integrar con Firebase Auth (ticket aparte)
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    } catch {
-      setSubmitError('No pudimos iniciar sesión. Verificá tus credenciales.');
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/home');
+    } catch (err) {
+      setSubmitError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
