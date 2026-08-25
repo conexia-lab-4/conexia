@@ -14,6 +14,7 @@ import {
 import { auth } from '../../lib/firebase';
 import { getAuthErrorMessage } from '../../lib/authErrors';
 
+const ENFORCE_INSTITUTIONAL_DOMAIN = false;
 const INSTITUTIONAL_DOMAIN = '@mail.austral.edu.ar';
 
 interface RegisterFormErrors {
@@ -49,7 +50,10 @@ export function Register() {
       nextErrors.email = 'El email es obligatorio';
     } else if (!/^\S+@\S+\.\S+$/.test(email)) {
       nextErrors.email = 'Ingresá un email válido';
-    } else if (!email.toLowerCase().endsWith(INSTITUTIONAL_DOMAIN)) {
+    } else if (
+      ENFORCE_INSTITUTIONAL_DOMAIN &&
+      !email.toLowerCase().endsWith(INSTITUTIONAL_DOMAIN)
+    ) {
       nextErrors.email = `El email debe pertenecer al dominio ${INSTITUTIONAL_DOMAIN}`;
     }
 
