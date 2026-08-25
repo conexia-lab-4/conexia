@@ -6,9 +6,15 @@ import './index.css';
 import { IconEyeOff } from '../../assets/icons/IconEyeOff.tsx';
 import { IconEye } from '../../assets/icons/IconEye.tsx';
 import { IconBack } from '../../assets/icons/IconBack.tsx';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
+} from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getAuthErrorMessage } from '../../lib/authErrors';
+
+const INSTITUTIONAL_DOMAIN = '@mail.austral.edu.ar';
 
 interface RegisterFormErrors {
   nombre?: string;
@@ -43,8 +49,9 @@ export function Register() {
       nextErrors.email = 'El email es obligatorio';
     } else if (!/^\S+@\S+\.\S+$/.test(email)) {
       nextErrors.email = 'Ingresá un email válido';
+    } else if (!email.toLowerCase().endsWith(INSTITUTIONAL_DOMAIN)) {
+      nextErrors.email = `El email debe pertenecer al dominio ${INSTITUTIONAL_DOMAIN}`;
     }
-    // TODO: validar dominio institucional (ticket aparte)
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -77,7 +84,12 @@ export function Register() {
       await updateProfile(credential.user, {
         displayName: `${nombre} ${apellido}`,
       });
-      navigate('/verify-email');
+      try {
+        await sendEmailVerification(credential.user);
+        navigate('/verify-email');
+      } catch {
+        navigate('/verify-email', { state: { verificationSendFailed: true } });
+      }
     } catch (err) {
       setSubmitError(getAuthErrorMessage(err));
     } finally {

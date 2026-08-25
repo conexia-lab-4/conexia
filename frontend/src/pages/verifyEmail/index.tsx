@@ -1,19 +1,38 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { sendEmailVerification } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import { Button } from '../../components/button';
 import './index.css';
 
-// TODO: reemplazar por la verificación real con Firebase (reload del user + chequeo de emailVerified)
-async function checkEmailVerifiedStub(): Promise<boolean> {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-  return Math.random() < 0.5;
+interface LocationState {
+  verificationSendFailed?: boolean;
+}
+
+async function checkEmailVerified(): Promise<boolean> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No hay una sesión activa');
+  }
+
+  await user.reload();
+  return user.emailVerified;
 }
 
 export function VerifyEmail() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState | null;
+
   const [isChecking, setIsChecking] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(
+    state?.verificationSendFailed
+      ? 'No pudimos enviarte el email de verificación. Probá reenviarlo.'
+      : '',
+  );
 
   const handleCheck = async () => {
     if (isChecking) {
@@ -25,7 +44,7 @@ export function VerifyEmail() {
     setIsChecking(true);
 
     try {
-      const isVerified = await checkEmailVerifiedStub();
+      const isVerified = await checkEmailVerified();
 
       if (isVerified) {
         navigate('/questionnaire');
@@ -40,6 +59,29 @@ export function VerifyEmail() {
       );
     } finally {
       setIsChecking(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (isResending || !auth.currentUser) {
+      return;
+    }
+
+    setError('');
+    setFeedback('');
+    setIsResending(true);
+
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setFeedback(
+        'Te reenviamos el email de verificación. Revisá tu bandeja de entrada.',
+      );
+    } catch {
+      setError(
+        'No pudimos reenviar el email. Intentá de nuevo en unos minutos.',
+      );
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -70,6 +112,15 @@ export function VerifyEmail() {
           onClick={handleCheck}
         >
           {isChecking ? 'Verificando...' : 'Ya validé mi email'}
+        </Button>
+        <Button
+          type="button"
+          variant="outlined"
+          size="large-wide"
+          disabled={isResending}
+          onClick={handleResend}
+        >
+          {isResending ? 'Reenviando...' : 'Reenviar email'}
         </Button>
       </div>
     </div>
