@@ -51,8 +51,12 @@ export function Login() {
 
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/home');
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      navigate(credential.user.emailVerified ? '/home' : '/verify-email');
     } catch (err) {
       setSubmitError(getAuthErrorMessage(err));
     } finally {
