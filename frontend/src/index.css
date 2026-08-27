@@ -93,6 +93,13 @@
   --color-progress-track: #d4e1ea;
   --color-progress-gradient-start: #85b6c1;
   --color-progress-gradient-end: #9dbc97;
+
+  /* Questionnaire - variantes nuevas */
+  --color-badge-blue-bg: #ecf4f7;
+  --color-badge-blue-text: #698ea1;
+  --color-badge-green-bg: #f0f4eb;
+  --color-badge-green-text: #6d7f61;
+  --fw-extrabold: 800;
 }
 
 .app-container {
