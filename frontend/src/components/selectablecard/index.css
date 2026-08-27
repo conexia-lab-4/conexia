@@ -77,3 +77,8 @@
   font-weight: var(--fw-regular);
   line-height: 10px;
 }
+
+.selectable-card__badge--none {
+  background: transparent;
+  padding: 0;
+}

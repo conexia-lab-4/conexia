@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import './index.css';
 
-export type CardColorVariant = 'blue' | 'green';
+export type CardColorVariant = 'blue' | 'green' | 'none';
 
 interface SelectableCardProps {
   badge: ReactNode;
