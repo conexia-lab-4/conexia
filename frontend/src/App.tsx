@@ -45,6 +45,14 @@ function HomePlaceholder() {
   return <div style={{ padding: 40 }}>Home (placeholder, en construcción)</div>;
 }
 
+function SchedulePlaceholder() {
+  return (
+    <div style={{ padding: 40 }}>
+      Cargar horarios (placeholder, en construcción)
+    </div>
+  );
+}
+
 function App() {
   return (
     <Routes>
@@ -56,6 +64,7 @@ function App() {
       <Route path="/questionnaire" element={<Questionnaire />} />
       <Route path="/home" element={<HomePlaceholder />} />
       <Route path="/test-card" element={<SelectableCardTest />} />
+      <Route path="/schedule" element={<SchedulePlaceholder />} />
     </Routes>
   );
 }

@@ -82,3 +82,8 @@
   background: transparent;
   padding: 0;
 }
+
+.selectable-card--centered {
+  align-items: center;
+  text-align: center;
+}

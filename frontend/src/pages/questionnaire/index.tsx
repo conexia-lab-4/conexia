@@ -10,6 +10,8 @@ import { IconCar } from '../../assets/icons/IconCar.tsx';
 import { IconBackpack } from '../../assets/icons/IconBackpack.tsx';
 import { UNIVERSITIES } from './universities';
 import './index.css';
+import { IconCheck } from '../../assets/icons/IconCheck.tsx';
+import { useNavigate } from 'react-router-dom';
 
 const TOTAL_STEPS = 3;
 
@@ -22,6 +24,7 @@ export function Questionnaire() {
   const [campus, setCampus] = useState('');
   const [hasCar, setHasCar] = useState<boolean | null>(null);
   const [availableSeats, setAvailableSeats] = useState('');
+  const navigate = useNavigate();
 
   const handleBack = () => {
     setCurrentStep((step) => Math.max(1, step - 1));
@@ -51,20 +54,65 @@ export function Questionnaire() {
     return (
       <div className="questionnaire app-container">
         <div className="questionnaire__topbar">
+          <div className="questionnaire__nav">
+            <button
+              type="button"
+              className="questionnaire__back"
+              onClick={() => setIsFinished(false)}
+              aria-label="Volver"
+            >
+              <IconBack size={20} color="#6B7280" />
+            </button>
+            <button
+              type="button"
+              className="questionnaire__skip text-body-3-bold"
+            >
+              Completar después
+            </button>
+          </div>
           <ProgressBar
             currentStep={TOTAL_STEPS}
             totalSteps={TOTAL_STEPS}
             isComplete
           />
         </div>
-        <div className="questionnaire__card">
-          {/* TODO: reemplazar por el diseño real de la pantalla de confirmación (pendiente) */}
-          <h3 className="questionnaire__step-title text-h6">
-            ¡Tu perfil está listo!
-          </h3>
-          <p className="questionnaire__step-subtitle text-body-3">
-            Ya podés empezar a usar Conexia.
+
+        <div className="questionnaire__header">
+          <span className="questionnaire__eyebrow">TU PERFIL CONEXIA</span>
+          <h2 className="text-h5">Queremos conocerte un poquito más</h2>
+          <p className="questionnaire__lead">
+            Completá estos datos para conectar con personas que compartan tu
+            rutina.
           </p>
+        </div>
+
+        <div className="questionnaire__card">
+          <div className="questionnaire__success">
+            <div className="questionnaire__success-badge">
+              <IconCheck size={24} color="#203956" />
+            </div>
+            <div className="questionnaire__success-text">
+              <h3 className="text-h5">¡Tu perfil ya está listo!</h3>
+              <p className="questionnaire__success-subtitle text-body-2">
+                El próximo paso es cargar tus horarios para empezar a encontrar
+                coincidencias.
+              </p>
+            </div>
+          </div>
+
+          <div className="questionnaire__footer">
+            <Button
+              type="button"
+              variant="fulfilled"
+              size="large-wide"
+              onClick={() => navigate('/schedule')}
+            >
+              Cargar mis horarios
+            </Button>
+            <p className="questionnaire__footer-help text-body-3">
+              Podés cambiar estos datos más adelante en tu perfil.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -185,6 +233,8 @@ export function Questionnaire() {
                 subtitle="Puedo compartir algunos viajes con otros estudiantes."
                 selected={hasCar === true}
                 onClick={() => setHasCar(true)}
+                showRadio={false}
+                centered
               />
               <SelectableCard
                 badge={<IconBackpack size={24} color="#5D93C8" />}
@@ -193,6 +243,8 @@ export function Questionnaire() {
                 subtitle="Quiero encontrar compañeros con recorridos compatibles."
                 selected={hasCar === false}
                 onClick={() => setHasCar(false)}
+                showRadio={false}
+                centered
               />
             </div>
 

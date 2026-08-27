@@ -11,6 +11,8 @@ interface SelectableCardProps {
   subtitle: string;
   selected: boolean;
   onClick: () => void;
+  showRadio?: boolean;
+  centered?: boolean;
 }
 
 export function SelectableCard({
@@ -20,16 +22,26 @@ export function SelectableCard({
   subtitle,
   selected,
   onClick,
+  showRadio = true,
+  centered = false,
 }: SelectableCardProps) {
   return (
     <button
       type="button"
-      className={`selectable-card${selected ? ' selectable-card--selected' : ''}`}
+      className={[
+        'selectable-card',
+        selected && 'selectable-card--selected',
+        centered && 'selectable-card--centered',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       onClick={onClick}
     >
-      <span className="selectable-card__radio">
-        {selected && <IconCheck size={12} color="var(--color-white)" />}
-      </span>
+      {showRadio && (
+        <span className="selectable-card__radio">
+          {selected && <IconCheck size={12} color="var(--color-white)" />}
+        </span>
+      )}
       <span
         className={`selectable-card__badge selectable-card__badge--${colorVariant} text-body-3-bold`}
       >
