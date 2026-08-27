@@ -50,9 +50,9 @@
 .questionnaire__header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 10px;
+  padding: 20px;
   box-sizing: border-box;
 }
 
@@ -81,7 +81,7 @@
   gap: 20px;
   width: 100%;
   flex: 1;
-  padding: 31px 21px;
+  padding: 50px 21px;
   box-sizing: border-box;
   background: var(--color-white);
   border-radius: 50px 50px 0 0;
@@ -117,4 +117,12 @@
 .questionnaire__footer-help {
   color: var(--color-grey-400);
   text-align: center;
+}
+
+.questionnaire__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  width: 100%;
+  margin-top: 12px;
 }

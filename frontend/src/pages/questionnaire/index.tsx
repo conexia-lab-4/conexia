@@ -2,23 +2,35 @@ import { useState } from 'react';
 import { ProgressBar } from '../../components/progressbar';
 import { SelectableCard } from '../../components/selectablecard';
 import { Button } from '../../components/button';
+import { TextField } from '../../components/textfield';
+import { IconBack } from '../../assets/icons/IconBack.tsx';
+import { IconEye } from '../../assets/icons/IconEye.tsx';
+import { IconChevronDown } from '../../assets/icons/IconChevronDown.tsx';
 import { UNIVERSITIES } from './universities';
 import './index.css';
-import { IconBack } from '../../assets/icons/IconBack.tsx';
 
 const TOTAL_STEPS = 3;
 
 export function Questionnaire() {
   const [currentStep, setCurrentStep] = useState(1);
   const [universityId, setUniversityId] = useState<string | null>(null);
+  const [career, setCareer] = useState('');
+  const [year, setYear] = useState('');
+  const [campus, setCampus] = useState('');
+
+  const handleBack = () => {
+    setCurrentStep((step) => Math.max(1, step - 1));
+  };
 
   const handleContinue = () => {
     setCurrentStep((step) => Math.min(TOTAL_STEPS, step + 1));
   };
 
-  const handleBack = () => {
-    setCurrentStep((step) => Math.max(1, step - 1));
-  };
+  const isStep1Valid = Boolean(universityId);
+  const isStep2Valid = Boolean(career.trim() && year.trim() && campus.trim());
+
+  const isCurrentStepValid =
+    currentStep === 1 ? isStep1Valid : currentStep === 2 ? isStep2Valid : false;
 
   return (
     <div className="questionnaire app-container">
@@ -52,33 +64,79 @@ export function Questionnaire() {
       </div>
 
       <div className="questionnaire__card">
-        <h3 className="questionnaire__step-title text-h6">
-          ¿A qué universidad vas?
-        </h3>
-        <p className="questionnaire__step-subtitle text-body-3">
-          Elegí tu universidad para personalizar tu experiencia.
-        </p>
+        {currentStep === 1 && (
+          <>
+            <h3 className="questionnaire__step-title text-h6">
+              ¿A qué universidad vas?
+            </h3>
+            <p className="questionnaire__step-subtitle text-body-3">
+              Elegí tu universidad para personalizar tu experiencia.
+            </p>
 
-        <div className="questionnaire__grid">
-          {UNIVERSITIES.map((university) => (
-            <SelectableCard
-              key={university.id}
-              badge={university.abbreviation}
-              colorVariant={university.colorVariant}
-              title={university.name}
-              subtitle={university.campus}
-              selected={universityId === university.id}
-              onClick={() => setUniversityId(university.id)}
-            />
-          ))}
-        </div>
+            <div className="questionnaire__grid">
+              {UNIVERSITIES.map((university) => (
+                <SelectableCard
+                  key={university.id}
+                  badge={university.abbreviation}
+                  colorVariant={university.colorVariant}
+                  title={university.name}
+                  subtitle={university.campus}
+                  selected={universityId === university.id}
+                  onClick={() => setUniversityId(university.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {currentStep === 2 && (
+          <>
+            <h3 className="questionnaire__step-title text-h6">
+              ¿Que estudias?
+            </h3>
+            <p className="questionnaire__step-subtitle text-body-3">
+              Nos ayuda a encontrar coincidencias con estudiantes de rutinas
+              parecidas.
+            </p>
+
+            <div className="questionnaire__fields">
+              <TextField
+                label="Carrera"
+                value={career}
+                onChange={(e) => setCareer(e.target.value)}
+                placeholder="Buscá tu carrera"
+                rightIcon={
+                  <IconEye size={20} color="var(--color-primary-400)" />
+                }
+                onClickIcon={() => {
+                  // TODO: definir comportamiento del ícono (a confirmar)
+                }}
+              />
+              <TextField
+                label="Año de cursada"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                placeholder="Seleccioná una opción"
+                rightIcon={
+                  <IconChevronDown size={20} color="var(--color-grey-400)" />
+                }
+              />
+              <TextField
+                label="Sede/Campus"
+                value={campus}
+                onChange={(e) => setCampus(e.target.value)}
+                placeholder="Ej. Pilar, Ciudad Universitaria..."
+              />
+            </div>
+          </>
+        )}
 
         <div className="questionnaire__footer">
           <Button
             type="button"
             variant="fulfilled"
             size="large-wide"
-            disabled={!universityId}
+            disabled={!isCurrentStepValid}
             onClick={handleContinue}
           >
             Continuar
