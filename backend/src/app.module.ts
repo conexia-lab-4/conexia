@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { FirebaseModule } from './firebase/firebase.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
+import { SubjectsModule } from './subjects/subjects.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ProfileModule } from './profile/profile.module';
     FirebaseModule,
     PrismaModule,
     ProfileModule,
+    SubjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
