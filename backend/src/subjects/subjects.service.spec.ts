@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -75,20 +74,6 @@ describe('SubjectsService', () => {
         },
         include: { schedules: true },
       });
-    });
-
-    it('rechaza cuando un horario tiene startTime posterior o igual a endTime', async () => {
-      const dto: CreateSubjectDto = {
-        name: 'Física I',
-        schedules: [
-          { dayOfWeek: 'TUESDAY', startTime: '10:00', endTime: '08:00' },
-        ],
-      };
-
-      await expect(service.create(userId, dto)).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(prismaMock.subject.create).not.toHaveBeenCalled();
     });
   });
 

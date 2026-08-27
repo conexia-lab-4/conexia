@@ -1,5 +1,6 @@
 import { IsEnum, IsString, Matches } from 'class-validator';
 import { DayOfWeek } from '../../../generated/prisma/client';
+import { EndTimeAfterStartTime } from './end-time-after-start-time.validator';
 
 export class CreateScheduleDto {
   @IsEnum(DayOfWeek)
@@ -15,5 +16,6 @@ export class CreateScheduleDto {
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
     message: 'endTime debe tener el formato HH:mm',
   })
+  @EndTimeAfterStartTime()
   endTime!: string;
 }
