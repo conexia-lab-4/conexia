@@ -4,17 +4,18 @@ import { Landing } from './pages/landing';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { VerifyEmail } from './pages/verifyEmail';
-
-function QuestionnairePlaceholder() {
-  return (
-    <div style={{ padding: 40 }}>
-      Cuestionario (placeholder, en construcción)
-    </div>
-  );
-}
+import { Questionnaire } from './pages/questionnaire';
 
 function HomePlaceholder() {
   return <div style={{ padding: 40 }}>Home (placeholder, en construcción)</div>;
+}
+
+function SchedulePlaceholder() {
+  return (
+    <div style={{ padding: 40 }}>
+      Cargar horarios (placeholder, en construcción)
+    </div>
+  );
 }
 
 function App() {
@@ -25,8 +26,9 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/questionnaire" element={<QuestionnairePlaceholder />} />
+      <Route path="/questionnaire" element={<Questionnaire />} />
       <Route path="/home" element={<HomePlaceholder />} />
+      <Route path="/schedule" element={<SchedulePlaceholder />} />
     </Routes>
   );
 }
