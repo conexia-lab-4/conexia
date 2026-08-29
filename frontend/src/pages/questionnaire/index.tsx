@@ -4,7 +4,6 @@ import { SelectableCard } from '../../components/selectablecard';
 import { Button } from '../../components/button';
 import { TextField } from '../../components/textfield';
 import { IconBack } from '../../assets/icons/IconBack.tsx';
-import { IconEye } from '../../assets/icons/IconEye.tsx';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown.tsx';
 import { IconCar } from '../../assets/icons/IconCar.tsx';
 import { IconBackpack } from '../../assets/icons/IconBackpack.tsx';
@@ -14,6 +13,48 @@ import { IconCheck } from '../../assets/icons/IconCheck.tsx';
 import { useNavigate } from 'react-router-dom';
 
 const TOTAL_STEPS = 3;
+
+const CAREERS = [
+  'Ingeniería en Informática',
+  'Administración de Empresas',
+  'Derecho',
+  'Medicina',
+  'Arquitectura',
+  'Comunicación',
+  'Psicología',
+  'Contador Público',
+  'Diseño Industrial',
+  'Economía',
+];
+
+function NumberStepper({
+  onIncrement,
+  onDecrement,
+}: {
+  onIncrement: () => void;
+  onDecrement: () => void;
+}) {
+  return (
+    <span className="year-stepper">
+      <button
+        type="button"
+        className="year-stepper__btn year-stepper__btn--up"
+        onClick={onIncrement}
+        aria-label="Aumentar año"
+      >
+        <IconChevronDown size={10} color="var(--color-grey-400)" />
+      </button>
+      <button
+        type="button"
+        className="year-stepper__btn"
+        onClick={onDecrement}
+        aria-label="Disminuir año"
+      >
+        <IconChevronDown size={10} color="var(--color-grey-400)" />
+      </button>
+    </span>
+  );
+}
 
 export function Questionnaire() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -25,6 +66,11 @@ export function Questionnaire() {
   const [hasCar, setHasCar] = useState<boolean | null>(null);
   const [availableSeats, setAvailableSeats] = useState('');
   const navigate = useNavigate();
+  const [isCareerOpen, setIsCareerOpen] = useState(false);
+
+  const filteredCareers = CAREERS.filter((c) =>
+    c.toLowerCase().includes(career.toLowerCase()),
+  );
 
   const handleBack = () => {
     setCurrentStep((step) => Math.max(1, step - 1));
@@ -36,6 +82,22 @@ export function Questionnaire() {
 
   const handleFinish = () => {
     setIsFinished(true);
+  };
+
+  const handleIncrementYear = () => {
+    setYear((prev) => String(Math.min(6, (Number(prev) || 0) + 1)));
+  };
+
+  const handleDecrementYear = () => {
+    setYear((prev) => String(Math.max(1, (Number(prev) || 1) - 1)));
+  };
+
+  const handleIncrementSeats = () => {
+    setAvailableSeats((prev) => String((Number(prev) || 0) + 1));
+  };
+
+  const handleDecrementSeats = () => {
+    setAvailableSeats((prev) => String(Math.max(1, (Number(prev) || 1) - 1)));
   };
 
   const isStep1Valid = Boolean(universityId);
@@ -122,14 +184,16 @@ export function Questionnaire() {
     <div className="questionnaire app-container">
       <div className="questionnaire__topbar">
         <div className="questionnaire__nav">
-          <button
-            type="button"
-            className="questionnaire__back"
-            onClick={handleBack}
-            aria-label="Volver"
-          >
-            <IconBack size={20} color="#6B7280" />
-          </button>
+          {currentStep > 1 && (
+            <button
+              type="button"
+              className="questionnaire__back"
+              onClick={handleBack}
+              aria-label="Volver"
+            >
+              <IconBack size={20} color="#6B7280" />
+            </button>
+          )}
           <button
             type="button"
             className="questionnaire__skip text-body-3-bold"
@@ -184,27 +248,54 @@ export function Questionnaire() {
               Nos ayuda a encontrar coincidencias con estudiantes de rutinas
               parecidas.
             </p>
-
             <div className="questionnaire__fields">
+              <div className="questionnaire__combobox">
+                <TextField
+                  label="Carrera"
+                  value={career}
+                  onChange={(e) => {
+                    setCareer(e.target.value);
+                    setIsCareerOpen(true);
+                  }}
+                  onFocus={() => setIsCareerOpen(true)}
+                  onBlur={() => setTimeout(() => setIsCareerOpen(false), 150)}
+                  placeholder="Buscá tu carrera"
+                  rightIcon={
+                    <IconChevronDown size={20} color="var(--color-grey-400)" />
+                  }
+                />
+                {isCareerOpen && filteredCareers.length > 0 && (
+                  <ul className="questionnaire__combobox-list">
+                    {filteredCareers.map((c) => (
+                      <li key={c}>
+                        <button
+                          type="button"
+                          className="questionnaire__combobox-option text-body-2"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCareer(c);
+                            setIsCareerOpen(false);
+                          }}
+                        >
+                          {c}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <TextField
-                label="Carrera"
-                value={career}
-                onChange={(e) => setCareer(e.target.value)}
-                placeholder="Buscá tu carrera"
-                rightIcon={
-                  <IconEye size={20} color="var(--color-primary-400)" />
-                }
-                onClickIcon={() => {
-                  // TODO: definir comportamiento del ícono (a confirmar)
-                }}
-              />
-              <TextField
+                type="text"
                 label="Año de cursada"
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
+                onChange={() => {}}
+                readOnly
                 placeholder="Seleccioná una opción"
                 rightIcon={
-                  <IconChevronDown size={20} color="var(--color-grey-400)" />
+                  <NumberStepper
+                    onIncrement={handleIncrementYear}
+                    onDecrement={handleDecrementYear}
+                  />
                 }
               />
               <TextField
@@ -251,12 +342,17 @@ export function Questionnaire() {
             {hasCar === true && (
               <div className="questionnaire__seats">
                 <TextField
+                  type="text"
                   label="¿Cuántos lugares podrías ofrecer?"
                   value={availableSeats}
-                  onChange={(e) => setAvailableSeats(e.target.value)}
+                  onChange={() => {}}
+                  readOnly
                   placeholder="Ej. 2"
                   rightIcon={
-                    <IconChevronDown size={20} color="var(--color-grey-400)" />
+                    <NumberStepper
+                      onIncrement={handleIncrementSeats}
+                      onDecrement={handleDecrementSeats}
+                    />
                   }
                 />
               </div>
