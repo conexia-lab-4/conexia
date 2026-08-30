@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProgressBar } from '../../components/progressbar';
 import { SelectableCard } from '../../components/selectablecard';
 import { Button } from '../../components/button';
@@ -11,6 +11,9 @@ import { UNIVERSITIES } from './universities';
 import './index.css';
 import { IconCheck } from '../../assets/icons/IconCheck.tsx';
 import { useNavigate } from 'react-router-dom';
+import { getProfile, upsertProfile } from '../../lib/profileApi';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 const TOTAL_STEPS = 3;
 
@@ -67,10 +70,83 @@ export function Questionnaire() {
   const [availableSeats, setAvailableSeats] = useState('');
   const navigate = useNavigate();
   const [isCareerOpen, setIsCareerOpen] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const filteredCareers = CAREERS.filter((c) =>
     c.toLowerCase().includes(career.toLowerCase()),
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getProfile()
+      .then((profile) => {
+        if (!isMounted || !profile) {
+          return;
+        }
+        const matchedUniversity = UNIVERSITIES.find(
+          (u) => u.name === profile.university,
+        );
+        setUniversityId(matchedUniversity?.id ?? null);
+        setCareer(profile.career);
+        setYear(String(profile.year));
+        setCampus(profile.campus);
+        setHasCar(profile.hasCar);
+        setAvailableSeats(
+          profile.availableSeats != null ? String(profile.availableSeats) : '',
+        );
+      })
+      .catch(() => {
+        // otros errores en el ticket de validaciones y estados
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingProfile(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setIsLoadingProfile(false);
+        return;
+      }
+
+      getProfile()
+        .then((profile) => {
+          if (!profile) {
+            return;
+          }
+          const matchedUniversity = UNIVERSITIES.find(
+            (u) => u.name === profile.university,
+          );
+          setUniversityId(matchedUniversity?.id ?? null);
+          setCareer(profile.career);
+          setYear(String(profile.year));
+          setCampus(profile.campus);
+          setHasCar(profile.hasCar);
+          setAvailableSeats(
+            profile.availableSeats != null
+              ? String(profile.availableSeats)
+              : '',
+          );
+        })
+        .catch(() => {
+          // manejo detallado en el ticket de "validaciones y estados"
+        })
+        .finally(() => {
+          setIsLoadingProfile(false);
+        });
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleBack = () => {
     setCurrentStep((step) => Math.max(1, step - 1));
@@ -78,10 +154,6 @@ export function Questionnaire() {
 
   const handleContinue = () => {
     setCurrentStep((step) => Math.min(TOTAL_STEPS, step + 1));
-  };
-
-  const handleFinish = () => {
-    setIsFinished(true);
   };
 
   const handleIncrementYear = () => {
@@ -100,6 +172,37 @@ export function Questionnaire() {
     setAvailableSeats((prev) => String(Math.max(1, (Number(prev) || 1) - 1)));
   };
 
+  const handleFinish = async () => {
+    if (isSavingProfile) {
+      return;
+    }
+
+    const university = UNIVERSITIES.find((u) => u.id === universityId)?.name;
+    if (!university || hasCar === null) {
+      return;
+    }
+
+    setSaveError('');
+    setIsSavingProfile(true);
+
+    try {
+      await upsertProfile({
+        university,
+        career,
+        year: Number(year),
+        campus,
+        hasCar,
+        ...(hasCar ? { availableSeats: Number(availableSeats) } : {}),
+        questionnaireCompleted: true,
+      });
+      setIsFinished(true);
+    } catch {
+      setSaveError('No pudimos guardar tu perfil. Intentá de nuevo.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const isStep1Valid = Boolean(universityId);
   const isStep2Valid = Boolean(career.trim() && year.trim() && campus.trim());
   const isStep3Valid =
@@ -111,6 +214,16 @@ export function Questionnaire() {
       : currentStep === 2
         ? isStep2Valid
         : isStep3Valid;
+
+  if (isLoadingProfile) {
+    return (
+      <div className="questionnaire app-container">
+        <p className="text-body-1" style={{ padding: 40 }}>
+          Cargando...
+        </p>
+      </div>
+    );
+  }
 
   if (isFinished) {
     return (
@@ -361,16 +474,23 @@ export function Questionnaire() {
         )}
 
         <div className="questionnaire__footer">
+          {saveError && (
+            <p className="questionnaire__error text-body-3">{saveError}</p>
+          )}
           <Button
             type="button"
             variant="fulfilled"
             size="large-wide"
-            disabled={!isCurrentStepValid}
+            disabled={!isCurrentStepValid || isSavingProfile}
             onClick={
               currentStep === TOTAL_STEPS ? handleFinish : handleContinue
             }
           >
-            {currentStep === TOTAL_STEPS ? 'Terminar' : 'Continuar'}
+            {currentStep === TOTAL_STEPS
+              ? isSavingProfile
+                ? 'Guardando...'
+                : 'Terminar'
+              : 'Continuar'}
           </Button>
           <p className="questionnaire__footer-help text-body-3">
             Podés cambiar estos datos más adelante en tu perfil.

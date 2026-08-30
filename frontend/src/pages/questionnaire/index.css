@@ -246,3 +246,7 @@
 .year-stepper__btn--up svg {
   transform: rotate(180deg);
 }
+
+.questionnaire__error {
+  color: var(--color-error-500);
+}
