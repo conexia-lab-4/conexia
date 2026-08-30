@@ -11,7 +11,11 @@ import { UNIVERSITIES } from './universities';
 import './index.css';
 import { IconCheck } from '../../assets/icons/IconCheck.tsx';
 import { useNavigate } from 'react-router-dom';
-import { getProfile, upsertProfile } from '../../lib/profileApi';
+import {
+  getProfile,
+  upsertProfile,
+  type ProfileResponse,
+} from '../../lib/profileApi';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
@@ -59,6 +63,21 @@ function NumberStepper({
   );
 }
 
+function mapProfileToFormState(profile: ProfileResponse) {
+  const matchedUniversity = UNIVERSITIES.find(
+    (u) => u.name === profile.university,
+  );
+  return {
+    universityId: matchedUniversity?.id ?? null,
+    career: profile.career,
+    year: String(profile.year),
+    campus: profile.campus,
+    hasCar: profile.hasCar,
+    availableSeats:
+      profile.availableSeats != null ? String(profile.availableSeats) : '',
+  };
+}
+
 export function Questionnaire() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isFinished, setIsFinished] = useState(false);
@@ -73,44 +92,12 @@ export function Questionnaire() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const filteredCareers = CAREERS.filter((c) =>
     c.toLowerCase().includes(career.toLowerCase()),
   );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    getProfile()
-      .then((profile) => {
-        if (!isMounted || !profile) {
-          return;
-        }
-        const matchedUniversity = UNIVERSITIES.find(
-          (u) => u.name === profile.university,
-        );
-        setUniversityId(matchedUniversity?.id ?? null);
-        setCareer(profile.career);
-        setYear(String(profile.year));
-        setCampus(profile.campus);
-        setHasCar(profile.hasCar);
-        setAvailableSeats(
-          profile.availableSeats != null ? String(profile.availableSeats) : '',
-        );
-      })
-      .catch(() => {
-        // otros errores en el ticket de validaciones y estados
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingProfile(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -123,22 +110,19 @@ export function Questionnaire() {
           if (!profile) {
             return;
           }
-          const matchedUniversity = UNIVERSITIES.find(
-            (u) => u.name === profile.university,
-          );
-          setUniversityId(matchedUniversity?.id ?? null);
-          setCareer(profile.career);
-          setYear(String(profile.year));
-          setCampus(profile.campus);
-          setHasCar(profile.hasCar);
-          setAvailableSeats(
-            profile.availableSeats != null
-              ? String(profile.availableSeats)
-              : '',
-          );
+          const formState = mapProfileToFormState(profile);
+          setUniversityId(formState.universityId);
+          setCareer(formState.career);
+          setYear(formState.year);
+          setCampus(formState.campus);
+          setHasCar(formState.hasCar);
+          setAvailableSeats(formState.availableSeats);
         })
-        .catch(() => {
-          // manejo detallado en el ticket de "validaciones y estados"
+        .catch((err) => {
+          console.error('Error al cargar el perfil:', err);
+          setLoadError(
+            'No pudimos cargar tu información previa. Podés completar el formulario de todas formas.',
+          );
         })
         .finally(() => {
           setIsLoadingProfile(false);
@@ -325,6 +309,15 @@ export function Questionnaire() {
           rutina.
         </p>
       </div>
+
+      {loadError && (
+        <p
+          className="questionnaire__error text-body-3"
+          style={{ padding: '0 24px' }}
+        >
+          {loadError}
+        </p>
+      )}
 
       <div className="questionnaire__card">
         {currentStep === 1 && (
