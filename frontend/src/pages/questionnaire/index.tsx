@@ -225,6 +225,7 @@ export function Questionnaire() {
             <button
               type="button"
               className="questionnaire__skip text-body-3-bold"
+              onClick={() => navigate('/home')}
             >
               Completar después
             </button>
@@ -281,7 +282,7 @@ export function Questionnaire() {
     <div className="questionnaire app-container">
       <div className="questionnaire__topbar">
         <div className="questionnaire__nav">
-          {currentStep > 1 && (
+          {currentStep > 1 ? (
             <button
               type="button"
               className="questionnaire__back"
@@ -290,10 +291,13 @@ export function Questionnaire() {
             >
               <IconBack size={20} color="#6B7280" />
             </button>
+          ) : (
+            <span className="questionnaire__back-spacer" aria-hidden="true" />
           )}
           <button
             type="button"
             className="questionnaire__skip text-body-3-bold"
+            onClick={() => navigate('/home')}
           >
             Completar después
           </button>
