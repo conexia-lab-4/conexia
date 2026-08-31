@@ -11,7 +11,7 @@ on:
       - 'frontend/**'
 
 jobs:
-  ci:
+  frontend-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
