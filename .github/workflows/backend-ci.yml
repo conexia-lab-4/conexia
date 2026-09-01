@@ -3,15 +3,12 @@ name: Backend CI
 on:
   pull_request:
     branches: [dev, main]
-    paths:
-      - 'backend/**'
+
   push:
     branches: [dev, main]
-    paths:
-      - 'backend/**'
 
 jobs:
-  ci:
+  backend-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
