@@ -15,6 +15,7 @@ import {
   getProfile,
   upsertProfile,
   type ProfileResponse,
+  type UpsertProfilePayload,
 } from '../../lib/profileApi';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -64,14 +65,14 @@ function NumberStepper({
 }
 
 function mapProfileToFormState(profile: ProfileResponse) {
-  const matchedUniversity = UNIVERSITIES.find(
-    (u) => u.name === profile.university,
-  );
+  const matchedUniversity = profile.university
+    ? UNIVERSITIES.find((u) => u.name === profile.university)
+    : undefined;
   return {
     universityId: matchedUniversity?.id ?? null,
-    career: profile.career,
-    year: String(profile.year),
-    campus: profile.campus,
+    career: profile.career ?? '',
+    year: profile.year != null ? String(profile.year) : '',
+    campus: profile.campus ?? '',
     hasCar: profile.hasCar,
     availableSeats:
       profile.availableSeats != null ? String(profile.availableSeats) : '',
@@ -132,12 +133,73 @@ export function Questionnaire() {
     return () => unsubscribe();
   }, []);
 
+  const buildPartialPayload = (): UpsertProfilePayload => {
+    const payload: UpsertProfilePayload = {};
+
+    const universityName = UNIVERSITIES.find(
+      (u) => u.id === universityId,
+    )?.name;
+    if (universityName) {
+      payload.university = universityName;
+    }
+    if (career.trim()) {
+      payload.career = career;
+    }
+    if (year.trim()) {
+      payload.year = Number(year);
+    }
+    if (campus.trim()) {
+      payload.campus = campus;
+    }
+
+    if (hasCar === true && availableSeats.trim()) {
+      payload.hasCar = true;
+      payload.availableSeats = Number(availableSeats);
+    } else if (hasCar === false) {
+      payload.hasCar = false;
+    }
+    // Si hasCar es true pero todavía no completó availableSeats, no lo mandamos
+    // todavía (el backend rechaza esa combinación inconsistente)
+
+    return payload;
+  };
+
   const handleBack = () => {
     setCurrentStep((step) => Math.max(1, step - 1));
   };
 
-  const handleContinue = () => {
-    setCurrentStep((step) => Math.min(TOTAL_STEPS, step + 1));
+  const handleContinue = async () => {
+    if (isSavingProfile) {
+      return;
+    }
+
+    setSaveError('');
+    setIsSavingProfile(true);
+
+    try {
+      const payload = buildPartialPayload();
+      if (Object.keys(payload).length > 0) {
+        await upsertProfile(payload);
+      }
+      setCurrentStep((step) => Math.min(TOTAL_STEPS, step + 1));
+    } catch {
+      setSaveError('No pudimos guardar tu progreso. Intentá de nuevo.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    const payload = buildPartialPayload();
+    if (Object.keys(payload).length > 0) {
+      try {
+        await upsertProfile(payload);
+      } catch (err) {
+        console.error('Error al guardar el progreso antes de omitir:', err);
+        // No bloqueamos la salida si falla el guardado parcial.
+      }
+    }
+    navigate('/home');
   };
 
   const handleIncrementYear = () => {
@@ -161,8 +223,8 @@ export function Questionnaire() {
       return;
     }
 
-    const university = UNIVERSITIES.find((u) => u.id === universityId)?.name;
-    if (!university || hasCar === null) {
+    const payload = buildPartialPayload();
+    if (!payload.university || hasCar === null) {
       return;
     }
 
@@ -170,15 +232,7 @@ export function Questionnaire() {
     setIsSavingProfile(true);
 
     try {
-      await upsertProfile({
-        university,
-        career,
-        year: Number(year),
-        campus,
-        hasCar,
-        ...(hasCar ? { availableSeats: Number(availableSeats) } : {}),
-        questionnaireCompleted: true,
-      });
+      await upsertProfile({ ...payload, questionnaireCompleted: true });
       setIsFinished(true);
     } catch {
       setSaveError('No pudimos guardar tu perfil. Intentá de nuevo.');
@@ -225,7 +279,7 @@ export function Questionnaire() {
             <button
               type="button"
               className="questionnaire__skip text-body-3-bold"
-              onClick={() => navigate('/home')}
+              onClick={handleSkip}
             >
               Completar después
             </button>
@@ -297,7 +351,7 @@ export function Questionnaire() {
           <button
             type="button"
             className="questionnaire__skip text-body-3-bold"
-            onClick={() => navigate('/home')}
+            onClick={handleSkip}
           >
             Completar después
           </button>
@@ -483,11 +537,11 @@ export function Questionnaire() {
               currentStep === TOTAL_STEPS ? handleFinish : handleContinue
             }
           >
-            {currentStep === TOTAL_STEPS
-              ? isSavingProfile
-                ? 'Guardando...'
-                : 'Terminar'
-              : 'Continuar'}
+            {isSavingProfile
+              ? 'Guardando...'
+              : currentStep === TOTAL_STEPS
+                ? 'Terminar'
+                : 'Continuar'}
           </Button>
           <p className="questionnaire__footer-help text-body-3">
             Podés cambiar estos datos más adelante en tu perfil.
