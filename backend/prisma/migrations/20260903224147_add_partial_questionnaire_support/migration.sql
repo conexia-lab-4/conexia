@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "StudentProfile" ADD COLUMN     "hasCar" BOOLEAN,
+ALTER COLUMN "university" DROP NOT NULL,
+ALTER COLUMN "career" DROP NOT NULL,
+ALTER COLUMN "year" DROP NOT NULL,
+ALTER COLUMN "campus" DROP NOT NULL;
