@@ -19,43 +19,40 @@ export class ProfileService {
       throw new NotFoundException('El usuario todavía no completó su perfil');
     }
 
-    return { ...profile, hasCar: profile.availableSeats !== null };
+    return profile;
   }
 
   async upsertProfile(userId: string, dto: UpsertProfileDto) {
-    if (dto.hasCar && dto.availableSeats === undefined) {
+    if (dto.hasCar === true && dto.availableSeats === undefined) {
       throw new BadRequestException(
         'availableSeats es requerido cuando hasCar es true',
       );
     }
 
-    if (!dto.hasCar && dto.availableSeats !== undefined) {
+    if (dto.hasCar === false && dto.availableSeats !== undefined) {
       throw new BadRequestException(
         'availableSeats debe omitirse cuando hasCar es false',
       );
     }
 
+    const availableSeats = dto.hasCar === false ? null : dto.availableSeats;
+
+    const data = {
+      university: dto.university,
+      career: dto.career,
+      year: dto.year,
+      campus: dto.campus,
+      hasCar: dto.hasCar,
+      availableSeats,
+      questionnaireCompleted: dto.questionnaireCompleted,
+    };
+
     const profile = await this.prisma.studentProfile.upsert({
       where: { userId },
-      update: {
-        university: dto.university,
-        career: dto.career,
-        year: dto.year,
-        campus: dto.campus,
-        availableSeats: dto.hasCar ? dto.availableSeats : null,
-        questionnaireCompleted: dto.questionnaireCompleted ?? false,
-      },
-      create: {
-        userId,
-        university: dto.university,
-        career: dto.career,
-        year: dto.year,
-        campus: dto.campus,
-        availableSeats: dto.hasCar ? dto.availableSeats : null,
-        questionnaireCompleted: dto.questionnaireCompleted ?? false,
-      },
+      update: data,
+      create: { userId, ...data },
     });
 
-    return { ...profile, hasCar: profile.availableSeats !== null };
+    return profile;
   }
 }
