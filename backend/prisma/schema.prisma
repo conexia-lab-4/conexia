@@ -19,10 +19,11 @@ model User {
 model StudentProfile {
   id                     String   @id @default(uuid())
   userId                 String   @unique
-  university             String
-  career                 String
-  year                   Int
-  campus                 String
+  university             String?
+  career                 String?
+  year                   Int?
+  campus                 String?
+  hasCar                 Boolean?
   availableSeats         Int?
   questionnaireCompleted Boolean  @default(false)
   createdAt              DateTime @default(now())
