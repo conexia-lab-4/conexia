@@ -250,3 +250,9 @@
 .questionnaire__error {
   color: var(--color-error-500);
 }
+
+.questionnaire__back-spacer {
+  width: 20px;
+  height: 24px;
+  display: inline-block;
+}
