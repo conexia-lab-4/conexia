@@ -5,10 +5,7 @@ import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { VerifyEmail } from './pages/verifyEmail';
 import { Questionnaire } from './pages/questionnaire';
-
-function HomePlaceholder() {
-  return <div style={{ padding: 40 }}>Home (placeholder, en construcción)</div>;
-}
+import { Home } from './pages/home';
 
 function SchedulePlaceholder() {
   return (
@@ -27,7 +24,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/questionnaire" element={<Questionnaire />} />
-      <Route path="/home" element={<HomePlaceholder />} />
+      <Route path="/home" element={<Home />} />
       <Route path="/schedule" element={<SchedulePlaceholder />} />
     </Routes>
   );
