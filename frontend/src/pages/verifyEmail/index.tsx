@@ -17,6 +17,11 @@ async function checkEmailVerified(): Promise<boolean> {
   }
 
   await user.reload();
+
+  if (user.emailVerified) {
+    await user.getIdToken(true);
+  }
+
   return user.emailVerified;
 }
 
