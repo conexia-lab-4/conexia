@@ -15,6 +15,7 @@
   --fw-regular: 400;
   --fw-semibold: 600;
   --fw-bold: 700;
+  --fw-medium: 500;
 
   --fs-h1: 56px;
   --fs-h2: 48px;
@@ -99,6 +100,8 @@
   --color-badge-blue-text: #698ea1;
   --color-badge-green-bg: #f0f4eb;
   --color-badge-green-text: #6d7f61;
+  --color-stat-icon-pending-bg: #edf2e6;
+  --color-stat-icon-total-bg: #f5eef6;
   --fw-extrabold: 800;
 }
 
