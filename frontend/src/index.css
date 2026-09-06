@@ -100,6 +100,11 @@
   --color-badge-blue-text: #698ea1;
   --color-badge-green-bg: #f0f4eb;
   --color-badge-green-text: #6d7f61;
+  --color-badge-yellow-bg: #fffed3;
+  --color-badge-yellow-text: #ffd665;
+  --color-badge-red-text: #ff8282;
+  --color-badge-mint-bg: #c9fadd;
+  --color-badge-mint-text: #53d086;
   --color-stat-icon-pending-bg: #edf2e6;
   --color-stat-icon-total-bg: #f5eef6;
   --fw-extrabold: 800;
