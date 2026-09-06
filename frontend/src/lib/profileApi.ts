@@ -1,21 +1,21 @@
 import { authFetch } from './api';
 
 export interface ProfileResponse {
-  university: string;
-  career: string;
-  year: number;
-  campus: string;
-  hasCar: boolean;
+  university: string | null;
+  career: string | null;
+  year: number | null;
+  campus: string | null;
+  hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
 }
 
 export interface UpsertProfilePayload {
-  university: string;
-  career: string;
-  year: number;
-  campus: string;
-  hasCar: boolean;
+  university?: string;
+  career?: string;
+  year?: number;
+  campus?: string;
+  hasCar?: boolean;
   availableSeats?: number;
   questionnaireCompleted?: boolean;
 }

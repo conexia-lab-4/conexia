@@ -6,10 +6,11 @@ import { UpsertProfileDto } from './dto/upsert-profile.dto';
 type StudentProfileRecord = {
   id: string;
   userId: string;
-  university: string;
-  career: string;
-  year: number;
-  campus: string;
+  university: string | null;
+  career: string | null;
+  year: number | null;
+  campus: string | null;
+  hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
 };
@@ -45,14 +46,15 @@ describe('ProfileService', () => {
   });
 
   describe('getProfile', () => {
-    it('devuelve el perfil cuando existe, con hasCar calculado', async () => {
+    it('devuelve el perfil cuando existe', async () => {
       const profile: StudentProfileRecord = {
         id: 'profile-1',
         userId,
-        university: validDto.university,
-        career: validDto.career,
-        year: validDto.year,
-        campus: validDto.campus,
+        university: validDto.university!,
+        career: validDto.career!,
+        year: validDto.year!,
+        campus: validDto.campus!,
+        hasCar: true,
         availableSeats: 3,
         questionnaireCompleted: true,
       };
@@ -60,28 +62,29 @@ describe('ProfileService', () => {
 
       const result = await service.getProfile(userId);
 
-      expect(result).toEqual({ ...profile, hasCar: true });
+      expect(result).toEqual(profile);
       expect(prismaMock.studentProfile.findUnique).toHaveBeenCalledWith({
         where: { userId },
       });
     });
 
-    it('calcula hasCar en false cuando availableSeats es null', async () => {
+    it('devuelve hasCar en null cuando el usuario todavía no contestó esa pregunta', async () => {
       const profile: StudentProfileRecord = {
         id: 'profile-1',
         userId,
-        university: validDto.university,
-        career: validDto.career,
-        year: validDto.year,
-        campus: validDto.campus,
+        university: 'Austral',
+        career: null,
+        year: null,
+        campus: null,
+        hasCar: null,
         availableSeats: null,
-        questionnaireCompleted: true,
+        questionnaireCompleted: false,
       };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
       const result = await service.getProfile(userId);
 
-      expect(result).toEqual({ ...profile, hasCar: false });
+      expect(result.hasCar).toBeNull();
     });
 
     it('lanza NotFoundException cuando el usuario no tiene perfil', async () => {
@@ -98,10 +101,11 @@ describe('ProfileService', () => {
       const created: StudentProfileRecord = {
         id: 'profile-1',
         userId,
-        university: validDto.university,
-        career: validDto.career,
-        year: validDto.year,
-        campus: validDto.campus,
+        university: validDto.university!,
+        career: validDto.career!,
+        year: validDto.year!,
+        campus: validDto.campus!,
+        hasCar: true,
         availableSeats: 3,
         questionnaireCompleted: true,
       };
@@ -109,7 +113,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, validDto);
 
-      expect(result).toEqual({ ...created, hasCar: true });
+      expect(result).toEqual(created);
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -117,6 +121,7 @@ describe('ProfileService', () => {
           career: validDto.career,
           year: validDto.year,
           campus: validDto.campus,
+          hasCar: validDto.hasCar,
           availableSeats: validDto.availableSeats,
           questionnaireCompleted: validDto.questionnaireCompleted,
         },
@@ -126,6 +131,7 @@ describe('ProfileService', () => {
           career: validDto.career,
           year: validDto.year,
           campus: validDto.campus,
+          hasCar: validDto.hasCar,
           availableSeats: validDto.availableSeats,
           questionnaireCompleted: validDto.questionnaireCompleted,
         },
@@ -155,10 +161,11 @@ describe('ProfileService', () => {
       const created: StudentProfileRecord = {
         id: 'profile-1',
         userId,
-        university: dto.university,
-        career: dto.career,
-        year: dto.year,
-        campus: dto.campus,
+        university: dto.university!,
+        career: dto.career!,
+        year: dto.year!,
+        campus: dto.campus!,
+        hasCar: false,
         availableSeats: null,
         questionnaireCompleted: dto.questionnaireCompleted ?? false,
       };
@@ -166,7 +173,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, dto);
 
-      expect(result).toEqual({ ...created, hasCar: false });
+      expect(result).toEqual(created);
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -174,6 +181,7 @@ describe('ProfileService', () => {
           career: dto.career,
           year: dto.year,
           campus: dto.campus,
+          hasCar: false,
           availableSeats: null,
           questionnaireCompleted: dto.questionnaireCompleted,
         },
@@ -183,10 +191,70 @@ describe('ProfileService', () => {
           career: dto.career,
           year: dto.year,
           campus: dto.campus,
+          hasCar: false,
           availableSeats: null,
           questionnaireCompleted: dto.questionnaireCompleted,
         },
       });
+    });
+
+    it('permite un guardado parcial con un solo campo (university)', async () => {
+      const dto: UpsertProfileDto = { university: 'UBA' };
+      const created: StudentProfileRecord = {
+        id: 'profile-1',
+        userId,
+        university: 'UBA',
+        career: null,
+        year: null,
+        campus: null,
+        hasCar: null,
+        availableSeats: null,
+        questionnaireCompleted: false,
+      };
+      prismaMock.studentProfile.upsert.mockResolvedValue(created);
+
+      const result = await service.upsertProfile(userId, dto);
+
+      expect(result).toEqual(created);
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          university: 'UBA',
+          career: undefined,
+          year: undefined,
+          campus: undefined,
+          hasCar: undefined,
+          availableSeats: undefined,
+          questionnaireCompleted: undefined,
+        },
+        create: {
+          userId,
+          university: 'UBA',
+          career: undefined,
+          year: undefined,
+          campus: undefined,
+          hasCar: undefined,
+          availableSeats: undefined,
+          questionnaireCompleted: undefined,
+        },
+      });
+    });
+
+    it('no valida availableSeats si hasCar no viene en la request (guardado parcial)', async () => {
+      const dto: UpsertProfileDto = { career: 'Medicina' };
+      prismaMock.studentProfile.upsert.mockResolvedValue({
+        id: 'profile-1',
+        userId,
+        university: null,
+        career: 'Medicina',
+        year: null,
+        campus: null,
+        hasCar: null,
+        availableSeats: null,
+        questionnaireCompleted: false,
+      });
+
+      await expect(service.upsertProfile(userId, dto)).resolves.toBeDefined();
     });
   });
 });

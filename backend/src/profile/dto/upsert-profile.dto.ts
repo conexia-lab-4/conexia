@@ -8,24 +8,29 @@ import {
 } from 'class-validator';
 
 export class UpsertProfileDto {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  university!: string;
+  university?: string;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  career!: string;
+  career?: string;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
-  year!: number;
+  year?: number;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  campus!: string;
+  campus?: string;
 
+  @IsOptional()
   @IsBoolean()
-  hasCar!: boolean;
+  hasCar?: boolean;
 
   @IsOptional()
   @IsInt()
