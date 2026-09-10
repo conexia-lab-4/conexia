@@ -6,11 +6,13 @@ import {
   groupSubjectsByDay,
   DAY_LABELS,
   type DayGroup,
+  type ScheduleEntry,
 } from '../../lib/scheduleGrouping';
 import {
   ScheduleCard,
   type ScheduleCardColorVariant,
 } from '../../components/schedulecards';
+import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
 import { NavBar } from '../../components/navbar';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
@@ -38,6 +40,10 @@ function buildSubjectColorMap(
 export function Schedule() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
+    null,
+  );
+  const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -62,6 +68,34 @@ export function Schedule() {
     0,
   );
   const colorMap = buildSubjectColorMap(subjects);
+
+  function handleToggleMenu(scheduleId: string) {
+    setOpenMenuScheduleId((current) =>
+      current === scheduleId ? null : scheduleId,
+    );
+  }
+
+  function handleDeleteClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteTarget(entry);
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setSubjects((prev) =>
+      prev.map((subject) =>
+        subject.id === deleteTarget.subjectId
+          ? {
+              ...subject,
+              schedules: subject.schedules.filter(
+                (s) => s.id !== deleteTarget.scheduleId,
+              ),
+            }
+          : subject,
+      ),
+    );
+    setDeleteTarget(null);
+  }
 
   return (
     <div className="schedule-page">
@@ -126,6 +160,9 @@ export function Schedule() {
                     colorVariant={colorMap.get(entry.subjectId) ?? 'blue'}
                     startTime={entry.startTime}
                     endTime={entry.endTime}
+                    isMenuOpen={openMenuScheduleId === entry.scheduleId}
+                    onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
+                    onDeleteClick={() => handleDeleteClick(entry)}
                   />
                 ))}
               </section>
@@ -144,6 +181,14 @@ export function Schedule() {
             </div>
           </div>
         </>
+      )}
+
+      {deleteTarget && (
+        <DeleteScheduleDialog
+          subjectName={deleteTarget.subjectName}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
 
       <NavBar activeItem="horarios" />
