@@ -15,6 +15,7 @@
   --fw-regular: 400;
   --fw-semibold: 600;
   --fw-bold: 700;
+  --fw-medium: 500;
 
   --fs-h1: 56px;
   --fs-h2: 48px;
@@ -25,6 +26,7 @@
   --fs-body-1: 16px;
   --fs-body-2: 14px;
   --fs-body-3: 12px;
+  --fs-caption: 10px;
 
   --ls-h1: -0.02em;
   --ls-h2: -0.02em;
@@ -43,6 +45,7 @@
   --lh-body-1: 19px;
   --lh-body-2: 17px;
   --lh-body-3: 15px;
+  --lh-caption: 12px;
 
   /* Color Palette */
   --color-primary-100: #f4f8fc;
@@ -99,6 +102,18 @@
   --color-badge-blue-text: #698ea1;
   --color-badge-green-bg: #f0f4eb;
   --color-badge-green-text: #6d7f61;
+  --color-badge-yellow-bg: #fffed3;
+  --color-badge-yellow-text: #ffd665;
+  --color-badge-red-text: #ff8282;
+  --color-badge-mint-bg: #c9fadd;
+  --color-badge-mint-text: #53d086;
+  --color-stat-icon-pending-bg: #edf2e6;
+  --color-stat-icon-total-bg: #f5eef6;
+  --color-info-bg: #e4e7f8;
+  --color-info-icon: #6075e9;
+  --color-info-link: #5670ee;
+  --color-info-link-icon: #4e69ec;
+  --color-info-card-bg: rgba(241, 244, 255, 0.8);
   --fw-extrabold: 800;
 }
 
