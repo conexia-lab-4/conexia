@@ -115,6 +115,26 @@
   --color-info-link-icon: #4e69ec;
   --color-info-card-bg: rgba(241, 244, 255, 0.8);
   --fw-extrabold: 800;
+
+  /* Colores de materia (selector de color) */
+  --color-subject-1: #6288f0;
+  --color-subject-2: #d6caf9;
+  --color-subject-3: #f4bae1;
+  --color-subject-4: #facaaf;
+  --color-subject-5: #fde795;
+  --color-subject-6: #b5ecca;
+  --color-subject-7: #f1a0a0;
+  --color-subject-8: #ffffd4;
+
+  /* Day selector */
+  --color-day-bg: #edf0fb;
+  --color-day-selected-bg: #dee6f8;
+  --color-day-selected-text: #3e67d5;
+
+  /* Info callout (¿Cómo funciona?) */
+  --color-info-callout-bg: #f0f2fe;
+  --color-info-callout-icon-bg: #e0e5fd;
+  --color-info-callout-icon: #465cef;
 }
 
 .app-container {
