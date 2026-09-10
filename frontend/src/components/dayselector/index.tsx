@@ -1,15 +1,7 @@
 import './index.css';
+import { DAY_OPTIONS, type DayValue } from './constants';
 
-export type DayValue =
-  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY';
-
-export const DAY_OPTIONS: { value: DayValue; label: string }[] = [
-  { value: 'MONDAY', label: 'Lun' },
-  { value: 'TUESDAY', label: 'Mar' },
-  { value: 'WEDNESDAY', label: 'Mié' },
-  { value: 'THURSDAY', label: 'Jue' },
-  { value: 'FRIDAY', label: 'Vie' },
-];
+export type { DayValue } from './constants';
 
 interface DaySelectorProps {
   selected: DayValue[];
@@ -25,9 +17,7 @@ export function DaySelector({ selected, onToggle }: DaySelectorProps) {
           <button
             key={value}
             type="button"
-            className={`day-selector__pill${
-              isSelected ? ' day-selector__pill--selected' : ''
-            }`}
+            className={`day-selector__pill${isSelected ? ' day-selector__pill--selected' : ''}`}
             aria-pressed={isSelected}
             onClick={() => onToggle(value)}
           >

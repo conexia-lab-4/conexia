@@ -1,6 +1,6 @@
 import { IconPlus } from '../../assets/icons/IconPlus';
 import { TimeField } from '../timefield';
-import { DAY_OPTIONS, type DayValue } from '../dayselector';
+import { DAY_OPTIONS, type DayValue } from '../dayselector/constants';
 import './index.css';
 
 export type TimeRange = { start: string; end: string };
