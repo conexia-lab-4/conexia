@@ -1,4 +1,4 @@
-import { IsEnum, IsString, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { DayOfWeek } from '../../../generated/prisma/client';
 import { EndTimeAfterStartTime } from './end-time-after-start-time.validator';
 
@@ -18,4 +18,8 @@ export class CreateScheduleDto {
   })
   @EndTimeAfterStartTime()
   endTime!: string;
+
+  @IsOptional()
+  @IsString()
+  classroom?: string;
 }

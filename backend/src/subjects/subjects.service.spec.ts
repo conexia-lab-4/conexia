@@ -9,6 +9,8 @@ type SubjectRecord = {
   id: string;
   userId: string;
   name: string;
+  color?: string;
+  visibleProfile?: boolean;
   schedules?: ScheduleRecord[];
 };
 
@@ -18,6 +20,7 @@ type ScheduleRecord = {
   dayOfWeek: string;
   startTime: string;
   endTime: string;
+  classroom?: string | null;
 };
 
 describe('SubjectsService', () => {
@@ -40,6 +43,7 @@ describe('SubjectsService', () => {
 
   const validDto: CreateSubjectDto = {
     name: 'Análisis Matemático',
+    color: 'BLUE',
     schedules: [
       { dayOfWeek: 'MONDAY', startTime: '08:00', endTime: '10:00' },
       { dayOfWeek: 'WEDNESDAY', startTime: '08:00', endTime: '10:00' },
@@ -85,11 +89,14 @@ describe('SubjectsService', () => {
         data: {
           userId,
           name: validDto.name,
+          color: validDto.color,
+          visibleProfile: validDto.visibleProfile,
           schedules: {
             create: validDto.schedules.map((s) => ({
               dayOfWeek: s.dayOfWeek,
               startTime: s.startTime,
               endTime: s.endTime,
+              classroom: s.classroom,
             })),
           },
         },
@@ -141,7 +148,11 @@ describe('SubjectsService', () => {
       });
       expect(prismaMock.subject.update).toHaveBeenCalledWith({
         where: { id: 'subject-1' },
-        data: { name: dto.name },
+        data: {
+          name: dto.name,
+          color: dto.color,
+          visibleProfile: dto.visibleProfile,
+        },
         include: { schedules: true },
       });
     });
@@ -210,6 +221,7 @@ describe('SubjectsService', () => {
           dayOfWeek: owned.dayOfWeek,
           startTime: '09:00',
           endTime: owned.endTime,
+          classroom: owned.classroom,
         },
       });
     });
@@ -227,6 +239,7 @@ describe('SubjectsService', () => {
           dayOfWeek: owned.dayOfWeek,
           startTime: owned.startTime,
           endTime: owned.endTime,
+          classroom: owned.classroom,
         },
       });
     });

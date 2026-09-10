@@ -42,6 +42,7 @@ describe('SubjectsController', () => {
     const user: AuthenticatedUser = { id: 'user-autenticado' };
     const dto: CreateSubjectDto = {
       name: 'Análisis Matemático',
+      color: 'BLUE',
       schedules: [
         { dayOfWeek: 'MONDAY', startTime: '08:00', endTime: '10:00' },
       ],
