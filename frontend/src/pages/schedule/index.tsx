@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { getSubjects, type Subject } from '../../lib/subjectsApi';
+import {
+  getSubjects,
+  deleteSchedule,
+  type Subject,
+} from '../../lib/subjectsApi';
 import {
   groupSubjectsByDay,
   DAY_LABELS,
@@ -44,6 +48,8 @@ export function Schedule() {
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -77,24 +83,43 @@ export function Schedule() {
 
   function handleDeleteClick(entry: ScheduleEntry) {
     setOpenMenuScheduleId(null);
+    setDeleteError(null);
     setDeleteTarget(entry);
   }
 
-  function handleConfirmDelete() {
-    if (!deleteTarget) return;
-    setSubjects((prev) =>
-      prev.map((subject) =>
-        subject.id === deleteTarget.subjectId
-          ? {
-              ...subject,
-              schedules: subject.schedules.filter(
-                (s) => s.id !== deleteTarget.scheduleId,
-              ),
-            }
-          : subject,
-      ),
-    );
+  function handleCancelDelete() {
     setDeleteTarget(null);
+    setDeleteError(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteSchedule(deleteTarget.scheduleId);
+
+      setSubjects((prev) =>
+        prev.map((subject) =>
+          subject.id === deleteTarget.subjectId
+            ? {
+                ...subject,
+                schedules: subject.schedules.filter(
+                  (s) => s.id !== deleteTarget.scheduleId,
+                ),
+              }
+            : subject,
+        ),
+      );
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error('Error al eliminar el horario:', error);
+      setDeleteError('No pudimos eliminar la materia. Intentá de nuevo.');
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   return (
@@ -186,8 +211,10 @@ export function Schedule() {
       {deleteTarget && (
         <DeleteScheduleDialog
           subjectName={deleteTarget.subjectName}
+          isDeleting={isDeleting}
+          error={deleteError}
           onConfirm={handleConfirmDelete}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={handleCancelDelete}
         />
       )}
 

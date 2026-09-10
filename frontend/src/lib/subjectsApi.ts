@@ -31,3 +31,13 @@ export async function getSubjects(): Promise<Subject[]> {
 
   return response.json();
 }
+
+export async function deleteSchedule(scheduleId: string): Promise<void> {
+  const response = await authFetch(`/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo eliminar el horario');
+  }
+}

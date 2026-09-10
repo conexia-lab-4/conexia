@@ -4,17 +4,24 @@ import './index.css';
 
 interface DeleteScheduleDialogProps {
   subjectName: string;
+  isDeleting?: boolean;
+  error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 export function DeleteScheduleDialog({
   subjectName,
+  isDeleting,
+  error,
   onConfirm,
   onCancel,
 }: DeleteScheduleDialogProps) {
   return (
-    <div className="delete-schedule-dialog__overlay" onClick={onCancel}>
+    <div
+      className="delete-schedule-dialog__overlay"
+      onClick={isDeleting ? undefined : onCancel}
+    >
       <div
         className="delete-schedule-dialog"
         onClick={(event) => event.stopPropagation()}
@@ -27,16 +34,23 @@ export function DeleteScheduleDialog({
           <strong>{subjectName}</strong> se eliminará de tus horarios. Esta
           acción no se puede deshacer.
         </p>
+        {error && <p className="delete-schedule-dialog__error">{error}</p>}
         <div className="delete-schedule-dialog__actions">
-          <Button variant="outlined" size="medium" onClick={onCancel}>
+          <Button
+            variant="outlined"
+            size="medium"
+            onClick={onCancel}
+            disabled={isDeleting}
+          >
             Cancelar
           </Button>
           <button
             type="button"
             className="delete-schedule-dialog__delete-btn"
             onClick={onConfirm}
+            disabled={isDeleting}
           >
-            Eliminar
+            {isDeleting ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
       </div>

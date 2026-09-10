@@ -45,6 +45,12 @@
   margin-top: 8px;
 }
 
+.delete-schedule-dialog__error {
+  font-size: var(--fs-body-3);
+  color: var(--color-error-700);
+  margin-top: 8px;
+}
+
 .delete-schedule-dialog__actions {
   display: flex;
   gap: 12px;
@@ -65,4 +71,9 @@
   font-weight: var(--fw-semibold);
   font-size: var(--fs-body-2);
   cursor: pointer;
+}
+
+.delete-schedule-dialog__delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
