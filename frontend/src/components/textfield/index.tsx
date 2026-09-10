@@ -1,12 +1,13 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import './index.css';
 
-export type TextFieldVariant = 'default' | 'error' | 'desplegable';
+export type TextFieldVariant = 'default' | 'error' | 'desplegable' | 'filled';
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   helperText?: string;
   variant?: TextFieldVariant;
+  leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   onClickIcon?: () => void;
 }
@@ -17,6 +18,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
       label,
       helperText,
       variant = 'default',
+      leftIcon,
       rightIcon,
       onClickIcon,
       className,
@@ -51,6 +53,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         )}
         <div className="textfield__body">
           <div className="textfield__field">
+            {leftIcon && <span className="textfield__icon">{leftIcon}</span>}
             <input
               id={inputId}
               name={name}
