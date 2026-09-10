@@ -8,8 +8,6 @@ import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
 
-
-
 function App() {
   return (
     <Routes>

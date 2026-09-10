@@ -7,7 +7,10 @@ import {
   DAY_LABELS,
   type DayGroup,
 } from '../../lib/scheduleGrouping';
-import { ScheduleCard, type ScheduleCardColorVariant } from '../../components/schedulecards';
+import {
+  ScheduleCard,
+  type ScheduleCardColorVariant,
+} from '../../components/schedulecards';
 import { NavBar } from '../../components/navbar';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
@@ -15,7 +18,12 @@ import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
-const COLOR_CYCLE: ScheduleCardColorVariant[] = ['blue', 'green', 'yellow', 'red'];
+const COLOR_CYCLE: ScheduleCardColorVariant[] = [
+  'blue',
+  'green',
+  'yellow',
+  'red',
+];
 
 function buildSubjectColorMap(
   subjects: Subject[],
@@ -61,8 +69,7 @@ export function Schedule() {
         <div>
           <h1 className="schedule-page__title">Mis Horarios</h1>
           <p className="schedule-page__subtitle">
-            Organizá tus materias y encontrá estudiantes con horarios
-            similares
+            Organizá tus materias y encontrá estudiantes con horarios similares
           </p>
         </div>
         {/* Navega al alta de materia cuando ese ticket (KAN-109) esté implementado */}
@@ -86,9 +93,7 @@ export function Schedule() {
           <div className="schedule-page__summary">
             <IconCalendar size={24} color="var(--color-primary-700)" />
             <div>
-              <span className="schedule-page__summary-title">
-                Esta semana
-              </span>
+              <span className="schedule-page__summary-title">Esta semana</span>
               <span className="schedule-page__summary-count">
                 {totalEntries} materia{totalEntries === 1 ? '' : 's'}
               </span>

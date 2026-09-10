@@ -15,4 +15,3 @@ export function IconDotsThree({ size = 16, color = 'black' }: IconProps) {
     </svg>
   );
 }
-
