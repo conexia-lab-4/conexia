@@ -6,6 +6,7 @@ import { Register } from './pages/register';
 import { VerifyEmail } from './pages/verifyEmail';
 import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
+import { AddSubject } from './pages/addSubject';
 
 function SchedulePlaceholder() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <Route path="/questionnaire" element={<Questionnaire />} />
       <Route path="/home" element={<Home />} />
       <Route path="/schedule" element={<SchedulePlaceholder />} />
+      <Route path="/assignments/new" element={<AddSubject />} />
     </Routes>
   );
 }

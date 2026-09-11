@@ -95,3 +95,9 @@ button.textfield__icon {
   border-color: var(--color-primary-400);
   background: var(--color-primary-100);
 }
+
+/* Variant: filled (look "relleno" en reposo, para formularios como Agregar Materia) */
+.textfield--filled .textfield__field {
+  border-color: var(--color-primary-400);
+  background: var(--color-primary-100);
+}
