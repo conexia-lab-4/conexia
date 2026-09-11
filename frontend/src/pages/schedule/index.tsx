@@ -19,6 +19,12 @@ import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline'
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
+type DeleteMode = 'schedule' | 'subject';
+
+interface DeleteTarget {
+  entry: ScheduleEntry;
+  mode: DeleteMode;
+}
 
 const COLOR_CYCLE: ScheduleCardColorVariant[] = [
   'blue',
@@ -43,7 +49,7 @@ export function Schedule() {
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
     null,
   );
-  const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -75,25 +81,38 @@ export function Schedule() {
     );
   }
 
-  function handleDeleteClick(entry: ScheduleEntry) {
+  function handleDeleteScheduleClick(entry: ScheduleEntry) {
     setOpenMenuScheduleId(null);
-    setDeleteTarget(entry);
+    setDeleteTarget({ entry, mode: 'schedule' });
+  }
+
+  function handleDeleteSubjectClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteTarget({ entry, mode: 'subject' });
   }
 
   function handleConfirmDelete() {
     if (!deleteTarget) return;
-    setSubjects((prev) =>
-      prev.map((subject) =>
-        subject.id === deleteTarget.subjectId
-          ? {
-              ...subject,
-              schedules: subject.schedules.filter(
-                (s) => s.id !== deleteTarget.scheduleId,
-              ),
-            }
-          : subject,
-      ),
-    );
+    const { entry, mode } = deleteTarget;
+
+    if (mode === 'schedule') {
+      setSubjects((prev) =>
+        prev.map((subject) =>
+          subject.id === entry.subjectId
+            ? {
+                ...subject,
+                schedules: subject.schedules.filter(
+                  (s) => s.id !== entry.scheduleId,
+                ),
+              }
+            : subject,
+        ),
+      );
+    } else {
+      setSubjects((prev) =>
+        prev.filter((subject) => subject.id !== entry.subjectId),
+      );
+    }
     setDeleteTarget(null);
   }
 
@@ -162,7 +181,10 @@ export function Schedule() {
                     endTime={entry.endTime}
                     isMenuOpen={openMenuScheduleId === entry.scheduleId}
                     onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
-                    onDeleteClick={() => handleDeleteClick(entry)}
+                    onDeleteScheduleClick={() =>
+                      handleDeleteScheduleClick(entry)
+                    }
+                    onDeleteSubjectClick={() => handleDeleteSubjectClick(entry)}
                   />
                 ))}
               </section>
@@ -185,7 +207,28 @@ export function Schedule() {
 
       {deleteTarget && (
         <DeleteScheduleDialog
-          subjectName={deleteTarget.subjectName}
+          title={
+            deleteTarget.mode === 'schedule'
+              ? '¿Eliminar este horario?'
+              : '¿Eliminar materia?'
+          }
+          message={
+            deleteTarget.mode === 'schedule' ? (
+              <>
+                <strong>
+                  {deleteTarget.entry.startTime} - {deleteTarget.entry.endTime}
+                </strong>{' '}
+                de <strong>{deleteTarget.entry.subjectName}</strong> se
+                eliminará de tus horarios. Esta acción no se puede deshacer.
+              </>
+            ) : (
+              <>
+                Se eliminarán <strong>todos los horarios</strong> de{' '}
+                <strong>{deleteTarget.entry.subjectName}</strong>. Esta acción
+                no se puede deshacer.
+              </>
+            )
+          }
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeleteTarget(null)}
         />
