@@ -6,15 +6,8 @@ import { Register } from './pages/register';
 import { VerifyEmail } from './pages/verifyEmail';
 import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
+import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
-
-function SchedulePlaceholder() {
-  return (
-    <div style={{ padding: 40 }}>
-      Cargar horarios (placeholder, en construcción)
-    </div>
-  );
-}
 
 function App() {
   return (
@@ -26,7 +19,7 @@ function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/questionnaire" element={<Questionnaire />} />
       <Route path="/home" element={<Home />} />
-      <Route path="/schedule" element={<SchedulePlaceholder />} />
+      <Route path="/schedule" element={<Schedule />} />
       <Route path="/assignments/new" element={<AddSubject />} />
     </Routes>
   );
