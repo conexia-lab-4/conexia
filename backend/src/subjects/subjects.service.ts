@@ -13,12 +13,15 @@ export class SubjectsService {
       dayOfWeek: schedule.dayOfWeek,
       startTime: schedule.startTime,
       endTime: schedule.endTime,
+      classroom: schedule.classroom,
     }));
 
     return this.prisma.subject.create({
       data: {
         userId,
         name: dto.name,
+        color: dto.color,
+        visibleProfile: dto.visibleProfile,
         schedules: { create: schedulesData },
       },
       include: { schedules: true },
@@ -41,7 +44,11 @@ export class SubjectsService {
 
     return this.prisma.subject.update({
       where: { id: subjectId },
-      data: { name: dto.name },
+      data: {
+        name: dto.name,
+        color: dto.color,
+        visibleProfile: dto.visibleProfile,
+      },
       include: { schedules: true },
     });
   }
@@ -68,6 +75,7 @@ export class SubjectsService {
         dayOfWeek: dto.dayOfWeek ?? schedule.dayOfWeek,
         startTime,
         endTime,
+        classroom: dto.classroom ?? schedule.classroom,
       },
     });
   }

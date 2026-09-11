@@ -7,6 +7,7 @@ import { VerifyEmail } from './pages/verifyEmail';
 import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
+import { AddSubject } from './pages/addSubject';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <Route path="/questionnaire" element={<Questionnaire />} />
       <Route path="/home" element={<Home />} />
       <Route path="/schedule" element={<Schedule />} />
+      <Route path="/assignments/new" element={<AddSubject />} />
     </Routes>
   );
 }

@@ -4,6 +4,7 @@ import { auth } from '../../lib/firebase';
 import {
   getSubjects,
   deleteSchedule,
+  updateSchedule,
   type Subject,
 } from '../../lib/subjectsApi';
 import {
@@ -17,6 +18,8 @@ import {
   type ScheduleCardColorVariant,
 } from '../../components/schedulecards';
 import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
+import { EditScheduleDialog } from '../../components/editscheduledialog';
+import type { DayValue } from '../../components/dayselector';
 import { NavBar } from '../../components/navbar';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
@@ -50,6 +53,9 @@ export function Schedule() {
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<ScheduleEntry | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -122,6 +128,52 @@ export function Schedule() {
     }
   }
 
+  function handleEditClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setSaveError(null);
+    setEditTarget(entry);
+  }
+
+  async function handleSaveEdit(data: {
+    dayOfWeek: DayValue;
+    startTime: string;
+    endTime: string;
+    classroom: string;
+  }) {
+    if (!editTarget) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const updated = await updateSchedule(editTarget.scheduleId, {
+        dayOfWeek: data.dayOfWeek,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        classroom: data.classroom,
+      });
+
+      setSubjects((prev) =>
+        prev.map((subject) =>
+          subject.id === editTarget.subjectId
+            ? {
+                ...subject,
+                schedules: subject.schedules.map((s) =>
+                  s.id === editTarget.scheduleId ? updated : s,
+                ),
+              }
+            : subject,
+        ),
+      );
+      setEditTarget(null);
+    } catch (error) {
+      console.error('Error al actualizar el horario:', error);
+      setSaveError('No pudimos guardar los cambios. Intentá de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="schedule-page">
       <header className="schedule-page__header">
@@ -185,8 +237,10 @@ export function Schedule() {
                     colorVariant={colorMap.get(entry.subjectId) ?? 'blue'}
                     startTime={entry.startTime}
                     endTime={entry.endTime}
+                    classroom={entry.classroom ?? undefined}
                     isMenuOpen={openMenuScheduleId === entry.scheduleId}
                     onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
+                    onEdit={() => handleEditClick(entry)}
                     onDeleteClick={() => handleDeleteClick(entry)}
                   />
                 ))}
@@ -215,6 +269,20 @@ export function Schedule() {
           error={deleteError}
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
+        />
+      )}
+
+      {editTarget && (
+        <EditScheduleDialog
+          subjectName={editTarget.subjectName}
+          initialDay={editTarget.dayOfWeek as DayValue}
+          initialStartTime={editTarget.startTime}
+          initialEndTime={editTarget.endTime}
+          initialClassroom={editTarget.classroom ?? ''}
+          isSaving={isSaving}
+          error={saveError}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditTarget(null)}
         />
       )}
 
