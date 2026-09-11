@@ -21,4 +21,8 @@ export class UpdateScheduleDto {
   })
   @EndTimeAfterStartTime()
   endTime?: string;
+
+  @IsOptional()
+  @IsString()
+  classroom?: string;
 }
