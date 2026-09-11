@@ -1,0 +1,19 @@
+.profile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.profile__logout {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-primary-500);
+  color: var(--color-primary-100);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
