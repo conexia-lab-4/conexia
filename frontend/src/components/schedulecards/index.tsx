@@ -1,4 +1,4 @@
-import { IconClock } from '../../assets/icons/IconClock';
+import { IconClockOutline } from '../../assets/icons/IconClockOutline';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { IconDotsThree } from '../../assets/icons/IconDotsThree';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
@@ -74,7 +74,7 @@ export function ScheduleCard({
           color: config.badgeText,
         }}
       >
-        <IconClock size={14} color={config.badgeText} />
+        <IconClockOutline size={14} color={config.badgeText} />
         {startTime} - {endTime}
       </span>
 

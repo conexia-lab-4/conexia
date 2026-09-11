@@ -1,0 +1,33 @@
+.day-selector {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  width: 100%;
+}
+
+.day-selector__pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 14px;
+  background: var(--color-day-bg);
+  color: var(--color-grey-400);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body-3);
+  cursor: pointer;
+}
+
+.day-selector__pill--selected {
+  background: var(--color-day-selected-bg);
+  color: var(--color-day-selected-text);
+  font-weight: var(--fw-bold);
+}
