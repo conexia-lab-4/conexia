@@ -7,6 +7,8 @@ import { VerifyEmail } from './pages/verifyEmail';
 import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
 import { AddSubject } from './pages/addSubject';
+import { Profile } from './pages/profile';
+import { RequireAuth } from './components/requireAuth';
 
 function SchedulePlaceholder() {
   return (
@@ -19,15 +21,25 @@ function SchedulePlaceholder() {
 function App() {
   return (
     <Routes>
+      {/* Públicas */}
       <Route path="/" element={<Splash />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/questionnaire" element={<Questionnaire />} />
-      <Route path="/home" element={<Home />} />
-      <Route path="/schedule" element={<SchedulePlaceholder />} />
-      <Route path="/assignments/new" element={<AddSubject />} />
+
+      {/* Requiere sesión (sin verificación) */}
+      <Route element={<RequireAuth blockIfVerified />}>
+        <Route path="/verify-email" element={<VerifyEmail />} />
+      </Route>
+
+      {/* Requiere sesión + email verificado */}
+      <Route element={<RequireAuth requireVerified />}>
+        <Route path="/questionnaire" element={<Questionnaire />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/schedule" element={<SchedulePlaceholder />} />
+        <Route path="/assignments/new" element={<AddSubject />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
     </Routes>
   );
 }
