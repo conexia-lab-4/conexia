@@ -2,6 +2,8 @@ import { IconClockOutline } from '../../assets/icons/IconClockOutline';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { IconDotsThree } from '../../assets/icons/IconDotsThree';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
+import { IconPencil } from '../../assets/icons/IconPencil';
+import { IconTrash } from '../../assets/icons/IconTrash';
 import './index.css';
 
 export type ScheduleCardColorVariant = 'blue' | 'green' | 'red' | 'yellow';
@@ -13,7 +15,11 @@ interface ScheduleCardProps {
   endTime: string;
   classroom?: string;
   matches?: number;
-  onMenuClick?: () => void;
+  isMenuOpen?: boolean;
+  onToggleMenu?: () => void;
+  onEdit?: () => void;
+  onDeleteScheduleClick?: () => void;
+  onDeleteSubjectClick?: () => void;
 }
 
 const COLOR_CONFIG: Record<
@@ -49,7 +55,11 @@ export function ScheduleCard({
   endTime,
   classroom,
   matches,
-  onMenuClick,
+  isMenuOpen,
+  onToggleMenu,
+  onEdit,
+  onDeleteScheduleClick,
+  onDeleteSubjectClick,
 }: ScheduleCardProps) {
   const config = COLOR_CONFIG[colorVariant];
 
@@ -57,14 +67,51 @@ export function ScheduleCard({
     <div className="schedule-card" style={{ borderLeftColor: config.border }}>
       <div className="schedule-card__header">
         <span className="schedule-card__title">{subject}</span>
-        <button
-          type="button"
-          className="schedule-card__menu-btn"
-          onClick={onMenuClick}
-          aria-label={`Opciones de ${subject}`}
-        >
-          <IconDotsThree size={18} color="var(--color-grey-400)" />
-        </button>
+        <div className="schedule-card__menu-wrapper">
+          <button
+            type="button"
+            className="schedule-card__menu-btn"
+            onClick={onToggleMenu}
+            aria-label={`Opciones de ${subject}`}
+          >
+            <IconDotsThree size={18} color="var(--color-grey-400)" />
+          </button>
+
+          {isMenuOpen && (
+            <>
+              <div
+                className="schedule-card__menu-overlay"
+                onClick={onToggleMenu}
+              />
+              <div className="schedule-card__menu">
+                <button
+                  type="button"
+                  className="schedule-card__menu-item"
+                  onClick={onEdit}
+                >
+                  <IconPencil size={16} color="var(--color-text)" />
+                  Editar materia
+                </button>
+                <button
+                  type="button"
+                  className="schedule-card__menu-item schedule-card__menu-item--danger"
+                  onClick={onDeleteScheduleClick}
+                >
+                  <IconTrash size={16} color="var(--color-error-500)" />
+                  Eliminar solo este horario
+                </button>
+                <button
+                  type="button"
+                  className="schedule-card__menu-item schedule-card__menu-item--danger"
+                  onClick={onDeleteSubjectClick}
+                >
+                  <IconTrash size={16} color="var(--color-error-500)" />
+                  Eliminar materia
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <span
