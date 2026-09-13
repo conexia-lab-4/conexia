@@ -4,8 +4,10 @@ export interface ScheduleEntry {
   subjectId: string;
   subjectName: string;
   scheduleId: string;
+  dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
+  classroom: string | null;
 }
 
 export interface DayGroup {
@@ -42,8 +44,10 @@ export function groupSubjectsByDay(subjects: Subject[]): DayGroup[] {
         subjectId: subject.id,
         subjectName: subject.name,
         scheduleId: schedule.id,
+        dayOfWeek: schedule.dayOfWeek,
         startTime: schedule.startTime,
         endTime: schedule.endTime,
+        classroom: schedule.classroom,
       };
       const existing = byDay.get(schedule.dayOfWeek) ?? [];
       existing.push(entry);
