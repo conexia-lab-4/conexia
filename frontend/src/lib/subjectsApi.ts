@@ -1,8 +1,25 @@
 import { authFetch } from './api';
 
+export type DayOfWeek =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
+
+export interface Schedule {
+  id: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+}
+
 export interface Subject {
   id: string;
   name: string;
+  schedules: Schedule[];
 }
 
 export async function getSubjects(): Promise<Subject[]> {
