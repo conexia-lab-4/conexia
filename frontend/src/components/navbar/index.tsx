@@ -22,7 +22,7 @@ const NAV_ITEMS: {
   { id: 'horarios', label: 'Horarios', Icon: IconCalendar, path: '/schedule' },
   { id: 'matches', label: 'Matches', Icon: IconUsersThree, path: null },
   { id: 'viajes', label: 'Viajes', Icon: IconCar, path: null },
-  { id: 'perfil', label: 'Mi Perfil', Icon: IconUser, path: null },
+  { id: 'perfil', label: 'Mi Perfil', Icon: IconUser, path: '/profile' },
 ];
 
 export function NavBar({ activeItem }: NavBarProps) {
