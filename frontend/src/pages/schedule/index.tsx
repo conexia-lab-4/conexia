@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getSubjects, type Subject } from '../../lib/subjectsApi';
@@ -38,6 +39,7 @@ function buildSubjectColorMap(
 export function Schedule() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -73,8 +75,11 @@ export function Schedule() {
             Organizá tus materias y encontrá estudiantes con horarios similares
           </p>
         </div>
-        {/* Navega al alta de materia cuando ese ticket (KAN-109) esté implementado */}
-        <button type="button" className="schedule-page__add-btn">
+        <button
+          type="button"
+          className="schedule-page__add-btn"
+          onClick={() => navigate('/assignments/new')}
+        >
           + Agregar Materia
         </button>
       </header>
