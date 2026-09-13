@@ -6,17 +6,25 @@ import {
   groupSubjectsByDay,
   DAY_LABELS,
   type DayGroup,
+  type ScheduleEntry,
 } from '../../lib/scheduleGrouping';
 import {
   ScheduleCard,
   type ScheduleCardColorVariant,
 } from '../../components/schedulecards';
+import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
 import { NavBar } from '../../components/navbar';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
+type DeleteMode = 'schedule' | 'subject';
+
+interface DeleteTarget {
+  entry: ScheduleEntry;
+  mode: DeleteMode;
+}
 
 const COLOR_CYCLE: ScheduleCardColorVariant[] = [
   'blue',
@@ -38,6 +46,10 @@ function buildSubjectColorMap(
 export function Schedule() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
+    null,
+  );
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -63,6 +75,47 @@ export function Schedule() {
   ).length;
 
   const colorMap = buildSubjectColorMap(subjects);
+
+  function handleToggleMenu(scheduleId: string) {
+    setOpenMenuScheduleId((current) =>
+      current === scheduleId ? null : scheduleId,
+    );
+  }
+
+  function handleDeleteScheduleClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteTarget({ entry, mode: 'schedule' });
+  }
+
+  function handleDeleteSubjectClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteTarget({ entry, mode: 'subject' });
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    const { entry, mode } = deleteTarget;
+
+    if (mode === 'schedule') {
+      setSubjects((prev) =>
+        prev.map((subject) =>
+          subject.id === entry.subjectId
+            ? {
+                ...subject,
+                schedules: subject.schedules.filter(
+                  (s) => s.id !== entry.scheduleId,
+                ),
+              }
+            : subject,
+        ),
+      );
+    } else {
+      setSubjects((prev) =>
+        prev.filter((subject) => subject.id !== entry.subjectId),
+      );
+    }
+    setDeleteTarget(null);
+  }
 
   return (
     <div className="schedule-page">
@@ -128,6 +181,12 @@ export function Schedule() {
                     colorVariant={colorMap.get(entry.subjectId) ?? 'blue'}
                     startTime={entry.startTime}
                     endTime={entry.endTime}
+                    isMenuOpen={openMenuScheduleId === entry.scheduleId}
+                    onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
+                    onDeleteScheduleClick={() =>
+                      handleDeleteScheduleClick(entry)
+                    }
+                    onDeleteSubjectClick={() => handleDeleteSubjectClick(entry)}
                   />
                 ))}
               </section>
@@ -146,6 +205,35 @@ export function Schedule() {
             </div>
           </div>
         </>
+      )}
+
+      {deleteTarget && (
+        <DeleteScheduleDialog
+          title={
+            deleteTarget.mode === 'schedule'
+              ? '¿Eliminar este horario?'
+              : '¿Eliminar materia?'
+          }
+          message={
+            deleteTarget.mode === 'schedule' ? (
+              <>
+                <strong>
+                  {deleteTarget.entry.startTime} - {deleteTarget.entry.endTime}
+                </strong>{' '}
+                de <strong>{deleteTarget.entry.subjectName}</strong> se
+                eliminará de tus horarios. Esta acción no se puede deshacer.
+              </>
+            ) : (
+              <>
+                Se eliminarán <strong>todos los horarios</strong> de{' '}
+                <strong>{deleteTarget.entry.subjectName}</strong>. Esta acción
+                no se puede deshacer.
+              </>
+            )
+          }
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
 
       <NavBar activeItem="horarios" />

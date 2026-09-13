@@ -70,3 +70,50 @@
 .schedule-card__footer-separator {
   color: var(--color-grey-300);
 }
+
+.schedule-card__menu-wrapper {
+  position: relative;
+}
+
+.schedule-card__menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.schedule-card__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 11;
+  background-color: var(--color-white);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+}
+
+.schedule-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.schedule-card__menu-item:hover {
+  background-color: var(--color-grey-100);
+}
+
+.schedule-card__menu-item--danger {
+  color: var(--color-error-500);
+}
