@@ -14,11 +14,14 @@ export interface Schedule {
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
+  classroom: string | null;
 }
 
 export interface Subject {
   id: string;
   name: string;
+  color: string;
+  visibleProfile: boolean;
   schedules: Schedule[];
 }
 
@@ -31,7 +34,6 @@ export async function getSubjects(): Promise<Subject[]> {
 
   return response.json();
 }
-
 export type SubjectColor =
   'BLUE' | 'PURPLE' | 'PINK' | 'ORANGE' | 'YELLOW' | 'GREEN';
 
@@ -58,6 +60,39 @@ export async function createSubject(
 
   if (!response.ok) {
     throw new Error('No se pudo crear la materia');
+  }
+
+  return response.json();
+}
+
+export async function deleteSchedule(scheduleId: string): Promise<void> {
+  const response = await authFetch(`/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo eliminar el horario');
+  }
+}
+
+export interface UpdateScheduleInput {
+  dayOfWeek?: DayOfWeek;
+  startTime?: string;
+  endTime?: string;
+  classroom?: string;
+}
+
+export async function updateSchedule(
+  scheduleId: string,
+  data: UpdateScheduleInput,
+): Promise<Schedule> {
+  const response = await authFetch(`/schedules/${scheduleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo actualizar el horario');
   }
 
   return response.json();
