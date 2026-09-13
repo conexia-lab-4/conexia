@@ -94,6 +94,7 @@ export function Questionnaire() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [isSkipping, setIsSkipping] = useState(false);
 
   const filteredCareers = CAREERS.filter((c) =>
     c.toLowerCase().includes(career.toLowerCase()),
@@ -190,6 +191,11 @@ export function Questionnaire() {
   };
 
   const handleSkip = async () => {
+    if (isSkipping || isSavingProfile) {
+      return;
+    }
+
+    setIsSkipping(true);
     const payload = buildPartialPayload();
     if (Object.keys(payload).length > 0) {
       try {
@@ -280,8 +286,9 @@ export function Questionnaire() {
               type="button"
               className="questionnaire__skip text-body-3-bold"
               onClick={handleSkip}
+              disabled={isSkipping || isSavingProfile}
             >
-              Completar después
+              {isSkipping ? 'Guardando...' : 'Completar después'}
             </button>
           </div>
           <ProgressBar
@@ -352,8 +359,9 @@ export function Questionnaire() {
             type="button"
             className="questionnaire__skip text-body-3-bold"
             onClick={handleSkip}
+            disabled={isSkipping || isSavingProfile}
           >
-            Completar después
+            {isSkipping ? 'Guardando...' : 'Completar después'}
           </button>
         </div>
         <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
@@ -532,7 +540,7 @@ export function Questionnaire() {
             type="button"
             variant="fulfilled"
             size="large-wide"
-            disabled={!isCurrentStepValid || isSavingProfile}
+            disabled={!isCurrentStepValid || isSavingProfile || isSkipping}
             onClick={
               currentStep === TOTAL_STEPS ? handleFinish : handleContinue
             }
