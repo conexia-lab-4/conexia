@@ -1,0 +1,134 @@
+.add-subject {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100vh;
+  padding-bottom: 20px;
+  background: var(--color-grey-100);
+}
+
+.add-subject__header {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 48px 10px 32px;
+  border-radius: 0 0 20px 20px;
+}
+
+.add-subject__back {
+  position: absolute;
+  left: 10px;
+  top: 24px;
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.add-subject__heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  max-width: 261px;
+}
+
+.add-subject__title {
+  color: var(--color-black);
+}
+
+.add-subject__subtitle {
+  color: var(--color-grey-400);
+}
+
+.add-subject__illustration {
+  position: absolute;
+  right: 0;
+  top: 45px;
+  width: 167px;
+  height: 111px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.add-subject__form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 15px;
+  flex: 1;
+}
+
+.add-subject__field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+.add-subject__group-label {
+  color: var(--color-grey-400);
+}
+
+.add-subject__info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  margin-top: auto;
+  background: var(--color-info-callout-bg);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.add-subject__info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: var(--color-info-callout-icon-bg);
+  border-radius: 999px;
+}
+
+.add-subject__info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.add-subject__info-title {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-bold);
+  color: var(--color-black);
+}
+
+.add-subject__info-body {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--color-grey-400);
+}
+
+.add-subject .textfield__label {
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body-3);
+  color: var(--color-grey-400);
+}
+
+.add-subject .textfield__input {
+  font-size: var(--fs-body-3);
+  line-height: var(--lh-body-3);
+}

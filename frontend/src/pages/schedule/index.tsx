@@ -69,10 +69,11 @@ export function Schedule() {
   }, []);
 
   const dayGroups: DayGroup[] = groupSubjectsByDay(subjects);
-  const totalEntries = dayGroups.reduce(
-    (sum, group) => sum + group.entries.length,
-    0,
-  );
+
+  const distinctSubjectsCount = subjects.filter(
+    (subject) => subject.schedules.length > 0,
+  ).length;
+
   const colorMap = buildSubjectColorMap(subjects);
 
   function handleToggleMenu(scheduleId: string) {
@@ -148,7 +149,8 @@ export function Schedule() {
             <div>
               <span className="schedule-page__summary-title">Esta semana</span>
               <span className="schedule-page__summary-count">
-                {totalEntries} materia{totalEntries === 1 ? '' : 's'}
+                {distinctSubjectsCount} materia
+                {distinctSubjectsCount === 1 ? '' : 's'}
               </span>
             </div>
           </div>

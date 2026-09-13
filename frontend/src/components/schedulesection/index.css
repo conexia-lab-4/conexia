@@ -1,0 +1,66 @@
+.schedule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.schedule-section__day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-section__day-label {
+  color: var(--color-day-selected-text);
+  font-weight: var(--fw-bold);
+}
+
+.schedule-section__row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.schedule-section__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-section__field-label {
+  color: var(--color-grey-400);
+}
+
+.schedule-section__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 35px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.schedule-section__remove svg {
+  transform: rotate(45deg);
+}
+
+.schedule-section__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--color-grey-400);
+  cursor: pointer;
+}
