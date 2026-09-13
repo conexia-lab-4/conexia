@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getSubjects } from '../../lib/subjectsApi';
@@ -31,28 +31,31 @@ export function Home() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
 
+  const loadHomeData = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const [subjects, profileData] = await Promise.all([
+        getSubjects(),
+        getProfile(),
+      ]);
+      setSubjectsCount(subjects.length);
+      setProfile(profileData);
+      setStatus('ready');
+    } catch (error) {
+      console.error('Error al cargar datos del Home:', error);
+      setStatus('error');
+    }
+  }, []);
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) return;
-
       setDisplayName(user.displayName?.split(' ')[0] ?? null);
-
-      try {
-        const [subjects, profileData] = await Promise.all([
-          getSubjects(),
-          getProfile(),
-        ]);
-        setSubjectsCount(subjects.length);
-        setProfile(profileData);
-        setStatus('ready');
-      } catch (error) {
-        console.error('Error al cargar datos del Home:', error);
-        setStatus('error');
-      }
+      loadHomeData();
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadHomeData]);
 
   const completedSteps = countCompletedSteps(profile);
   const questionnaireCompleted = profile?.questionnaireCompleted ?? false;
@@ -79,9 +82,16 @@ export function Home() {
       )}
 
       {status === 'error' && (
-        <p className="home__status-message home__status-message--error">
-          No pudimos cargar tu información. Intentá de nuevo más tarde.
-        </p>
+        <div className="home__status-message home__status-message--error">
+          <p>No pudimos cargar tu información. Intentá de nuevo más tarde.</p>
+          <button
+            type="button"
+            className="home__retry-button"
+            onClick={loadHomeData}
+          >
+            Reintentar
+          </button>
+        </div>
       )}
 
       {status === 'ready' && (
