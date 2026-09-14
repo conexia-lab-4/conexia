@@ -14,9 +14,28 @@ import {
   type SchedulesByDay,
 } from '../../components/schedulesection';
 import addSubjectHeader from '../../assets/images/add-subject-header.svg';
+import { createSubject, type SubjectColor } from '../../lib/subjectsApi';
 import './index.css';
 
 const ICON_COLOR = 'var(--color-grey-400)';
+
+function buildFlatSchedules(
+  selectedDays: DayValue[],
+  schedules: SchedulesByDay,
+  classroom: string,
+) {
+  const trimmedClassroom = classroom.trim() || undefined;
+  return selectedDays.flatMap((day) =>
+    (schedules[day] ?? [])
+      .filter((range) => range.start && range.end)
+      .map((range) => ({
+        dayOfWeek: day,
+        startTime: range.start,
+        endTime: range.end,
+        classroom: trimmedClassroom,
+      })),
+  );
+}
 
 export function AddSubject() {
   const navigate = useNavigate();
@@ -27,7 +46,9 @@ export function AddSubject() {
   const [schedules, setSchedules] = useState<SchedulesByDay>({});
   const [campus, setCampus] = useState('');
   const [classroom, setClassroom] = useState('');
-  const [colorId, setColorId] = useState<string | null>(null);
+  const [colorId, setColorId] = useState<SubjectColor | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const toggleDay = (day: DayValue) => {
     setSelectedDays((prev) => {
@@ -71,31 +92,33 @@ export function AddSubject() {
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const flatSchedules = buildFlatSchedules(selectedDays, schedules, classroom);
+  const canSubmit =
+    Boolean(name.trim()) && Boolean(colorId) && flatSchedules.length > 0;
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    const flatSchedules = selectedDays.flatMap((day) =>
-      (schedules[day] ?? []).map((range) => ({
-        dayOfWeek: day,
-        startTime: range.start,
-        endTime: range.end,
-      })),
-    );
+    if (!canSubmit || isSubmitting || !colorId) {
+      return;
+    }
 
-    const payload = {
-      name,
-      career,
-      campus,
-      classroom,
-      colorId,
-      schedules: flatSchedules,
-    };
+    setSubmitError('');
+    setIsSubmitting(true);
 
-    // TODO KAN-111: reemplazar por la llamada real al endpoint POST
-    console.log('Alta de materia (pendiente de persistir):', payload);
-    navigate('/schedule');
+    try {
+      await createSubject({
+        name: name.trim(),
+        color: colorId,
+        schedules: flatSchedules,
+      });
+      navigate('/schedule');
+    } catch {
+      setSubmitError('No pudimos guardar la materia. Intentá de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
   return (
     <div className="add-subject">
       <header className="add-subject__header">
@@ -176,7 +199,10 @@ export function AddSubject() {
           <span className="add-subject__group-label text-body-3">
             Color de la materia
           </span>
-          <ColorPicker selected={colorId} onSelect={setColorId} />
+          <ColorPicker
+            selected={colorId}
+            onSelect={(id) => setColorId(id as SubjectColor)}
+          />
         </div>
 
         <div className="add-subject__info">
@@ -192,8 +218,17 @@ export function AddSubject() {
           </div>
         </div>
 
-        <Button type="submit" variant="fulfilled" size="large-wide">
-          Agregar materia
+        {submitError && (
+          <p className="add-subject__error text-body-3">{submitError}</p>
+        )}
+
+        <Button
+          type="submit"
+          variant="fulfilled"
+          size="large-wide"
+          disabled={!canSubmit || isSubmitting}
+        >
+          {isSubmitting ? 'Guardando...' : 'Agregar materia'}
         </Button>
       </form>
     </div>

@@ -1,0 +1,119 @@
+.schedule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--color-white);
+  border-radius: 12px;
+  border-left: 4px solid transparent;
+  padding: 16px;
+  box-shadow: var(--shadow);
+
+  /* Hardcodeado temporal hasta que se mergee KAN-100 (trae los tokens de amarillo) */
+  --color-schedulecard-yellow-border: #ffd665;
+  --color-schedulecard-yellow-bg: #fffed3;
+  --color-schedulecard-yellow-text: #a68a2f;
+}
+
+.schedule-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-card__title {
+  font-family: var(--font-primary);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-body-1);
+  color: var(--color-text);
+}
+
+.schedule-card__menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.schedule-card__menu-btn:hover {
+  background-color: var(--color-grey-100);
+}
+
+.schedule-card__time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+}
+
+.schedule-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-body-3);
+  color: var(--color-grey-400);
+}
+
+.schedule-card__footer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule-card__footer-separator {
+  color: var(--color-grey-300);
+}
+
+.schedule-card__menu-wrapper {
+  position: relative;
+}
+
+.schedule-card__menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.schedule-card__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 11;
+  background-color: var(--color-white);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+}
+
+.schedule-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.schedule-card__menu-item:hover {
+  background-color: var(--color-grey-100);
+}
+
+.schedule-card__menu-item--danger {
+  color: var(--color-error-500);
+}
