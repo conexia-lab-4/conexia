@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import {
@@ -6,6 +7,7 @@ import {
   deleteSchedule,
   updateSchedule,
   type Subject,
+  type SubjectColor,
 } from '../../lib/subjectsApi';
 import {
   groupSubjectsByDay,
@@ -27,19 +29,12 @@ import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
-const COLOR_CYCLE: ScheduleCardColorVariant[] = [
-  'blue',
-  'green',
-  'yellow',
-  'red',
-];
-
 function buildSubjectColorMap(
   subjects: Subject[],
 ): Map<string, ScheduleCardColorVariant> {
   const map = new Map<string, ScheduleCardColorVariant>();
-  subjects.forEach((subject, index) => {
-    map.set(subject.id, COLOR_CYCLE[index % COLOR_CYCLE.length]);
+  subjects.forEach((subject) => {
+    map.set(subject.id, (subject.color as SubjectColor) ?? 'BLUE');
   });
   return map;
 }
@@ -47,6 +42,7 @@ function buildSubjectColorMap(
 export function Schedule() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const navigate = useNavigate();
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
     null,
   );
@@ -183,8 +179,11 @@ export function Schedule() {
             Organizá tus materias y encontrá estudiantes con horarios similares
           </p>
         </div>
-        {/* Navega al alta de materia cuando ese ticket (KAN-109) esté implementado */}
-        <button type="button" className="schedule-page__add-btn">
+        <button
+          type="button"
+          className="schedule-page__add-btn"
+          onClick={() => navigate('/assignments/new')}
+        >
           + Agregar Materia
         </button>
       </header>
@@ -234,7 +233,7 @@ export function Schedule() {
                   <ScheduleCard
                     key={entry.scheduleId}
                     subject={entry.subjectName}
-                    colorVariant={colorMap.get(entry.subjectId) ?? 'blue'}
+                    colorVariant={colorMap.get(entry.subjectId) ?? 'BLUE'}
                     startTime={entry.startTime}
                     endTime={entry.endTime}
                     classroom={entry.classroom ?? undefined}
