@@ -13,11 +13,17 @@ import {
   ScheduleSection,
   type SchedulesByDay,
 } from '../../components/schedulesection';
-import addSubjectHeader from '../../assets/images/add-subject-header.svg';
 import { createSubject, type SubjectColor } from '../../lib/subjectsApi';
+import addSubjectHeader from '../../assets/images/add-subject-header.svg';
 import './index.css';
 
 const ICON_COLOR = 'var(--color-grey-400)';
+
+interface FormErrors {
+  name?: string;
+  color?: string;
+  schedule?: string;
+}
 
 function buildFlatSchedules(
   selectedDays: DayValue[],
@@ -37,6 +43,43 @@ function buildFlatSchedules(
   );
 }
 
+function validateForm(
+  name: string,
+  colorId: SubjectColor | null,
+  selectedDays: DayValue[],
+  schedules: SchedulesByDay,
+): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!name.trim()) {
+    errors.name = 'El nombre de la materia es obligatorio';
+  }
+
+  if (!colorId) {
+    errors.color = 'Elegí un color para la materia';
+  }
+
+  if (selectedDays.length === 0) {
+    errors.schedule = 'Seleccioná al menos un día de la semana';
+  } else {
+    const ranges = selectedDays.flatMap((day) => schedules[day] ?? []);
+    const hasIncompleteRange = ranges.some(
+      (range) => !range.start || !range.end,
+    );
+    const hasInvalidOrder = ranges.some(
+      (range) => range.start && range.end && range.end <= range.start,
+    );
+
+    if (hasIncompleteRange) {
+      errors.schedule = 'Completá la hora de inicio y fin de cada horario';
+    } else if (hasInvalidOrder) {
+      errors.schedule = 'La hora de fin debe ser posterior a la de inicio';
+    }
+  }
+
+  return errors;
+}
+
 export function AddSubject() {
   const navigate = useNavigate();
 
@@ -49,6 +92,7 @@ export function AddSubject() {
   const [colorId, setColorId] = useState<SubjectColor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const toggleDay = (day: DayValue) => {
     setSelectedDays((prev) => {
@@ -93,13 +137,15 @@ export function AddSubject() {
   };
 
   const flatSchedules = buildFlatSchedules(selectedDays, schedules, classroom);
-  const canSubmit =
-    Boolean(name.trim()) && Boolean(colorId) && flatSchedules.length > 0;
+  const errors = validateForm(name, colorId, selectedDays, schedules);
+  const isValid = Object.keys(errors).length === 0;
+  const showErrors = hasAttemptedSubmit;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
 
-    if (!canSubmit || isSubmitting || !colorId) {
+    if (!isValid || isSubmitting || !colorId) {
       return;
     }
 
@@ -119,6 +165,7 @@ export function AddSubject() {
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className="add-subject">
       <header className="add-subject__header">
@@ -143,10 +190,11 @@ export function AddSubject() {
         />
       </header>
 
-      <form className="add-subject__form" onSubmit={handleSubmit}>
+      <form className="add-subject__form" onSubmit={handleSubmit} noValidate>
         <TextField
           label="Nombre de la materia"
-          variant="filled"
+          variant={showErrors && errors.name ? 'error' : 'filled'}
+          helperText={showErrors ? errors.name : undefined}
           leftIcon={<IconBook size={20} color={ICON_COLOR} />}
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -169,13 +217,18 @@ export function AddSubject() {
           <DaySelector selected={selectedDays} onToggle={toggleDay} />
         </div>
 
-        <ScheduleSection
-          selectedDays={selectedDays}
-          schedules={schedules}
-          onChangeRange={handleChangeRange}
-          onAddRange={handleAddRange}
-          onRemoveRange={handleRemoveRange}
-        />
+        <div className="add-subject__field-group">
+          <ScheduleSection
+            selectedDays={selectedDays}
+            schedules={schedules}
+            onChangeRange={handleChangeRange}
+            onAddRange={handleAddRange}
+            onRemoveRange={handleRemoveRange}
+          />
+          {showErrors && errors.schedule && (
+            <p className="add-subject__field-error">{errors.schedule}</p>
+          )}
+        </div>
 
         <TextField
           label="Sede/Campus"
@@ -203,6 +256,9 @@ export function AddSubject() {
             selected={colorId}
             onSelect={(id) => setColorId(id as SubjectColor)}
           />
+          {showErrors && errors.color && (
+            <p className="add-subject__field-error">{errors.color}</p>
+          )}
         </div>
 
         <div className="add-subject__info">
@@ -226,7 +282,7 @@ export function AddSubject() {
           type="submit"
           variant="fulfilled"
           size="large-wide"
-          disabled={!canSubmit || isSubmitting}
+          disabled={isSubmitting}
         >
           {isSubmitting ? 'Guardando...' : 'Agregar materia'}
         </Button>

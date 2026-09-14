@@ -137,3 +137,10 @@
   color: var(--color-error-700);
   text-align: center;
 }
+
+.add-subject__field-error {
+  font-size: var(--fs-body-3);
+  line-height: var(--lh-body-3);
+  color: var(--color-error-500);
+  text-align: left;
+}
