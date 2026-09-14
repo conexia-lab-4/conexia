@@ -13,10 +13,23 @@ import {
   ScheduleSection,
   type SchedulesByDay,
 } from '../../components/schedulesection';
+import { createSubject, type SubjectColor } from '../../lib/subjectsApi';
 import addSubjectHeader from '../../assets/images/add-subject-header.svg';
 import './index.css';
 
 const ICON_COLOR = 'var(--color-grey-400)';
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const COLOR_ID_TO_ENUM: Record<string, SubjectColor> = {
+  '1': 'BLUE',
+  '2': 'PURPLE',
+  '3': 'PINK',
+  '4': 'ORANGE',
+  '5': 'YELLOW',
+  '6': 'GREEN',
+  '7': 'RED',
+  '8': 'CREAM',
+};
 
 export function AddSubject() {
   const navigate = useNavigate();
@@ -28,6 +41,8 @@ export function AddSubject() {
   const [campus, setCampus] = useState('');
   const [classroom, setClassroom] = useState('');
   const [colorId, setColorId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleDay = (day: DayValue) => {
     setSelectedDays((prev) => {
@@ -71,29 +86,67 @@ export function AddSubject() {
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  function validate(): string | null {
+    if (!name.trim()) return 'Ingresá el nombre de la materia.';
+    if (!colorId || !COLOR_ID_TO_ENUM[colorId]) {
+      return 'Elegí un color para la materia.';
+    }
+    if (selectedDays.length === 0) {
+      return 'Seleccioná al menos un día de la semana.';
+    }
+    for (const day of selectedDays) {
+      const ranges = schedules[day] ?? [];
+      for (const range of ranges) {
+        if (!TIME_REGEX.test(range.start) || !TIME_REGEX.test(range.end)) {
+          return 'Completá la hora de inicio y de fin de cada horario.';
+        }
+        if (range.end <= range.start) {
+          return 'La hora de fin debe ser posterior a la hora de inicio.';
+        }
+      }
+    }
+    return null;
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const validationMessage = validate();
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
 
     const flatSchedules = selectedDays.flatMap((day) =>
       (schedules[day] ?? []).map((range) => ({
         dayOfWeek: day,
         startTime: range.start,
         endTime: range.end,
+        classroom: classroom.trim() || undefined,
       })),
     );
 
-    const payload = {
-      name,
-      career,
-      campus,
-      classroom,
-      colorId,
-      schedules: flatSchedules,
-    };
+    setIsSubmitting(true);
+    setError(null);
 
-    // TODO KAN-111: reemplazar por la llamada real al endpoint POST
-    console.log('Alta de materia (pendiente de persistir):', payload);
-    navigate('/schedule');
+    try {
+      await createSubject({
+        name: name.trim(),
+        color: COLOR_ID_TO_ENUM[colorId!],
+        schedules: flatSchedules,
+      });
+      navigate('/schedule');
+    } catch (err) {
+      console.error('Error al crear la materia:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No pudimos guardar la materia. Intentá de nuevo.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -192,8 +245,15 @@ export function AddSubject() {
           </div>
         </div>
 
-        <Button type="submit" variant="fulfilled" size="large-wide">
-          Agregar materia
+        {error && <p className="add-subject__error">{error}</p>}
+
+        <Button
+          type="submit"
+          variant="fulfilled"
+          size="large-wide"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Guardando...' : 'Agregar materia'}
         </Button>
       </form>
     </div>
