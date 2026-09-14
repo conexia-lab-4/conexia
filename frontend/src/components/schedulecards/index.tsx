@@ -4,9 +4,10 @@ import { IconDotsThree } from '../../assets/icons/IconDotsThree';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
 import { IconPencil } from '../../assets/icons/IconPencil';
 import { IconTrash } from '../../assets/icons/IconTrash';
+import type { SubjectColor } from '../../lib/subjectsApi';
 import './index.css';
 
-export type ScheduleCardColorVariant = 'blue' | 'green' | 'red' | 'yellow';
+export type ScheduleCardColorVariant = SubjectColor;
 
 interface ScheduleCardProps {
   subject: string;
@@ -26,25 +27,35 @@ const COLOR_CONFIG: Record<
   ScheduleCardColorVariant,
   { border: string; badgeBg: string; badgeText: string }
 > = {
-  blue: {
-    border: 'var(--color-primary-500)',
-    badgeBg: 'var(--color-badge-blue-bg)',
-    badgeText: 'var(--color-badge-blue-text)',
+  BLUE: {
+    border: 'var(--color-subject-1)',
+    badgeBg: 'var(--color-subject-1)',
+    badgeText: 'var(--color-grey-500)',
   },
-  green: {
-    border: 'var(--color-success-500)',
-    badgeBg: 'var(--color-badge-green-bg)',
-    badgeText: 'var(--color-badge-green-text)',
+  PURPLE: {
+    border: 'var(--color-subject-2)',
+    badgeBg: 'var(--color-subject-2)',
+    badgeText: 'var(--color-grey-500)',
   },
-  red: {
-    border: 'var(--color-error-500)',
-    badgeBg: 'var(--color-error-100)',
-    badgeText: 'var(--color-error-700)',
+  PINK: {
+    border: 'var(--color-subject-3)',
+    badgeBg: 'var(--color-subject-3)',
+    badgeText: 'var(--color-grey-500)',
   },
-  yellow: {
-    border: 'var(--color-schedulecard-yellow-border)',
-    badgeBg: 'var(--color-schedulecard-yellow-bg)',
-    badgeText: 'var(--color-schedulecard-yellow-text)',
+  ORANGE: {
+    border: 'var(--color-subject-4)',
+    badgeBg: 'var(--color-subject-4)',
+    badgeText: 'var(--color-grey-500)',
+  },
+  YELLOW: {
+    border: 'var(--color-subject-5)',
+    badgeBg: 'var(--color-subject-5)',
+    badgeText: 'var(--color-grey-500)',
+  },
+  GREEN: {
+    border: 'var(--color-subject-6)',
+    badgeBg: 'var(--color-subject-6)',
+    badgeText: 'var(--color-grey-500)',
   },
 };
 

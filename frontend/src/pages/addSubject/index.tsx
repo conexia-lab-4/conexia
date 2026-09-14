@@ -20,16 +20,23 @@ import './index.css';
 const ICON_COLOR = 'var(--color-grey-400)';
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const COLOR_ID_TO_ENUM: Record<string, SubjectColor> = {
-  '1': 'BLUE',
-  '2': 'PURPLE',
-  '3': 'PINK',
-  '4': 'ORANGE',
-  '5': 'YELLOW',
-  '6': 'GREEN',
-  '7': 'RED',
-  '8': 'CREAM',
-};
+function buildFlatSchedules(
+  selectedDays: DayValue[],
+  schedules: SchedulesByDay,
+  classroom: string,
+) {
+  const trimmedClassroom = classroom.trim() || undefined;
+  return selectedDays.flatMap((day) =>
+    (schedules[day] ?? [])
+      .filter((range) => range.start && range.end)
+      .map((range) => ({
+        dayOfWeek: day,
+        startTime: range.start,
+        endTime: range.end,
+        classroom: trimmedClassroom,
+      })),
+  );
+}
 
 export function AddSubject() {
   const navigate = useNavigate();
@@ -40,9 +47,9 @@ export function AddSubject() {
   const [schedules, setSchedules] = useState<SchedulesByDay>({});
   const [campus, setCampus] = useState('');
   const [classroom, setClassroom] = useState('');
-  const [colorId, setColorId] = useState<string | null>(null);
+  const [colorId, setColorId] = useState<SubjectColor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   const toggleDay = (day: DayValue) => {
     setSelectedDays((prev) => {
@@ -88,7 +95,7 @@ export function AddSubject() {
 
   function validate(): string | null {
     if (!name.trim()) return 'Ingresá el nombre de la materia.';
-    if (!colorId || !COLOR_ID_TO_ENUM[colorId]) {
+    if (!colorId) {
       return 'Elegí un color para la materia.';
     }
     if (selectedDays.length === 0) {
@@ -114,32 +121,25 @@ export function AddSubject() {
 
     const validationMessage = validate();
     if (validationMessage) {
-      setError(validationMessage);
+      setSubmitError(validationMessage);
       return;
     }
 
-    const flatSchedules = selectedDays.flatMap((day) =>
-      (schedules[day] ?? []).map((range) => ({
-        dayOfWeek: day,
-        startTime: range.start,
-        endTime: range.end,
-        classroom: classroom.trim() || undefined,
-      })),
-    );
+    const flatSchedules = buildFlatSchedules(selectedDays, schedules, classroom);
 
     setIsSubmitting(true);
-    setError(null);
+    setSubmitError('');
 
     try {
       await createSubject({
         name: name.trim(),
-        color: COLOR_ID_TO_ENUM[colorId!],
+        color: colorId!,
         schedules: flatSchedules,
       });
       navigate('/schedule');
     } catch (err) {
       console.error('Error al crear la materia:', err);
-      setError(
+      setSubmitError(
         err instanceof Error
           ? err.message
           : 'No pudimos guardar la materia. Intentá de nuevo.',
@@ -148,7 +148,6 @@ export function AddSubject() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="add-subject">
       <header className="add-subject__header">
@@ -229,7 +228,10 @@ export function AddSubject() {
           <span className="add-subject__group-label text-body-3">
             Color de la materia
           </span>
-          <ColorPicker selected={colorId} onSelect={setColorId} />
+          <ColorPicker
+            selected={colorId}
+            onSelect={(id) => setColorId(id as SubjectColor)}
+          />
         </div>
 
         <div className="add-subject__info">
@@ -245,7 +247,7 @@ export function AddSubject() {
           </div>
         </div>
 
-        {error && <p className="add-subject__error">{error}</p>}
+        {submitError && <p className="add-subject__error">{submitError}</p>}
 
         <Button
           type="submit"

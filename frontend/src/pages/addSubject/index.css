@@ -138,3 +138,8 @@
   font-size: var(--fs-body-3);
   line-height: var(--lh-body-3);
 }
+
+.add-subject__error {
+  color: var(--color-error-700);
+  text-align: center;
+}
