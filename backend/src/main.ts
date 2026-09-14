@@ -3,7 +3,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 const PROD_ORIGIN = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-const VERCEL_PREVIEW_ORIGIN = /^https:\/\/conexia-[a-z0-9-]+-martinogueiras-projects\.vercel\.app$/;
+const VERCEL_PREVIEW_ORIGIN =
+  /^https:\/\/conexia-[a-z0-9-]+-martinogueiras-projects\.vercel\.app$/;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

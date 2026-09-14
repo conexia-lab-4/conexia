@@ -125,7 +125,11 @@ export function AddSubject() {
       return;
     }
 
-    const flatSchedules = buildFlatSchedules(selectedDays, schedules, classroom);
+    const flatSchedules = buildFlatSchedules(
+      selectedDays,
+      schedules,
+      classroom,
+    );
 
     setIsSubmitting(true);
     setSubmitError('');

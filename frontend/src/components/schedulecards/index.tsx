@@ -57,6 +57,16 @@ const COLOR_CONFIG: Record<
     badgeBg: 'var(--color-subject-6)',
     badgeText: 'var(--color-grey-500)',
   },
+  RED: {
+    border: 'var(--color-subject-7)',
+    badgeBg: 'var(--color-subject-7)',
+    badgeText: 'var(--color-grey-500)',
+  },
+  CREAM: {
+    border: 'var(--color-subject-8)',
+    badgeBg: 'var(--color-subject-8)',
+    badgeText: 'var(--color-grey-500)',
+  },
 };
 
 export function ScheduleCard({

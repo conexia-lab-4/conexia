@@ -44,7 +44,6 @@ export function Schedule() {
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
-  const navigate = useNavigate();
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
     null,
   );
