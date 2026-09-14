@@ -8,8 +8,15 @@ const VERCEL_PREVIEW_ORIGIN = /^https:\/\/conexia-[a-z0-9-]+-martinogueiras-proj
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin || origin === PROD_ORIGIN || VERCEL_PREVIEW_ORIGIN.test(origin)) {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (
+        !origin ||
+        origin === PROD_ORIGIN ||
+        VERCEL_PREVIEW_ORIGIN.test(origin)
+      ) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
