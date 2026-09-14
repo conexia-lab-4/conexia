@@ -45,6 +45,16 @@ export async function deleteSchedule(scheduleId: string): Promise<void> {
   }
 }
 
+export async function deleteSubject(subjectId: string): Promise<void> {
+  const response = await authFetch(`/subjects/${subjectId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo eliminar la materia');
+  }
+}
+
 export interface UpdateScheduleInput {
   dayOfWeek?: DayOfWeek;
   startTime?: string;

@@ -18,7 +18,8 @@ interface ScheduleCardProps {
   isMenuOpen?: boolean;
   onToggleMenu?: () => void;
   onEdit?: () => void;
-  onDeleteClick?: () => void;
+  onDeleteScheduleClick?: () => void;
+  onDeleteSubjectClick?: () => void;
 }
 
 const COLOR_CONFIG: Record<
@@ -57,7 +58,8 @@ export function ScheduleCard({
   isMenuOpen,
   onToggleMenu,
   onEdit,
-  onDeleteClick,
+  onDeleteScheduleClick,
+  onDeleteSubjectClick,
 }: ScheduleCardProps) {
   const config = COLOR_CONFIG[colorVariant];
 
@@ -93,7 +95,15 @@ export function ScheduleCard({
                 <button
                   type="button"
                   className="schedule-card__menu-item schedule-card__menu-item--danger"
-                  onClick={onDeleteClick}
+                  onClick={onDeleteScheduleClick}
+                >
+                  <IconTrash size={16} color="var(--color-error-500)" />
+                  Eliminar solo este horario
+                </button>
+                <button
+                  type="button"
+                  className="schedule-card__menu-item schedule-card__menu-item--danger"
+                  onClick={onDeleteSubjectClick}
                 >
                   <IconTrash size={16} color="var(--color-error-500)" />
                   Eliminar materia
