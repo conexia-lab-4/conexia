@@ -34,36 +34,6 @@ export async function getSubjects(): Promise<Subject[]> {
 
   return response.json();
 }
-export type SubjectColor =
-  'BLUE' | 'PURPLE' | 'PINK' | 'ORANGE' | 'YELLOW' | 'GREEN';
-
-export interface CreateScheduleInput {
-  dayOfWeek: DayOfWeek;
-  startTime: string;
-  endTime: string;
-  classroom?: string;
-}
-
-export interface CreateSubjectInput {
-  name: string;
-  color: SubjectColor;
-  schedules: CreateScheduleInput[];
-}
-
-export async function createSubject(
-  payload: CreateSubjectInput,
-): Promise<Subject> {
-  const response = await authFetch('/subjects', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error('No se pudo crear la materia');
-  }
-
-  return response.json();
-}
 
 export async function deleteSchedule(scheduleId: string): Promise<void> {
   const response = await authFetch(`/schedules/${scheduleId}`, {
@@ -72,6 +42,16 @@ export async function deleteSchedule(scheduleId: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error('No se pudo eliminar el horario');
+  }
+}
+
+export async function deleteSubject(subjectId: string): Promise<void> {
+  const response = await authFetch(`/subjects/${subjectId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo eliminar la materia');
   }
 }
 
@@ -97,6 +77,41 @@ export async function updateSchedule(
       ? body.message[0]
       : body?.message;
     throw new Error(message ?? 'No se pudo actualizar el horario');
+  }
+
+  return response.json();
+}
+
+export type SubjectColor =
+  'BLUE' | 'PURPLE' | 'PINK' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'RED' | 'CREAM';
+
+export interface CreateScheduleInput {
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  classroom?: string;
+}
+
+export interface CreateSubjectInput {
+  name: string;
+  color: SubjectColor;
+  schedules: CreateScheduleInput[];
+}
+
+export async function createSubject(
+  data: CreateSubjectInput,
+): Promise<Subject> {
+  const response = await authFetch('/subjects', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const message = Array.isArray(body?.message)
+      ? body.message[0]
+      : body?.message;
+    throw new Error(message ?? 'No se pudo crear la materia');
   }
 
   return response.json();

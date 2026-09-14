@@ -49,6 +49,8 @@ enum SubjectColor {
   ORANGE
   YELLOW
   GREEN
+  RED
+  CREAM
 }
 
 model Subject {

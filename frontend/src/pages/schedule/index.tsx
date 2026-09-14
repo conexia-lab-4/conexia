@@ -5,6 +5,7 @@ import { auth } from '../../lib/firebase';
 import {
   getSubjects,
   deleteSchedule,
+  deleteSubject,
   updateSchedule,
   type Subject,
   type SubjectColor,
@@ -40,13 +41,16 @@ function buildSubjectColorMap(
 }
 
 export function Schedule() {
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
-  const navigate = useNavigate();
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'schedule' | 'subject'>(
+    'schedule',
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<ScheduleEntry | null>(null);
@@ -83,9 +87,17 @@ export function Schedule() {
     );
   }
 
-  function handleDeleteClick(entry: ScheduleEntry) {
+  function handleDeleteScheduleClick(entry: ScheduleEntry) {
     setOpenMenuScheduleId(null);
     setDeleteError(null);
+    setDeleteMode('schedule');
+    setDeleteTarget(entry);
+  }
+
+  function handleDeleteSubjectClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteError(null);
+    setDeleteMode('subject');
     setDeleteTarget(entry);
   }
 
@@ -101,24 +113,34 @@ export function Schedule() {
     setDeleteError(null);
 
     try {
-      await deleteSchedule(deleteTarget.scheduleId);
-
-      setSubjects((prev) =>
-        prev.map((subject) =>
-          subject.id === deleteTarget.subjectId
-            ? {
-                ...subject,
-                schedules: subject.schedules.filter(
-                  (s) => s.id !== deleteTarget.scheduleId,
-                ),
-              }
-            : subject,
-        ),
-      );
+      if (deleteMode === 'subject') {
+        await deleteSubject(deleteTarget.subjectId);
+        setSubjects((prev) =>
+          prev.filter((subject) => subject.id !== deleteTarget.subjectId),
+        );
+      } else {
+        await deleteSchedule(deleteTarget.scheduleId);
+        setSubjects((prev) =>
+          prev.map((subject) =>
+            subject.id === deleteTarget.subjectId
+              ? {
+                  ...subject,
+                  schedules: subject.schedules.filter(
+                    (s) => s.id !== deleteTarget.scheduleId,
+                  ),
+                }
+              : subject,
+          ),
+        );
+      }
       setDeleteTarget(null);
     } catch (error) {
-      console.error('Error al eliminar el horario:', error);
-      setDeleteError('No pudimos eliminar la materia. Intentá de nuevo.');
+      console.error('Error al eliminar:', error);
+      setDeleteError(
+        deleteMode === 'subject'
+          ? 'No pudimos eliminar la materia. Intentá de nuevo.'
+          : 'No pudimos eliminar el horario. Intentá de nuevo.',
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -240,7 +262,10 @@ export function Schedule() {
                     isMenuOpen={openMenuScheduleId === entry.scheduleId}
                     onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
                     onEdit={() => handleEditClick(entry)}
-                    onDeleteClick={() => handleDeleteClick(entry)}
+                    onDeleteScheduleClick={() =>
+                      handleDeleteScheduleClick(entry)
+                    }
+                    onDeleteSubjectClick={() => handleDeleteSubjectClick(entry)}
                   />
                 ))}
               </section>
@@ -263,7 +288,16 @@ export function Schedule() {
 
       {deleteTarget && (
         <DeleteScheduleDialog
-          subjectName={deleteTarget.subjectName}
+          title={
+            deleteMode === 'subject'
+              ? '¿Eliminar materia?'
+              : '¿Eliminar horario?'
+          }
+          message={
+            deleteMode === 'subject'
+              ? `${deleteTarget.subjectName} se eliminará por completo, junto con todos sus horarios. Esta acción no se puede deshacer.`
+              : `El horario de ${DAY_LABELS[deleteTarget.dayOfWeek]} de ${deleteTarget.subjectName} se eliminará. Esta acción no se puede deshacer.`
+          }
           isDeleting={isDeleting}
           error={deleteError}
           onConfirm={handleConfirmDelete}
