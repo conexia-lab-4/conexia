@@ -92,7 +92,11 @@ export async function updateSchedule(
   });
 
   if (!response.ok) {
-    throw new Error('No se pudo actualizar el horario');
+    const body = await response.json().catch(() => null);
+    const message = Array.isArray(body?.message)
+      ? body.message[0]
+      : body?.message;
+    throw new Error(message ?? 'No se pudo actualizar el horario');
   }
 
   return response.json();
