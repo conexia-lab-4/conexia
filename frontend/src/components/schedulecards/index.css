@@ -8,7 +8,6 @@
   padding: 16px;
   box-shadow: var(--shadow);
 
-  /* Hardcodeado temporal hasta que se mergee KAN-100 (trae los tokens de amarillo) */
   --color-schedulecard-yellow-border: #ffd665;
   --color-schedulecard-yellow-bg: #fffed3;
   --color-schedulecard-yellow-text: #a68a2f;
@@ -92,7 +91,7 @@
   padding: 6px;
   display: flex;
   flex-direction: column;
-  min-width: 170px;
+  min-width: 230px;
 }
 
 .schedule-card__menu-item {
@@ -108,6 +107,7 @@
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
 }
 
 .schedule-card__menu-item:hover {
