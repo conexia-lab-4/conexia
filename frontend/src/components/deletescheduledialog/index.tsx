@@ -3,7 +3,8 @@ import { IconTrash } from '../../assets/icons/IconTrash';
 import './index.css';
 
 interface DeleteScheduleDialogProps {
-  subjectName: string;
+  title: string;
+  message: string;
   isDeleting?: boolean;
   error?: string | null;
   onConfirm: () => void;
@@ -11,7 +12,8 @@ interface DeleteScheduleDialogProps {
 }
 
 export function DeleteScheduleDialog({
-  subjectName,
+  title,
+  message,
   isDeleting,
   error,
   onConfirm,
@@ -29,11 +31,8 @@ export function DeleteScheduleDialog({
         <div className="delete-schedule-dialog__icon">
           <IconTrash size={28} color="var(--color-error-500)" />
         </div>
-        <h2 className="delete-schedule-dialog__title">¿Eliminar materia?</h2>
-        <p className="delete-schedule-dialog__message">
-          <strong>{subjectName}</strong> se eliminará de tus horarios. Esta
-          acción no se puede deshacer.
-        </p>
+        <h2 className="delete-schedule-dialog__title">{title}</h2>
+        <p className="delete-schedule-dialog__message">{message}</p>
         {error && <p className="delete-schedule-dialog__error">{error}</p>}
         <div className="delete-schedule-dialog__actions">
           <Button

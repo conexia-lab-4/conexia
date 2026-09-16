@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import {
   getSubjects,
   deleteSchedule,
+  deleteSubject,
   updateSchedule,
   type Subject,
   type SubjectColor,
@@ -40,35 +41,42 @@ function buildSubjectColorMap(
 }
 
 export function Schedule() {
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
-  const navigate = useNavigate();
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'schedule' | 'subject'>(
+    'schedule',
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<ScheduleEntry | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const loadSubjects = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const data = await getSubjects();
+      setSubjects(data);
+      setStatus('ready');
+    } catch (error) {
+      console.error('Error al cargar materias y horarios:', error);
+      setStatus('error');
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-
-      try {
-        const data = await getSubjects();
-        setSubjects(data);
-        setStatus('ready');
-      } catch (error) {
-        console.error('Error al cargar materias y horarios:', error);
-        setStatus('error');
-      }
+      loadSubjects();
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadSubjects]);
 
   const dayGroups: DayGroup[] = groupSubjectsByDay(subjects);
   const totalEntries = dayGroups.reduce(
@@ -83,9 +91,17 @@ export function Schedule() {
     );
   }
 
-  function handleDeleteClick(entry: ScheduleEntry) {
+  function handleDeleteScheduleClick(entry: ScheduleEntry) {
     setOpenMenuScheduleId(null);
     setDeleteError(null);
+    setDeleteMode('schedule');
+    setDeleteTarget(entry);
+  }
+
+  function handleDeleteSubjectClick(entry: ScheduleEntry) {
+    setOpenMenuScheduleId(null);
+    setDeleteError(null);
+    setDeleteMode('subject');
     setDeleteTarget(entry);
   }
 
@@ -101,24 +117,34 @@ export function Schedule() {
     setDeleteError(null);
 
     try {
-      await deleteSchedule(deleteTarget.scheduleId);
-
-      setSubjects((prev) =>
-        prev.map((subject) =>
-          subject.id === deleteTarget.subjectId
-            ? {
-                ...subject,
-                schedules: subject.schedules.filter(
-                  (s) => s.id !== deleteTarget.scheduleId,
-                ),
-              }
-            : subject,
-        ),
-      );
+      if (deleteMode === 'subject') {
+        await deleteSubject(deleteTarget.subjectId);
+        setSubjects((prev) =>
+          prev.filter((subject) => subject.id !== deleteTarget.subjectId),
+        );
+      } else {
+        await deleteSchedule(deleteTarget.scheduleId);
+        setSubjects((prev) =>
+          prev.map((subject) =>
+            subject.id === deleteTarget.subjectId
+              ? {
+                  ...subject,
+                  schedules: subject.schedules.filter(
+                    (s) => s.id !== deleteTarget.scheduleId,
+                  ),
+                }
+              : subject,
+          ),
+        );
+      }
       setDeleteTarget(null);
     } catch (error) {
-      console.error('Error al eliminar el horario:', error);
-      setDeleteError('No pudimos eliminar la materia. Intentá de nuevo.');
+      console.error('Error al eliminar:', error);
+      setDeleteError(
+        deleteMode === 'subject'
+          ? 'No pudimos eliminar la materia. Intentá de nuevo.'
+          : 'No pudimos eliminar el horario. Intentá de nuevo.',
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -193,9 +219,16 @@ export function Schedule() {
       )}
 
       {status === 'error' && (
-        <p className="schedule-page__status-message schedule-page__status-message--error">
-          No pudimos cargar tus horarios. Intentá de nuevo más tarde.
-        </p>
+        <div className="schedule-page__status-message schedule-page__status-message--error">
+          <p>No pudimos cargar tus horarios. Intentá de nuevo más tarde.</p>
+          <button
+            type="button"
+            className="schedule-page__retry-button"
+            onClick={loadSubjects}
+          >
+            Reintentar
+          </button>
+        </div>
       )}
 
       {status === 'ready' && (
@@ -240,7 +273,10 @@ export function Schedule() {
                     isMenuOpen={openMenuScheduleId === entry.scheduleId}
                     onToggleMenu={() => handleToggleMenu(entry.scheduleId)}
                     onEdit={() => handleEditClick(entry)}
-                    onDeleteClick={() => handleDeleteClick(entry)}
+                    onDeleteScheduleClick={() =>
+                      handleDeleteScheduleClick(entry)
+                    }
+                    onDeleteSubjectClick={() => handleDeleteSubjectClick(entry)}
                   />
                 ))}
               </section>
@@ -263,7 +299,16 @@ export function Schedule() {
 
       {deleteTarget && (
         <DeleteScheduleDialog
-          subjectName={deleteTarget.subjectName}
+          title={
+            deleteMode === 'subject'
+              ? '¿Eliminar materia?'
+              : '¿Eliminar horario?'
+          }
+          message={
+            deleteMode === 'subject'
+              ? `${deleteTarget.subjectName} se eliminará por completo, junto con todos sus horarios. Esta acción no se puede deshacer.`
+              : `El horario de ${DAY_LABELS[deleteTarget.dayOfWeek]} de ${deleteTarget.subjectName} se eliminará. Esta acción no se puede deshacer.`
+          }
           isDeleting={isDeleting}
           error={deleteError}
           onConfirm={handleConfirmDelete}

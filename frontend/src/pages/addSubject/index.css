@@ -16,6 +16,12 @@
   border-radius: 0 0 20px 20px;
 }
 
+.add-subject__error {
+  color: var(--color-error-500);
+  font-size: var(--fs-body-3);
+  text-align: center;
+}
+
 .add-subject__back {
   position: absolute;
   left: 10px;

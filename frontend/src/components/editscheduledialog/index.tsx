@@ -23,6 +23,18 @@ interface EditScheduleDialogProps {
   onCancel: () => void;
 }
 
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function validateTimes(startTime: string, endTime: string): string | null {
+  if (!TIME_REGEX.test(startTime) || !TIME_REGEX.test(endTime)) {
+    return 'Completá la hora de inicio y de fin.';
+  }
+  if (endTime <= startTime) {
+    return 'La hora de fin debe ser posterior a la hora de inicio.';
+  }
+  return null;
+}
+
 export function EditScheduleDialog({
   subjectName,
   initialDay,
@@ -38,11 +50,23 @@ export function EditScheduleDialog({
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
   const [classroom, setClassroom] = useState(initialClassroom);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (isSaving) return;
+
+    const validationMessage = validateTimes(startTime, endTime);
+    if (validationMessage) {
+      setLocalError(validationMessage);
+      return;
+    }
+
+    setLocalError(null);
     onSave({ dayOfWeek: day, startTime, endTime, classroom });
   }
+
+  const displayedError = localError ?? error;
 
   return (
     <div
@@ -71,7 +95,10 @@ export function EditScheduleDialog({
               </span>
               <TimeField
                 value={startTime}
-                onChange={setStartTime}
+                onChange={(value) => {
+                  setLocalError(null);
+                  setStartTime(value);
+                }}
                 ariaLabel="Hora de inicio"
               />
             </div>
@@ -79,7 +106,10 @@ export function EditScheduleDialog({
               <span className="edit-schedule-dialog__label">Hora de fin</span>
               <TimeField
                 value={endTime}
-                onChange={setEndTime}
+                onChange={(value) => {
+                  setLocalError(null);
+                  setEndTime(value);
+                }}
                 ariaLabel="Hora de fin"
               />
             </div>
@@ -94,7 +124,9 @@ export function EditScheduleDialog({
             placeholder="Ej. 302"
           />
 
-          {error && <p className="edit-schedule-dialog__error">{error}</p>}
+          {displayedError && (
+            <p className="edit-schedule-dialog__error">{displayedError}</p>
+          )}
 
           <div className="edit-schedule-dialog__actions">
             <Button

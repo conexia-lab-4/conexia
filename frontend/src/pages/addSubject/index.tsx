@@ -274,9 +274,7 @@ export function AddSubject() {
           </div>
         </div>
 
-        {submitError && (
-          <p className="add-subject__error text-body-3">{submitError}</p>
-        )}
+        {submitError && <p className="add-subject__error">{submitError}</p>}
 
         <Button
           type="submit"

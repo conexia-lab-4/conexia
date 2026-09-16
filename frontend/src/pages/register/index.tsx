@@ -85,9 +85,14 @@ export function Register() {
         email,
         password,
       );
-      await updateProfile(credential.user, {
-        displayName: `${nombre} ${apellido}`,
-      });
+      try {
+        await updateProfile(credential.user, {
+          displayName: `${nombre} ${apellido}`,
+        });
+      } catch (err) {
+        console.error('Error al actualizar el nombre del perfil:', err);
+        // La cuenta ya se creó; no bloqueamos el registro por esto.
+      }
       try {
         await sendEmailVerification(credential.user);
         navigate('/verify-email');
