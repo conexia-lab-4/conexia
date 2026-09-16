@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -57,22 +57,26 @@ export function Schedule() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const loadSubjects = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const data = await getSubjects();
+      setSubjects(data);
+      setStatus('ready');
+    } catch (error) {
+      console.error('Error al cargar materias y horarios:', error);
+      setStatus('error');
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-
-      try {
-        const data = await getSubjects();
-        setSubjects(data);
-        setStatus('ready');
-      } catch (error) {
-        console.error('Error al cargar materias y horarios:', error);
-        setStatus('error');
-      }
+      loadSubjects();
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadSubjects]);
 
   const dayGroups: DayGroup[] = groupSubjectsByDay(subjects);
   const totalEntries = dayGroups.reduce(
@@ -215,9 +219,16 @@ export function Schedule() {
       )}
 
       {status === 'error' && (
-        <p className="schedule-page__status-message schedule-page__status-message--error">
-          No pudimos cargar tus horarios. Intentá de nuevo más tarde.
-        </p>
+        <div className="schedule-page__status-message schedule-page__status-message--error">
+          <p>No pudimos cargar tus horarios. Intentá de nuevo más tarde.</p>
+          <button
+            type="button"
+            className="schedule-page__retry-button"
+            onClick={loadSubjects}
+          >
+            Reintentar
+          </button>
+        </div>
       )}
 
       {status === 'ready' && (

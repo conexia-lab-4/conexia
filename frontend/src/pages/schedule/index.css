@@ -124,3 +124,22 @@
   color: var(--color-grey-400);
   margin-top: 2px;
 }
+
+.schedule-page__status-message--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-page__retry-button {
+  padding: 8px 20px;
+  border: 1px solid var(--color-primary-500);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-primary-500);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
