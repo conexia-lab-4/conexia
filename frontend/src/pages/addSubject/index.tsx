@@ -13,11 +13,12 @@ import {
   ScheduleSection,
   type SchedulesByDay,
 } from '../../components/schedulesection';
-import addSubjectHeader from '../../assets/images/add-subject-header.svg';
 import { createSubject, type SubjectColor } from '../../lib/subjectsApi';
+import addSubjectHeader from '../../assets/images/add-subject-header.svg';
 import './index.css';
 
 const ICON_COLOR = 'var(--color-grey-400)';
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function buildFlatSchedules(
   selectedDays: DayValue[],
@@ -92,29 +93,61 @@ export function AddSubject() {
     });
   };
 
-  const flatSchedules = buildFlatSchedules(selectedDays, schedules, classroom);
-  const canSubmit =
-    Boolean(name.trim()) && Boolean(colorId) && flatSchedules.length > 0;
+  function validate(): string | null {
+    if (!name.trim()) return 'Ingresá el nombre de la materia.';
+    if (!colorId) {
+      return 'Elegí un color para la materia.';
+    }
+    if (selectedDays.length === 0) {
+      return 'Seleccioná al menos un día de la semana.';
+    }
+    for (const day of selectedDays) {
+      const ranges = schedules[day] ?? [];
+      for (const range of ranges) {
+        if (!TIME_REGEX.test(range.start) || !TIME_REGEX.test(range.end)) {
+          return 'Completá la hora de inicio y de fin de cada horario.';
+        }
+        if (range.end <= range.start) {
+          return 'La hora de fin debe ser posterior a la hora de inicio.';
+        }
+      }
+    }
+    return null;
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
-    if (!canSubmit || isSubmitting || !colorId) {
+    const validationMessage = validate();
+    if (validationMessage) {
+      setSubmitError(validationMessage);
       return;
     }
 
-    setSubmitError('');
+    const flatSchedules = buildFlatSchedules(
+      selectedDays,
+      schedules,
+      classroom,
+    );
+
     setIsSubmitting(true);
+    setSubmitError('');
 
     try {
       await createSubject({
         name: name.trim(),
-        color: colorId,
+        color: colorId!,
         schedules: flatSchedules,
       });
       navigate('/schedule');
-    } catch {
-      setSubmitError('No pudimos guardar la materia. Intentá de nuevo.');
+    } catch (err) {
+      console.error('Error al crear la materia:', err);
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : 'No pudimos guardar la materia. Intentá de nuevo.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -218,15 +251,13 @@ export function AddSubject() {
           </div>
         </div>
 
-        {submitError && (
-          <p className="add-subject__error text-body-3">{submitError}</p>
-        )}
+        {submitError && <p className="add-subject__error">{submitError}</p>}
 
         <Button
           type="submit"
           variant="fulfilled"
           size="large-wide"
-          disabled={!canSubmit || isSubmitting}
+          disabled={isSubmitting}
         >
           {isSubmitting ? 'Guardando...' : 'Agregar materia'}
         </Button>
