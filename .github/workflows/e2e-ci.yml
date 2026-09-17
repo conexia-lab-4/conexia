@@ -7,6 +7,12 @@ on:
   push:
     branches: [dev, main]
 
+# Cancela el run anterior de la misma rama/PR cuando llega un push nuevo,
+# para no confundir artifacts de corridas viejas con las últimas.
+concurrency:
+  group: e2e-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
