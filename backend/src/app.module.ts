@@ -6,6 +6,7 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
 import { SubjectsModule } from './subjects/subjects.module';
+import { TestUtilsModule } from './test-utils/test-utils.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SubjectsModule } from './subjects/subjects.module';
     PrismaModule,
     ProfileModule,
     SubjectsModule,
+    TestUtilsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
