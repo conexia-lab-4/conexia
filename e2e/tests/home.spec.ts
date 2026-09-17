@@ -8,7 +8,7 @@ test.describe('Home', () => {
 
     await expect(page.getByRole('heading', { name: /¡Hola,/ })).toBeVisible();
     await expect(page.getByText('Mis Clases')).toBeVisible();
-    await expect(page.getByText('Matches')).toBeVisible();
+    await expect(page.getByText('Matches', { exact: true })).toBeVisible();
     await expect(page.getByText('Viajes Pendientes')).toBeVisible();
     await expect(page.getByText('Total viajes')).toBeVisible();
     await expect(

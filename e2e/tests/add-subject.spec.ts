@@ -6,6 +6,11 @@ import {
 } from './helpers/schedule';
 
 test.describe('Alta de materia', () => {
+  // El alta interactúa con el wheel-picker de horarios (varias esperas
+  // deliberadas de ~600ms por campo) y en CI corre en un runner más lento
+  // que el entorno local, así que el timeout default de 30s queda justo.
+  test.describe.configure({ timeout: 60_000 });
+
   test('crear una materia con un horario la deja visible en Mis Horarios', async ({
     page,
   }) => {

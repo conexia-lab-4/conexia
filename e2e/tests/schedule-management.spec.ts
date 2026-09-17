@@ -7,6 +7,11 @@ import {
 } from './helpers/schedule';
 
 test.describe('Edición y eliminación de horarios', () => {
+  // El beforeEach ya hace un alta completa por UI (wheel-picker incluido)
+  // antes de que arranque el test en sí, así que necesita más margen que
+  // el timeout default de 30s, sobre todo en el runner de CI.
+  test.describe.configure({ timeout: 60_000 });
+
   let subjectName: string;
 
   test.beforeEach(async ({ page }) => {
