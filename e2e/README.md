@@ -31,12 +31,6 @@ El proyecto `setup` (`tests/auth.setup.ts`) hace login una sola vez contra Fireb
 
 Los tests que no necesitan sesión (como `smoke.spec.ts`, `registration.spec.ts`, `login.spec.ts` y `email-verification.spec.ts`) la ignoran explícitamente con `test.use({ storageState: { cookies: [], origins: [] } })`.
 
-### Por qué hay un fixture custom además de `storageState`
-
-Firebase persiste la sesión con `browserSessionPersistence`, es decir en `sessionStorage`. `storageState()` de Playwright solo captura cookies, `localStorage` e IndexedDB — **nunca `sessionStorage`** (confirmado en la doc oficial). Sin nada más, cualquier test que reutilice `.auth/user.json` cae en `/login` como si no hubiera sesión.
-
-Para resolverlo sin cambiar cómo persiste la sesión la app real (eso afectaría a usuarios reales, no solo a los tests): `auth.setup.ts` además vuelca el `sessionStorage` post-login a `.auth/session-storage.json`, y `tests/fixtures/authenticated.ts` lo inyecta vía `context.addInitScript()` antes de que cargue cualquier script de la app. Todo test que necesite la sesión (`home.spec.ts`, `authenticated.spec.ts`, `add-subject.spec.ts`, `schedule-management.spec.ts`, `questionnaire.spec.ts`) importa `test`/`expect` desde `./fixtures/authenticated` en vez de `@playwright/test` directamente.
-
 ## Endpoints de test (`/test-utils/*`)
 
 Los flujos de Registro y Questionnaire tienen pasos que normalmente requieren intervención manual (clickear el link de verificación que llega por mail) o un estado compartido que hay que poder resetear (el perfil del Questionnaire). Para que los tests sean repetibles y no dependan de intervención manual, el backend expone endpoints de test bajo `/test-utils`, habilitados solo cuando `E2E_TESTING=true`:
@@ -48,14 +42,6 @@ Los flujos de Registro y Questionnaire tienen pasos que normalmente requieren in
 Estos endpoints devuelven 404 si `E2E_TESTING` no está en `true`, así que nunca deben quedar accesibles en producción. Los helpers de `tests/helpers/testUtils.ts` los consumen por HTTP contra `E2E_API_BASE_URL`.
 
 Los tests de `questionnaire.spec.ts` reutilizan el mismo usuario fijo (`E2E_TEST_EMAIL`) y mutan su perfil mediante `reset-profile`, por lo que ese archivo corre en modo `serial` (`test.describe.configure({ mode: 'serial' })`) para no pisarse entre corridas paralelas.
-
-## Home y Mis Horarios
-
-`home.spec.ts`, `add-subject.spec.ts` y `schedule-management.spec.ts` cubren el acceso al Home y el CRUD de materias/horarios, usando la sesión autenticada (storageState). A diferencia de `questionnaire.spec.ts`, estos no necesitan modo serial: cada test crea su propia materia con un nombre único (`uniqueSubjectName` en `tests/helpers/schedule.ts`) y todas las aserciones están scopeadas a esa card puntual (`page.locator('.schedule-card', { hasText: name })`), así que pueden convivir en paralelo con otras corridas sobre el mismo usuario sin pisarse. El cleanup se hace por UI con "Eliminar materia", que desde KAN-128 borra todas las instancias con ese nombre en un solo paso.
-
-### El selector de hora es un wheel picker, no un input
-
-`TimeField` usa `@ncdai/react-wheel-picker` en modo `infinite`, así que no se puede `.fill()` y las teclas `Home`/`End` están deshabilitadas (el componente las ignora en ese modo). `tests/helpers/schedule.ts` expone `setTimeField(page, triggerLabel, from, to)`, que calcula la diferencia entre el valor de partida conocido y el valor deseado y la resuelve con `ArrowUp`/`ArrowDown` sobre `[data-rwp]` (hay dos por campo — hora y minuto — distinguibles solo por posición en el DOM, ya que la librería no les pone `aria-label` propio). Para un campo recién abierto y vacío, el valor de partida es siempre `08:00` (default del componente).
 
 ## CI
 
