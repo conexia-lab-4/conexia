@@ -17,6 +17,8 @@ Pruebas end-to-end con Playwright sobre los flujos principales de Conexia.
 - `npm run test:e2e:headed` — con navegador visible
 - `npm run test:e2e:report` — abre el último reporte HTML
 
+El config levanta automáticamente el frontend (`npm run dev` en `frontend/`) si no está corriendo ya en `E2E_BASE_URL`, así que no hace falta arrancarlo a mano. El backend sí hay que levantarlo aparte (`cd backend && npm run start:dev`, con su `.env` configurado) para los tests que dependen de datos reales, como `authenticated.spec.ts`.
+
 ## Estrategia de datos de prueba
 
 Cada test es responsable de crear y limpiar sus propios datos (por ejemplo: alta de materia → asserts → eliminarla al final del test), en vez de depender de un seed fijo en la base compartida. Esto evita que los tests queden acoplados al estado de una DB que puede cambiar, y permite correrlos en paralelo sin que se pisen entre sí.

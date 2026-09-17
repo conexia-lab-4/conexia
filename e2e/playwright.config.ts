@@ -14,6 +14,13 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
+  webServer: {
+    command: 'npm run dev',
+    cwd: '../frontend',
+    url: BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
   projects: [
     {
       name: 'smoke',
