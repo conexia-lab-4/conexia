@@ -31,6 +31,12 @@ El proyecto `setup` (`tests/auth.setup.ts`) hace login una sola vez contra Fireb
 
 Los tests que no necesitan sesión (como `smoke.spec.ts`, `registration.spec.ts`, `login.spec.ts` y `email-verification.spec.ts`) la ignoran explícitamente con `test.use({ storageState: { cookies: [], origins: [] } })`.
 
+### Por qué hay un fixture custom además de `storageState`
+
+Firebase persiste la sesión con `browserSessionPersistence`, es decir en `sessionStorage`. `storageState()` de Playwright solo captura cookies, `localStorage` e IndexedDB — **nunca `sessionStorage`** (confirmado en la doc oficial). Sin nada más, cualquier test que reutilice `.auth/user.json` cae en `/login` como si no hubiera sesión.
+
+Para resolverlo sin cambiar cómo persiste la sesión la app real (eso afectaría a usuarios reales, no solo a los tests): `auth.setup.ts` además vuelca el `sessionStorage` post-login a `.auth/session-storage.json`, y `tests/fixtures/authenticated.ts` lo inyecta vía `context.addInitScript()` antes de que cargue cualquier script de la app. Todo test que necesite la sesión (`home.spec.ts`, `authenticated.spec.ts`, `add-subject.spec.ts`, `schedule-management.spec.ts`, `questionnaire.spec.ts`) importa `test`/`expect` desde `./fixtures/authenticated` en vez de `@playwright/test` directamente.
+
 ## Endpoints de test (`/test-utils/*`)
 
 Los flujos de Registro y Questionnaire tienen pasos que normalmente requieren intervención manual (clickear el link de verificación que llega por mail) o un estado compartido que hay que poder resetear (el perfil del Questionnaire). Para que los tests sean repetibles y no dependan de intervención manual, el backend expone endpoints de test bajo `/test-utils`, habilitados solo cuando `E2E_TESTING=true`:

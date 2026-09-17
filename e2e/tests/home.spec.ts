@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 
 test.describe('Home', () => {
   test('accede al Home con un usuario autenticado y verificado', async ({
