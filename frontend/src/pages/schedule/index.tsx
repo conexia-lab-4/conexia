@@ -92,8 +92,13 @@ export function Schedule() {
   }
 
   function getScheduleDeleteMessage(entry: ScheduleEntry): string {
-    const subject = subjects.find((s) => s.id === entry.subjectId);
-    const isLastSchedule = (subject?.schedules.length ?? 0) <= 1;
+    // "Materia" se identifica por nombre: puede haber varias altas
+    // (registros) con el mismo nombre, cada una con sus propios horarios.
+    // Por eso el total hay que contarlo across todas, no solo la de este id.
+    const totalSchedulesWithSameName = subjects
+      .filter((s) => s.name === entry.subjectName)
+      .reduce((sum, s) => sum + s.schedules.length, 0);
+    const isLastSchedule = totalSchedulesWithSameName <= 1;
     const dayLabel = DAY_LABELS[entry.dayOfWeek].toLowerCase();
     const timeRange = `${entry.startTime} -${entry.endTime}`;
 
