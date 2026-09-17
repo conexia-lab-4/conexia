@@ -32,12 +32,15 @@ describe('SubjectsService', () => {
       findFirst: jest.Mock<Promise<SubjectRecord | null>, [unknown]>;
       update: jest.Mock<Promise<SubjectRecord>, [unknown]>;
       delete: jest.Mock<Promise<SubjectRecord>, [unknown]>;
+      deleteMany: jest.Mock<Promise<{ count: number }>, [unknown]>;
     };
     schedule: {
       findFirst: jest.Mock<Promise<ScheduleRecord | null>, [unknown]>;
       update: jest.Mock<Promise<ScheduleRecord>, [unknown]>;
       delete: jest.Mock<Promise<ScheduleRecord>, [unknown]>;
+      count: jest.Mock<Promise<number>, [unknown]>;
     };
+    $transaction: jest.Mock;
   };
   const userId = 'user-123';
 
@@ -58,13 +61,19 @@ describe('SubjectsService', () => {
         findFirst: jest.fn<Promise<SubjectRecord | null>, [unknown]>(),
         update: jest.fn<Promise<SubjectRecord>, [unknown]>(),
         delete: jest.fn<Promise<SubjectRecord>, [unknown]>(),
+        deleteMany: jest.fn<Promise<{ count: number }>, [unknown]>(),
       },
       schedule: {
         findFirst: jest.fn<Promise<ScheduleRecord | null>, [unknown]>(),
         update: jest.fn<Promise<ScheduleRecord>, [unknown]>(),
         delete: jest.fn<Promise<ScheduleRecord>, [unknown]>(),
+        count: jest.fn<Promise<number>, [unknown]>(),
       },
+      $transaction: jest.fn(),
     };
+    prismaMock.$transaction.mockImplementation(
+      async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
+    );
     service = new SubjectsService(prismaMock as unknown as PrismaService);
   });
 
@@ -168,19 +177,19 @@ describe('SubjectsService', () => {
   });
 
   describe('removeSubject', () => {
-    it('elimina la materia cuando le pertenece al usuario', async () => {
+    it('elimina todas las materias del usuario con el mismo nombre', async () => {
       const owned: SubjectRecord = {
         id: 'subject-1',
         userId,
         name: 'Análisis Matemático',
       };
       prismaMock.subject.findFirst.mockResolvedValue(owned);
-      prismaMock.subject.delete.mockResolvedValue(owned);
+      prismaMock.subject.deleteMany.mockResolvedValue({ count: 2 });
 
       await service.removeSubject(userId, 'subject-1');
 
-      expect(prismaMock.subject.delete).toHaveBeenCalledWith({
-        where: { id: 'subject-1' },
+      expect(prismaMock.subject.deleteMany).toHaveBeenCalledWith({
+        where: { userId, name: 'Análisis Matemático' },
       });
     });
 
@@ -190,7 +199,7 @@ describe('SubjectsService', () => {
       await expect(
         service.removeSubject(userId, 'subject-ajeno'),
       ).rejects.toThrow(NotFoundException);
-      expect(prismaMock.subject.delete).not.toHaveBeenCalled();
+      expect(prismaMock.subject.deleteMany).not.toHaveBeenCalled();
     });
   });
 
@@ -263,14 +272,36 @@ describe('SubjectsService', () => {
       endTime: '10:00',
     };
 
-    it('elimina el horario cuando le pertenece al usuario', async () => {
+    it('elimina el horario y conserva la materia si le quedan otros horarios', async () => {
       prismaMock.schedule.findFirst.mockResolvedValue(owned);
       prismaMock.schedule.delete.mockResolvedValue(owned);
+      prismaMock.schedule.count.mockResolvedValue(1);
 
       await service.removeSchedule(userId, 'schedule-1');
 
       expect(prismaMock.schedule.delete).toHaveBeenCalledWith({
         where: { id: 'schedule-1' },
+      });
+      expect(prismaMock.schedule.count).toHaveBeenCalledWith({
+        where: { subjectId: owned.subjectId },
+      });
+      expect(prismaMock.subject.delete).not.toHaveBeenCalled();
+    });
+
+    it('elimina también la materia si el horario borrado era el último', async () => {
+      prismaMock.schedule.findFirst.mockResolvedValue(owned);
+      prismaMock.schedule.delete.mockResolvedValue(owned);
+      prismaMock.schedule.count.mockResolvedValue(0);
+      prismaMock.subject.delete.mockResolvedValue({
+        id: owned.subjectId,
+        userId,
+        name: 'Análisis Matemático',
+      });
+
+      await service.removeSchedule(userId, 'schedule-1');
+
+      expect(prismaMock.subject.delete).toHaveBeenCalledWith({
+        where: { id: owned.subjectId },
       });
     });
 

@@ -91,6 +91,17 @@ export function Schedule() {
     );
   }
 
+  function getScheduleDeleteMessage(entry: ScheduleEntry): string {
+    const subject = subjects.find((s) => s.id === entry.subjectId);
+    const isLastSchedule = (subject?.schedules.length ?? 0) <= 1;
+    const dayLabel = DAY_LABELS[entry.dayOfWeek].toLowerCase();
+    const timeRange = `${entry.startTime} -${entry.endTime}`;
+
+    return isLastSchedule
+      ? `Se eliminará la clase de ${entry.subjectName} del ${dayLabel} (${timeRange}). Como era tu único horario, la materia también se eliminará`
+      : `Se eliminará la clase de ${entry.subjectName} del ${dayLabel} (${timeRange}). La materia seguirá apareciendo en tus horarios`;
+  }
+
   function handleDeleteScheduleClick(entry: ScheduleEntry) {
     setOpenMenuScheduleId(null);
     setDeleteError(null);
@@ -119,22 +130,29 @@ export function Schedule() {
     try {
       if (deleteMode === 'subject') {
         await deleteSubject(deleteTarget.subjectId);
+        // El backend borra todas las materias del usuario con este nombre
+        // (dos altas separadas con el mismo nombre cuentan como la misma
+        // materia), así que el estado local filtra por nombre, no por id.
         setSubjects((prev) =>
-          prev.filter((subject) => subject.id !== deleteTarget.subjectId),
+          prev.filter((subject) => subject.name !== deleteTarget.subjectName),
         );
       } else {
         await deleteSchedule(deleteTarget.scheduleId);
+        // El backend borra también la materia si ese era su último horario,
+        // así que la sacamos del estado local en vez de dejarla vacía.
         setSubjects((prev) =>
-          prev.map((subject) =>
-            subject.id === deleteTarget.subjectId
-              ? {
-                  ...subject,
-                  schedules: subject.schedules.filter(
-                    (s) => s.id !== deleteTarget.scheduleId,
-                  ),
-                }
-              : subject,
-          ),
+          prev
+            .map((subject) =>
+              subject.id === deleteTarget.subjectId
+                ? {
+                    ...subject,
+                    schedules: subject.schedules.filter(
+                      (s) => s.id !== deleteTarget.scheduleId,
+                    ),
+                  }
+                : subject,
+            )
+            .filter((subject) => subject.schedules.length > 0),
         );
       }
       setDeleteTarget(null);
@@ -302,12 +320,15 @@ export function Schedule() {
           title={
             deleteMode === 'subject'
               ? '¿Eliminar materia?'
-              : '¿Eliminar horario?'
+              : '¿Eliminar solo este horario?'
           }
           message={
             deleteMode === 'subject'
-              ? `${deleteTarget.subjectName} se eliminará por completo, junto con todos sus horarios. Esta acción no se puede deshacer.`
-              : `El horario de ${DAY_LABELS[deleteTarget.dayOfWeek]} de ${deleteTarget.subjectName} se eliminará. Esta acción no se puede deshacer.`
+              ? subjects.filter((s) => s.name === deleteTarget.subjectName)
+                  .length > 1
+                ? `Se eliminarán todas las materias llamadas "${deleteTarget.subjectName}" junto con todos sus horarios. Esta acción no se puede deshacer.`
+                : `${deleteTarget.subjectName} se eliminará por completo, junto con todos sus horarios. Esta acción no se puede deshacer.`
+              : getScheduleDeleteMessage(deleteTarget)
           }
           isDeleting={isDeleting}
           error={deleteError}
