@@ -72,7 +72,7 @@ describe('SubjectsService', () => {
       $transaction: jest.fn(),
     };
     prismaMock.$transaction.mockImplementation(
-      async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
+      (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
     );
     service = new SubjectsService(prismaMock as unknown as PrismaService);
   });
