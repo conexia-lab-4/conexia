@@ -54,9 +54,13 @@ export class SubjectsService {
   }
 
   async removeSubject(userId: string, subjectId: string) {
-    await this.findOwnedSubjectOrThrow(userId, subjectId);
+    const subject = await this.findOwnedSubjectOrThrow(userId, subjectId);
 
-    await this.prisma.subject.delete({ where: { id: subjectId } });
+    // Dos altas separadas con el mismo nombre representan la misma materia
+    // para el usuario, así que "eliminar materia" las borra a todas.
+    await this.prisma.subject.deleteMany({
+      where: { userId, name: subject.name },
+    });
   }
 
   async updateSchedule(
@@ -81,9 +85,19 @@ export class SubjectsService {
   }
 
   async removeSchedule(userId: string, scheduleId: string) {
-    await this.findOwnedScheduleOrThrow(userId, scheduleId);
+    const schedule = await this.findOwnedScheduleOrThrow(userId, scheduleId);
 
-    await this.prisma.schedule.delete({ where: { id: scheduleId } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.schedule.delete({ where: { id: scheduleId } });
+
+      const remainingSchedules = await tx.schedule.count({
+        where: { subjectId: schedule.subjectId },
+      });
+
+      if (remainingSchedules === 0) {
+        await tx.subject.delete({ where: { id: schedule.subjectId } });
+      }
+    });
   }
 
   private async findOwnedSubjectOrThrow(userId: string, subjectId: string) {
