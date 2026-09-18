@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 
 test('accede a Mis Horarios estando logueado', async ({ page }) => {
   await page.goto('/schedule');

@@ -40,6 +40,14 @@ test.describe('Verificación de email', () => {
   });
 
   test('reenviar email muestra confirmación', async ({ page }) => {
+    test.setTimeout(90_000);
+
+    // Firebase aplica un cooldown (~60s) entre envíos consecutivos de
+    // verificación para el mismo usuario. El registro (beforeEach) ya
+    // disparó uno, así que hay que esperar ese cooldown antes de reenviar
+    // o Firebase responde auth/too-many-requests.
+    await page.waitForTimeout(65_000);
+
     await page.getByRole('button', { name: 'Reenviar email' }).click();
 
     await expect(
