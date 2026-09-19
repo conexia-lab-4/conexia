@@ -1,4 +1,9 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import './index.css';
 
 export type TextFieldVariant = 'default' | 'error' | 'desplegable' | 'filled';
@@ -28,7 +33,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     },
     ref,
   ) => {
-    const inputId = id ?? name;
+    const generatedId = useId();
+    const inputId = id ?? name ?? generatedId;
 
     const iconElement = rightIcon ? (
       onClickIcon ? (

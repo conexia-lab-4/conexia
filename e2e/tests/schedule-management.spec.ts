@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 import {
   addSubjectViaUI,
   deleteSubjectByNameViaUI,
@@ -7,6 +7,11 @@ import {
 } from './helpers/schedule';
 
 test.describe('Edición y eliminación de horarios', () => {
+  // El beforeEach ya hace un alta completa por UI (wheel-picker incluido,
+  // con espera por paso) antes de que arranque el test en sí, así que
+  // necesita más margen que el timeout default de 30s.
+  test.describe.configure({ timeout: 60_000 });
+
   let subjectName: string;
 
   test.beforeEach(async ({ page }) => {
@@ -48,11 +53,27 @@ test.describe('Edición y eliminación de horarios', () => {
   test('eliminar solo el horario lo saca de la lista sin tocar la materia', async ({
     page,
   }) => {
-    const card = page.locator('.schedule-card', { hasText: subjectName });
-    await card
+    // El beforeEach ya crea la materia con un horario (Mar 10:00-12:00). Si
+    // fuera el único, borrarlo se ve igual que borrar la materia entera
+    // (removeSchedule borra la materia cuando queda en 0 horarios). Para
+    // probar de verdad que "eliminar solo este horario" no toca el resto,
+    // la materia necesita un segundo horario en otro día.
+    await addSubjectViaUI(page, {
+      name: subjectName,
+      day: 'THURSDAY',
+      startTime: '09:00',
+      endTime: '10:00',
+      color: 'GREEN',
+    });
+
+    const cards = page.locator('.schedule-card', { hasText: subjectName });
+    await expect(cards).toHaveCount(2);
+
+    const tuesdayCard = cards.filter({ hasText: '10:00 - 12:00' });
+    await tuesdayCard
       .getByRole('button', { name: `Opciones de ${subjectName}` })
       .click();
-    await card
+    await tuesdayCard
       .getByRole('button', { name: 'Eliminar solo este horario' })
       .click();
 
@@ -61,9 +82,8 @@ test.describe('Edición y eliminación de horarios', () => {
     ).toBeVisible();
     await page.getByRole('button', { name: 'Eliminar' }).click();
 
-    await expect(
-      page.locator('.schedule-card', { hasText: subjectName }),
-    ).toHaveCount(0);
+    await expect(cards).toHaveCount(1);
+    await expect(cards.getByText('09:00 - 10:00')).toBeVisible();
   });
 
   test('eliminar la materia completa con confirmación la saca de la lista', async ({

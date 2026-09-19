@@ -58,19 +58,22 @@ export async function setTimeField(
   const hourWheel = wheels.nth(0);
   const minuteWheel = wheels.nth(1);
 
+  // Cada paso anima ~450ms; si se dispara el siguiente ArrowUp/ArrowDown
+  // antes de que la animación previa asiente, el wheel-picker lo ignora
+  // (queda "debajo" de la animación en curso), así que hay que esperar
+  // paso a paso en vez de disparar todos los presses seguidos.
   const hourDelta = toParsed.hour - fromParsed.hour;
   for (let i = 0; i < Math.abs(hourDelta); i++) {
     await hourWheel.press(hourDelta > 0 ? 'ArrowDown' : 'ArrowUp');
+    await page.waitForTimeout(500);
   }
 
   const minuteDelta = toParsed.minute - fromParsed.minute;
   for (let i = 0; i < Math.abs(minuteDelta); i++) {
     await minuteWheel.press(minuteDelta > 0 ? 'ArrowDown' : 'ArrowUp');
+    await page.waitForTimeout(500);
   }
 
-  // Cada paso anima ~450ms; esperamos a que la última animación asiente
-  // antes de confirmar, si no el valor commiteado puede quedar a mitad de camino.
-  await page.waitForTimeout(600);
   await page.getByRole('button', { name: 'Listo' }).click();
 }
 

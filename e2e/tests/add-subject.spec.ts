@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 import {
   addSubjectViaUI,
   deleteSubjectByNameViaUI,
@@ -6,6 +6,11 @@ import {
 } from './helpers/schedule';
 
 test.describe('Alta de materia', () => {
+  // El alta interactúa con el wheel-picker de horarios (espera por paso
+  // más una espera final), así que necesita más margen que el timeout
+  // default de 30s.
+  test.describe.configure({ timeout: 60_000 });
+
   test('crear una materia con un horario la deja visible en Mis Horarios', async ({
     page,
   }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 
 test.describe('Home', () => {
   test('accede al Home con un usuario autenticado y verificado', async ({
@@ -8,7 +8,7 @@ test.describe('Home', () => {
 
     await expect(page.getByRole('heading', { name: /¡Hola,/ })).toBeVisible();
     await expect(page.getByText('Mis Clases')).toBeVisible();
-    await expect(page.getByText('Matches')).toBeVisible();
+    await expect(page.getByText('Matches', { exact: true })).toBeVisible();
     await expect(page.getByText('Viajes Pendientes')).toBeVisible();
     await expect(page.getByText('Total viajes')).toBeVisible();
     await expect(
