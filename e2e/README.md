@@ -43,14 +43,6 @@ Estos endpoints devuelven 404 si `E2E_TESTING` no está en `true`, así que nunc
 
 Los tests de `questionnaire.spec.ts` reutilizan el mismo usuario fijo (`E2E_TEST_EMAIL`) y mutan su perfil mediante `reset-profile`, por lo que ese archivo corre en modo `serial` (`test.describe.configure({ mode: 'serial' })`) para no pisarse entre corridas paralelas.
 
-## Home y Mis Horarios
-
-`home.spec.ts`, `add-subject.spec.ts` y `schedule-management.spec.ts` cubren el acceso al Home y el CRUD de materias/horarios, usando la sesión autenticada (storageState). A diferencia de `questionnaire.spec.ts`, estos no necesitan modo serial: cada test crea su propia materia con un nombre único (`uniqueSubjectName` en `tests/helpers/schedule.ts`) y todas las aserciones están scopeadas a esa card puntual (`page.locator('.schedule-card', { hasText: name })`), así que pueden convivir en paralelo con otras corridas sobre el mismo usuario sin pisarse. El cleanup se hace por UI con "Eliminar materia", que desde KAN-128 borra todas las instancias con ese nombre en un solo paso.
-
-### El selector de hora es un wheel picker, no un input
-
-`TimeField` usa `@ncdai/react-wheel-picker` en modo `infinite`, así que no se puede `.fill()` y las teclas `Home`/`End` están deshabilitadas (el componente las ignora en ese modo). `tests/helpers/schedule.ts` expone `setTimeField(page, triggerLabel, from, to)`, que calcula la diferencia entre el valor de partida conocido y el valor deseado y la resuelve con `ArrowUp`/`ArrowDown` sobre `[data-rwp]` (hay dos por campo — hora y minuto — distinguibles solo por posición en el DOM, ya que la librería no les pone `aria-label` propio). Para un campo recién abierto y vacío, el valor de partida es siempre `08:00` (default del componente).
-
 ## CI
 
 El config detecta `process.env.CI` automáticamente (retries, workers, modo headless). Falta agregar el step de GitHub Actions cuando se decida integrar E2E al pipeline — queda fuera del alcance de este ticket.
