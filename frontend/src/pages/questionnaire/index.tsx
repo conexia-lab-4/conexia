@@ -19,6 +19,7 @@ import {
 } from '../../lib/profileApi';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import ConexiaLoader from '../../components/ConexiaLoader/index.tsx';
 
 const TOTAL_STEPS = 3;
 
@@ -263,7 +264,7 @@ export function Questionnaire() {
     return (
       <div className="questionnaire app-container">
         <p className="text-body-1" style={{ padding: 40 }}>
-          Cargando...
+          <ConexiaLoader></ConexiaLoader>
         </p>
       </div>
     );

@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import './index.css';
+import ConexiaLoader from '../ConexiaLoader';
 
 interface RequireAuthProps {
   requireVerified?: boolean;
@@ -14,7 +15,10 @@ export function RequireAuth({
   const { user, status } = useAuth();
 
   if (status === 'loading') {
-    return <div className="require-auth__loading">Cargando…</div>;
+    return <div className="require-auth__loading">
+      <ConexiaLoader>
+      </ConexiaLoader>
+      </div>;
   }
 
   if (status === 'unauthed' || !user) {

@@ -1,0 +1,109 @@
+.conexia-loader {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+}
+
+.conexia-loader__logo {
+  width: 93px;
+  height: auto;
+}
+
+.loader-part {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+
+  animation-duration: 2.2s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+/* 1 — aparece el pin azul */
+.loader-left {
+  animation-name: leftPin;
+}
+
+/* 2 — aparece la conexión */
+.loader-connection {
+  animation-name: connection;
+}
+
+/* 3 — aparece el pin verde */
+.loader-right {
+  animation-name: rightPin;
+}
+
+@keyframes leftPin {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(.92);
+  }
+
+  12%, 75% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  90%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes connection {
+  0%, 15% {
+    opacity: 0;
+    transform: scaleX(.4);
+  }
+
+  30%, 75% {
+    opacity: .8;
+    transform: scaleX(1);
+  }
+
+  90%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes rightPin {
+  0%, 28% {
+    opacity: 0;
+    transform: translateY(4px) scale(.92);
+  }
+
+  43%, 75% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  90%, 100% {
+    opacity: 0;
+  }
+}
+
+.conexia-loader__text {
+  font-size: 14px;
+  color: #7c7c86;
+
+  animation: loadingText 2.2s ease-in-out infinite;
+}
+
+@keyframes loadingText {
+  0%, 15% {
+    opacity: .35;
+  }
+
+  45%, 75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: .35;
+  }
+}
