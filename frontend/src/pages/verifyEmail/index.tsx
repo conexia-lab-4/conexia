@@ -81,9 +81,12 @@ export function VerifyEmail() {
       setFeedback(
         'Te reenviamos el email de verificación. Revisá tu bandeja de entrada.',
       );
-    } catch {
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
       setError(
-        'No pudimos reenviar el email. Intentá de nuevo en unos minutos.',
+        code === 'auth/too-many-requests'
+          ? 'Ya te enviamos un email hace instantes. Esperá un minuto antes de reenviarlo de nuevo.'
+          : 'No pudimos reenviar el email. Intentá de nuevo en unos minutos.',
       );
     } finally {
       setIsResending(false);
