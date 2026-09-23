@@ -14,6 +14,7 @@ import { IconRoute } from '../../assets/icons/IconRoute';
 import { IconHandWave } from '../../assets/icons/IconHandWave';
 import calendarHeader from '../../assets/images/calendar-header.png';
 import './index.css';
+import ConexiaLoader from '../../components/ConexiaLoader';
 
 function countCompletedSteps(profile: ProfileResponse | null): number {
   if (!profile) return 0;
@@ -78,7 +79,9 @@ export function Home() {
       </header>
 
       {status === 'loading' && (
-        <p className="home__status-message">Cargando...</p>
+        <p className="home__status-message">
+          <ConexiaLoader></ConexiaLoader>
+        </p>
       )}
 
       {status === 'error' && (
