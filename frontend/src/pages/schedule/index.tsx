@@ -240,8 +240,8 @@ export function Schedule() {
 
       {status === 'loading' && (
         <p className="schedule-page__status-message">
-          <ConexiaLoader>
-            </ConexiaLoader> </p>
+          <ConexiaLoader></ConexiaLoader>{' '}
+        </p>
       )}
 
       {status === 'error' && (

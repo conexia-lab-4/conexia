@@ -15,10 +15,11 @@ export function RequireAuth({
   const { user, status } = useAuth();
 
   if (status === 'loading') {
-    return <div className="require-auth__loading">
-      <ConexiaLoader>
-      </ConexiaLoader>
-      </div>;
+    return (
+      <div className="require-auth__loading">
+        <ConexiaLoader></ConexiaLoader>
+      </div>
+    );
   }
 
   if (status === 'unauthed' || !user) {
