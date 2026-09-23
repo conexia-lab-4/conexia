@@ -27,6 +27,7 @@ import { NavBar } from '../../components/navbar';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
 import './index.css';
+import ConexiaLoader from '../../components/ConexiaLoader';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -238,7 +239,9 @@ export function Schedule() {
       </header>
 
       {status === 'loading' && (
-        <p className="schedule-page__status-message">Cargando...</p>
+        <p className="schedule-page__status-message">
+          <ConexiaLoader></ConexiaLoader>{' '}
+        </p>
       )}
 
       {status === 'error' && (
