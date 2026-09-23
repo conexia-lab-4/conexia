@@ -1,11 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/authenticated';
 import { resetProfile } from './helpers/testUtils';
 
 test.describe('Questionnaire', () => {
   // Todos los tests de este archivo comparten el mismo usuario de prueba
   // (E2E_TEST_EMAIL) y mutan su perfil, así que no pueden correr en paralelo
   // entre sí sin pisarse.
-  test.describe.configure({ mode: 'serial' });
+  // El timeout sube porque el flujo completo (3 pasos + varias esperas de
+  // UI) corre más lento en el runner de CI que en local.
+  test.describe.configure({ mode: 'serial', timeout: 60_000 });
 
   test.beforeEach(async () => {
     const email = process.env.E2E_TEST_EMAIL;
