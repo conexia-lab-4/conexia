@@ -1,10 +1,7 @@
 import './index.css';
 
 export type MatchFilterValue =
-  | 'todos'
-  | 'misma-sede'
-  | 'misma-carrera'
-  | 'mismos-horarios';
+  'todos' | 'misma-sede' | 'misma-carrera' | 'mismos-horarios';
 
 interface FilterOption {
   value: MatchFilterValue;

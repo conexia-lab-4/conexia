@@ -32,9 +32,7 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
       </div>
 
       <div className="match-card__info">
-        <span className="match-card__name text-body-2-bold">
-          {match.name}
-        </span>
+        <span className="match-card__name text-body-2-bold">{match.name}</span>
         <span className="match-card__subtitle text-body-3">
           {match.career} {yearLabel}
         </span>
@@ -66,7 +64,10 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
 
           {!match.hasCar && match.hasSimilarSchedule && (
             <span className="match-card__badge match-card__badge--neutral">
-              <IconClockOutline size={12} color="var(--color-badge-blue-text)" />
+              <IconClockOutline
+                size={12}
+                color="var(--color-badge-blue-text)"
+              />
               Horarios similares
             </span>
           )}

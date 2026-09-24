@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
-import { MatchFilters, type MatchFilterValue } from '../../components/matchFilters';
+import {
+  MatchFilters,
+  type MatchFilterValue,
+} from '../../components/matchFilters';
 import { MatchCard } from '../../components/matchCard';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconSearch } from '../../assets/icons/IconSearch';
@@ -94,8 +97,7 @@ export function Matches() {
         <div className="matches__info-text">
           <span className="matches__info-title">¿Cómo funciona?</span>
           <p className="matches__info-body">
-            Te mostramos estudiantes con intereses, horarios y rutas
-            compatibles
+            Te mostramos estudiantes con intereses, horarios y rutas compatibles
           </p>
         </div>
       </div>
