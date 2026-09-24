@@ -1,0 +1,14 @@
+.compatibility-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compatibility-ring__label {
+  position: absolute;
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-bold);
+}

@@ -10,6 +10,7 @@ import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
 import { Profile } from './pages/profile';
 import { RequireAuth } from './components/requireAuth';
+import { Matches } from './pages/matches';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/assignments/new" element={<AddSubject />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/matches" element={<Matches />} />
       </Route>
     </Routes>
   );

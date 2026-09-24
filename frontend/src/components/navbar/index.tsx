@@ -20,7 +20,7 @@ const NAV_ITEMS: {
 }[] = [
   { id: 'home', label: 'Home', Icon: IconHome, path: '/home' },
   { id: 'horarios', label: 'Horarios', Icon: IconCalendar, path: '/schedule' },
-  { id: 'matches', label: 'Matches', Icon: IconUsersThree, path: null },
+  { id: 'matches', label: 'Matches', Icon: IconUsersThree, path: '/matches' },
   { id: 'viajes', label: 'Viajes', Icon: IconCar, path: null },
   { id: 'perfil', label: 'Mi Perfil', Icon: IconUser, path: '/profile' },
 ];
