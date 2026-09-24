@@ -33,6 +33,7 @@ model StudentProfile {
   phone                  String?
   birthDate              DateTime?
   bio                    String?
+  detourToleranceKm      Int?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
