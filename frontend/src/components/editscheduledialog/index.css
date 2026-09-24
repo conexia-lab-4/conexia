@@ -1,0 +1,75 @@
+.edit-schedule-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.edit-schedule-dialog {
+  background-color: var(--color-white);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 380px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.edit-schedule-dialog__title {
+  font-family: var(--font-primary);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-h6);
+  color: var(--color-text);
+}
+
+.edit-schedule-dialog__subtitle {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+  margin-top: 4px;
+}
+
+.edit-schedule-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.edit-schedule-dialog__field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-schedule-dialog__label {
+  font-size: var(--fs-body-3);
+  color: var(--color-grey-400);
+}
+
+.edit-schedule-dialog__times {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-schedule-dialog__times > * {
+  flex: 1;
+}
+
+.edit-schedule-dialog__error {
+  font-size: var(--fs-body-3);
+  color: var(--color-error-700);
+}
+
+.edit-schedule-dialog__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.edit-schedule-dialog__actions > * {
+  flex: 1;
+}

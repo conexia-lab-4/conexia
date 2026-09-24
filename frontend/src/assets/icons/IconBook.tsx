@@ -1,0 +1,21 @@
+import type { IconProps } from '../../utils/types';
+
+export function IconBook({ size = 20, color = 'black' }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 20C12 20 13.5 19 17 19C20.5 19 22 20 22 20V6C22 6 20.5 4 17 4C13.5 4 12 6 12 6C12 6 10.5 4 7 4C3.5 4 2 6 2 6V20C2 20 3.5 19 7 19C10.5 19 12 20 12 20ZM12 6V20"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
