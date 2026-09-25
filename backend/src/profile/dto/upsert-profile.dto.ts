@@ -71,4 +71,9 @@ export class UpsertProfileDto {
   @IsString()
   @MaxLength(500)
   bio?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  detourToleranceKm?: number;
 }

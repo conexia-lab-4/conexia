@@ -51,6 +51,7 @@ export class ProfileService {
       phone: dto.phone,
       birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       bio: dto.bio,
+      detourToleranceKm: dto.detourToleranceKm,
     };
 
     const profile = await this.prisma.studentProfile.upsert({
