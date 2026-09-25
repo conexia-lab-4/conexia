@@ -45,6 +45,12 @@ export class ProfileService {
       hasCar: dto.hasCar,
       availableSeats,
       questionnaireCompleted: dto.questionnaireCompleted,
+      carModel: dto.carModel,
+      carColor: dto.carColor,
+      originAddress: dto.originAddress,
+      phone: dto.phone,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      bio: dto.bio,
     };
 
     const profile = await this.prisma.studentProfile.upsert({

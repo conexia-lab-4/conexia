@@ -13,6 +13,12 @@ type StudentProfileRecord = {
   hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
+  carModel: string | null;
+  carColor: string | null;
+  originAddress: string | null;
+  phone: string | null;
+  birthDate: Date | null;
+  bio: string | null;
 };
 
 describe('ProfileService', () => {
@@ -33,6 +39,12 @@ describe('ProfileService', () => {
     hasCar: true,
     availableSeats: 3,
     questionnaireCompleted: true,
+    carModel: 'Toyota Corolla',
+    carColor: 'Blanco',
+    originAddress: 'Av. Directorio 1234',
+    phone: '+5491122334455',
+    birthDate: '2000-05-15',
+    bio: 'Estudiante de segundo año.',
   };
 
   beforeEach(() => {
@@ -57,6 +69,12 @@ describe('ProfileService', () => {
         hasCar: true,
         availableSeats: 3,
         questionnaireCompleted: true,
+        carModel: validDto.carModel!,
+        carColor: validDto.carColor!,
+        originAddress: validDto.originAddress!,
+        phone: validDto.phone!,
+        birthDate: new Date(validDto.birthDate!),
+        bio: validDto.bio!,
       };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
@@ -79,6 +97,12 @@ describe('ProfileService', () => {
         hasCar: null,
         availableSeats: null,
         questionnaireCompleted: false,
+        carModel: null,
+        carColor: null,
+        originAddress: null,
+        phone: null,
+        birthDate: null,
+        bio: null,
       };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
@@ -108,6 +132,12 @@ describe('ProfileService', () => {
         hasCar: true,
         availableSeats: 3,
         questionnaireCompleted: true,
+        carModel: validDto.carModel!,
+        carColor: validDto.carColor!,
+        originAddress: validDto.originAddress!,
+        phone: validDto.phone!,
+        birthDate: new Date(validDto.birthDate!),
+        bio: validDto.bio!,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -124,6 +154,12 @@ describe('ProfileService', () => {
           hasCar: validDto.hasCar,
           availableSeats: validDto.availableSeats,
           questionnaireCompleted: validDto.questionnaireCompleted,
+          carModel: validDto.carModel,
+          carColor: validDto.carColor,
+          originAddress: validDto.originAddress,
+          phone: validDto.phone,
+          birthDate: new Date(validDto.birthDate!),
+          bio: validDto.bio,
         },
         create: {
           userId,
@@ -134,6 +170,12 @@ describe('ProfileService', () => {
           hasCar: validDto.hasCar,
           availableSeats: validDto.availableSeats,
           questionnaireCompleted: validDto.questionnaireCompleted,
+          carModel: validDto.carModel,
+          carColor: validDto.carColor,
+          originAddress: validDto.originAddress,
+          phone: validDto.phone,
+          birthDate: new Date(validDto.birthDate!),
+          bio: validDto.bio,
         },
       });
     });
@@ -168,6 +210,12 @@ describe('ProfileService', () => {
         hasCar: false,
         availableSeats: null,
         questionnaireCompleted: dto.questionnaireCompleted ?? false,
+        carModel: dto.carModel!,
+        carColor: dto.carColor!,
+        originAddress: dto.originAddress!,
+        phone: dto.phone!,
+        birthDate: new Date(dto.birthDate!),
+        bio: dto.bio!,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -184,6 +232,12 @@ describe('ProfileService', () => {
           hasCar: false,
           availableSeats: null,
           questionnaireCompleted: dto.questionnaireCompleted,
+          carModel: dto.carModel,
+          carColor: dto.carColor,
+          originAddress: dto.originAddress,
+          phone: dto.phone,
+          birthDate: new Date(dto.birthDate!),
+          bio: dto.bio,
         },
         create: {
           userId,
@@ -194,6 +248,12 @@ describe('ProfileService', () => {
           hasCar: false,
           availableSeats: null,
           questionnaireCompleted: dto.questionnaireCompleted,
+          carModel: dto.carModel,
+          carColor: dto.carColor,
+          originAddress: dto.originAddress,
+          phone: dto.phone,
+          birthDate: new Date(dto.birthDate!),
+          bio: dto.bio,
         },
       });
     });
@@ -210,6 +270,12 @@ describe('ProfileService', () => {
         hasCar: null,
         availableSeats: null,
         questionnaireCompleted: false,
+        carModel: null,
+        carColor: null,
+        originAddress: null,
+        phone: null,
+        birthDate: null,
+        bio: null,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -226,6 +292,12 @@ describe('ProfileService', () => {
           hasCar: undefined,
           availableSeats: undefined,
           questionnaireCompleted: undefined,
+          carModel: undefined,
+          carColor: undefined,
+          originAddress: undefined,
+          phone: undefined,
+          birthDate: undefined,
+          bio: undefined,
         },
         create: {
           userId,
@@ -236,6 +308,12 @@ describe('ProfileService', () => {
           hasCar: undefined,
           availableSeats: undefined,
           questionnaireCompleted: undefined,
+          carModel: undefined,
+          carColor: undefined,
+          originAddress: undefined,
+          phone: undefined,
+          birthDate: undefined,
+          bio: undefined,
         },
       });
     });
@@ -252,6 +330,12 @@ describe('ProfileService', () => {
         hasCar: null,
         availableSeats: null,
         questionnaireCompleted: false,
+        carModel: null,
+        carColor: null,
+        originAddress: null,
+        phone: null,
+        birthDate: null,
+        bio: null,
       });
 
       await expect(service.upsertProfile(userId, dto)).resolves.toBeDefined();
