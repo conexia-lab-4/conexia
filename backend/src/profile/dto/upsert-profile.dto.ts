@@ -61,11 +61,6 @@ export class UpsertProfileDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
-  neighborhood?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
   phone?: string;
 
   @IsOptional()

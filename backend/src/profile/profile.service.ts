@@ -48,7 +48,6 @@ export class ProfileService {
       carModel: dto.carModel,
       carColor: dto.carColor,
       originAddress: dto.originAddress,
-      neighborhood: dto.neighborhood,
       phone: dto.phone,
       birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       bio: dto.bio,

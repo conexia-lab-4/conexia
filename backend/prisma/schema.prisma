@@ -29,7 +29,6 @@ model StudentProfile {
   carModel               String?
   carColor               String?
   originAddress          String?
-  neighborhood           String?
   phone                  String?
   birthDate              DateTime?
   bio                    String?
