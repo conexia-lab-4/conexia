@@ -8,6 +8,12 @@ export interface ProfileResponse {
   hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
+  carModel: string | null;
+  carColor: string | null;
+  originAddress: string | null;
+  phone: string | null;
+  birthDate: string | null;
+  bio: string | null;
 }
 
 export interface UpsertProfilePayload {
@@ -18,6 +24,12 @@ export interface UpsertProfilePayload {
   hasCar?: boolean;
   availableSeats?: number;
   questionnaireCompleted?: boolean;
+  carModel?: string;
+  carColor?: string;
+  originAddress?: string;
+  phone?: string;
+  birthDate?: string;
+  bio?: string;
 }
 
 export async function getProfile(): Promise<ProfileResponse | null> {
