@@ -19,6 +19,7 @@ type StudentProfileRecord = {
   phone: string | null;
   birthDate: Date | null;
   bio: string | null;
+  detourToleranceKm: number | null;
 };
 
 describe('ProfileService', () => {
@@ -45,6 +46,7 @@ describe('ProfileService', () => {
     phone: '+5491122334455',
     birthDate: '2000-05-15',
     bio: 'Estudiante de segundo año.',
+    detourToleranceKm: 5,
   };
 
   beforeEach(() => {
@@ -75,6 +77,7 @@ describe('ProfileService', () => {
         phone: validDto.phone!,
         birthDate: new Date(validDto.birthDate!),
         bio: validDto.bio!,
+        detourToleranceKm: validDto.detourToleranceKm!,
       };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
@@ -103,6 +106,7 @@ describe('ProfileService', () => {
         phone: null,
         birthDate: null,
         bio: null,
+        detourToleranceKm: null,
       };
       prismaMock.studentProfile.findUnique.mockResolvedValue(profile);
 
@@ -138,6 +142,7 @@ describe('ProfileService', () => {
         phone: validDto.phone!,
         birthDate: new Date(validDto.birthDate!),
         bio: validDto.bio!,
+        detourToleranceKm: validDto.detourToleranceKm!,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -160,6 +165,7 @@ describe('ProfileService', () => {
           phone: validDto.phone,
           birthDate: new Date(validDto.birthDate!),
           bio: validDto.bio,
+          detourToleranceKm: validDto.detourToleranceKm,
         },
         create: {
           userId,
@@ -176,6 +182,70 @@ describe('ProfileService', () => {
           phone: validDto.phone,
           birthDate: new Date(validDto.birthDate!),
           bio: validDto.bio,
+          detourToleranceKm: validDto.detourToleranceKm,
+        },
+      });
+    });
+
+    it('guarda detourToleranceKm en 0 sin tratarlo como vacío', async () => {
+      const dto: UpsertProfileDto = { detourToleranceKm: 0 };
+      prismaMock.studentProfile.upsert.mockResolvedValue({
+        id: 'profile-1',
+        userId,
+        university: null,
+        career: null,
+        year: null,
+        campus: null,
+        hasCar: null,
+        availableSeats: null,
+        questionnaireCompleted: false,
+        carModel: null,
+        carColor: null,
+        originAddress: null,
+        neighborhood: null,
+        phone: null,
+        birthDate: null,
+        bio: null,
+        detourToleranceKm: 0,
+      });
+
+      await service.upsertProfile(userId, dto);
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          university: undefined,
+          career: undefined,
+          year: undefined,
+          campus: undefined,
+          hasCar: undefined,
+          availableSeats: undefined,
+          questionnaireCompleted: undefined,
+          carModel: undefined,
+          carColor: undefined,
+          originAddress: undefined,
+          neighborhood: undefined,
+          phone: undefined,
+          birthDate: undefined,
+          bio: undefined,
+          detourToleranceKm: 0,
+        },
+        create: {
+          userId,
+          university: undefined,
+          career: undefined,
+          year: undefined,
+          campus: undefined,
+          hasCar: undefined,
+          availableSeats: undefined,
+          questionnaireCompleted: undefined,
+          carModel: undefined,
+          carColor: undefined,
+          originAddress: undefined,
+          neighborhood: undefined,
+          phone: undefined,
+          birthDate: undefined,
+          bio: undefined,
+          detourToleranceKm: 0,
         },
       });
     });
@@ -216,6 +286,7 @@ describe('ProfileService', () => {
         phone: dto.phone!,
         birthDate: new Date(dto.birthDate!),
         bio: dto.bio!,
+        detourToleranceKm: dto.detourToleranceKm!,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -238,6 +309,7 @@ describe('ProfileService', () => {
           phone: dto.phone,
           birthDate: new Date(dto.birthDate!),
           bio: dto.bio,
+          detourToleranceKm: dto.detourToleranceKm,
         },
         create: {
           userId,
@@ -254,6 +326,7 @@ describe('ProfileService', () => {
           phone: dto.phone,
           birthDate: new Date(dto.birthDate!),
           bio: dto.bio,
+          detourToleranceKm: dto.detourToleranceKm,
         },
       });
     });
@@ -276,6 +349,7 @@ describe('ProfileService', () => {
         phone: null,
         birthDate: null,
         bio: null,
+        detourToleranceKm: null,
       };
       prismaMock.studentProfile.upsert.mockResolvedValue(created);
 
@@ -298,6 +372,7 @@ describe('ProfileService', () => {
           phone: undefined,
           birthDate: undefined,
           bio: undefined,
+          detourToleranceKm: undefined,
         },
         create: {
           userId,
@@ -314,6 +389,7 @@ describe('ProfileService', () => {
           phone: undefined,
           birthDate: undefined,
           bio: undefined,
+          detourToleranceKm: undefined,
         },
       });
     });
@@ -336,6 +412,7 @@ describe('ProfileService', () => {
         phone: null,
         birthDate: null,
         bio: null,
+        detourToleranceKm: null,
       });
 
       await expect(service.upsertProfile(userId, dto)).resolves.toBeDefined();
