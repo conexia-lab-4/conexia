@@ -13,17 +13,16 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 48px 0 8px;
-  gap: 12px;
+  padding: 20px 8px 0;
+  gap: 8px;
 }
 
 .matches__heading {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 260px;
-  margin-top: -40px;
-  margin-left: 28px;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .matches__subtitle {
@@ -31,8 +30,8 @@
 }
 
 .matches__illustration {
-  width: 210px;
-  height: 175px;
+  width: clamp(110px, 36vw, 150px);
+  height: auto;
   object-fit: contain;
   flex-shrink: 0;
 }

@@ -45,20 +45,22 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
           {match.hasCar ? (
             <span className="match-card__badge match-card__badge--positive">
               <IconCar size={12} color="var(--color-success-700)" />
-              Con auto
+              <span className="match-card__badge-text">Con auto</span>
             </span>
           ) : (
             <span className="match-card__badge match-card__badge--negative">
               <IconCar size={12} color="var(--color-error-700)" />
-              Sin auto
+              <span className="match-card__badge-text">Sin auto</span>
             </span>
           )}
 
           {match.hasCar && match.availableSeats != null && (
             <span className="match-card__badge match-card__badge--neutral">
               <IconSeat size={12} color="var(--color-badge-blue-text)" />
-              {match.availableSeats}{' '}
-              {match.availableSeats === 1 ? 'asiento' : 'asientos'}
+              <span className="match-card__badge-text">
+                {match.availableSeats}{' '}
+                {match.availableSeats === 1 ? 'asiento' : 'asientos'}
+              </span>
             </span>
           )}
 
@@ -68,7 +70,7 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
                 size={12}
                 color="var(--color-badge-blue-text)"
               />
-              Horarios similares
+              <span className="match-card__badge-text">Horarios similares</span>
             </span>
           )}
         </div>
@@ -77,9 +79,7 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
       <div className="match-card__side">
         <div className="match-card__compat">
           <CompatibilityRing percent={match.compatibilityPercent} />
-          <span className="match-card__compat-label text-body-3">
-            Compatibilidad
-          </span>
+          <span className="match-card__compat-label">Compatibilidad</span>
         </div>
         <IconChevronRight size={16} color="var(--color-grey-300)" />
       </div>

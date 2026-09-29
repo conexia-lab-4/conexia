@@ -73,10 +73,23 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  max-width: 100%;
+  min-width: 0;
   padding: 2px 8px;
   border-radius: 30px;
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
+  box-sizing: border-box;
+}
+
+.match-card__badge svg {
+  flex-shrink: 0;
+}
+
+.match-card__badge-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -98,7 +111,7 @@
 .match-card__side {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -111,5 +124,23 @@
 
 .match-card__compat-label {
   color: var(--color-grey-400);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
   text-align: center;
+}
+
+@media (max-width: 360px) {
+  .match-card {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .match-card__avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .match-card__side {
+    gap: 0;
+  }
 }
