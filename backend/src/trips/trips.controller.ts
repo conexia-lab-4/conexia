@@ -16,7 +16,7 @@ export class TripsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tripsService.findOneOrThrow(id);
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tripsService.findOneOrThrow(id, user.id);
   }
 }

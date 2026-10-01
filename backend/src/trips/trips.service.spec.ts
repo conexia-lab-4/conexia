@@ -100,21 +100,68 @@ describe('TripsService', () => {
   });
 
   describe('findOneOrThrow', () => {
-    it('devuelve el viaje cuando existe', async () => {
-      const trip = { id: 'trip-1', origin: 'Pilar' };
-      prismaMock.trip.findUnique.mockResolvedValue(trip);
+    const driverId = 'driver-1';
+    const baseTrip = {
+      id: 'trip-1',
+      driverId,
+      origin: 'Pilar',
+      destination: 'Palermo',
+      capacity: 3,
+      driver: { id: driverId, email: 'driver@test.com' },
+    };
 
-      const result = await service.findOneOrThrow('trip-1');
+    it('devuelve el viaje con availableSeats e isParticipant en false si no participa', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [
+          {
+            userId: 'otro-user',
+            user: { id: 'otro-user', email: 'otro@test.com' },
+          },
+        ],
+      });
 
-      expect(result).toEqual(trip);
+      const result = await service.findOneOrThrow('trip-1', 'user-ajeno');
+
+      expect(result.availableSeats).toBe(2);
+      expect(result.isParticipant).toBe(false);
+    });
+
+    it('marca isParticipant true cuando el usuario es pasajero', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [
+          {
+            userId: 'user-123',
+            user: { id: 'user-123', email: 'yo@test.com' },
+          },
+        ],
+      });
+
+      const result = await service.findOneOrThrow('trip-1', 'user-123');
+
+      expect(result.isParticipant).toBe(true);
+      expect(result.availableSeats).toBe(2);
+    });
+
+    it('marca isParticipant true cuando el usuario es el conductor', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+
+      const result = await service.findOneOrThrow('trip-1', driverId);
+
+      expect(result.isParticipant).toBe(true);
+      expect(result.availableSeats).toBe(3);
     });
 
     it('lanza NotFoundException cuando no existe', async () => {
       prismaMock.trip.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOneOrThrow('trip-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOneOrThrow('trip-1', 'user-123'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
