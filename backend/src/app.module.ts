@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TestUtilsModule } from './test-utils/test-utils.module';
+import { TripsModule } from './trips/trips.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TestUtilsModule } from './test-utils/test-utils.module';
     PrismaModule,
     ProfileModule,
     SubjectsModule,
+    TripsModule,
     TestUtilsModule,
   ],
   controllers: [AppController],
