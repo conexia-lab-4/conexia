@@ -34,6 +34,24 @@ export class TripsService {
     });
   }
 
+  async findUpcoming(userId: string) {
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        driverId: { not: userId },
+        departureTime: { gt: new Date() },
+      },
+      orderBy: { departureTime: 'asc' },
+      include: {
+        driver: { select: { id: true, email: true } },
+        passengers: {
+          include: { user: { select: { id: true, email: true } } },
+        },
+      },
+    });
+
+    return trips.map((trip) => this.withDerivedFields(trip, userId));
+  }
+
   async findOneOrThrow(id: string, userId: string) {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
@@ -49,6 +67,16 @@ export class TripsService {
       throw new NotFoundException('El viaje no existe');
     }
 
+    return this.withDerivedFields(trip, userId);
+  }
+
+  private withDerivedFields<
+    T extends {
+      driverId: string;
+      capacity: number;
+      passengers: { userId: string }[];
+    },
+  >(trip: T, userId: string) {
     const isParticipant =
       trip.driverId === userId ||
       trip.passengers.some((passenger) => passenger.userId === userId);

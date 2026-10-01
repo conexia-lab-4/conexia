@@ -7,7 +7,7 @@ describe('TripsService', () => {
   let service: TripsService;
   let prismaMock: {
     studentProfile: { findUnique: jest.Mock };
-    trip: { create: jest.Mock; findUnique: jest.Mock };
+    trip: { create: jest.Mock; findUnique: jest.Mock; findMany: jest.Mock };
   };
   const userId = 'user-123';
 
@@ -21,7 +21,7 @@ describe('TripsService', () => {
   beforeEach(() => {
     prismaMock = {
       studentProfile: { findUnique: jest.fn() },
-      trip: { create: jest.fn(), findUnique: jest.fn() },
+      trip: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     };
     service = new TripsService(prismaMock as unknown as PrismaService);
   });
@@ -96,6 +96,55 @@ describe('TripsService', () => {
         },
         include: { passengers: true },
       });
+    });
+  });
+
+  describe('findUpcoming', () => {
+    it('excluye los viajes publicados por el propio usuario', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00.000Z'));
+      prismaMock.trip.findMany.mockResolvedValue([]);
+
+      await service.findUpcoming('user-123');
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: {
+          driverId: { not: 'user-123' },
+          departureTime: { gt: new Date('2026-10-01T12:00:00.000Z') },
+        },
+        orderBy: { departureTime: 'asc' },
+        include: {
+          driver: { select: { id: true, email: true } },
+          passengers: {
+            include: { user: { select: { id: true, email: true } } },
+          },
+        },
+      });
+
+      jest.useRealTimers();
+    });
+
+    it('calcula availableSeats e isParticipant para cada viaje devuelto', async () => {
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: 'trip-1',
+          driverId: 'otro-driver',
+          capacity: 3,
+          passengers: [{ userId: 'user-123' }],
+        },
+        {
+          id: 'trip-2',
+          driverId: 'otro-driver',
+          capacity: 2,
+          passengers: [],
+        },
+      ]);
+
+      const result = await service.findUpcoming('user-123');
+
+      expect(result[0].availableSeats).toBe(2);
+      expect(result[0].isParticipant).toBe(true);
+      expect(result[1].availableSeats).toBe(2);
+      expect(result[1].isParticipant).toBe(false);
     });
   });
 
