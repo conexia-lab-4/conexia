@@ -15,8 +15,13 @@ export class TripsController {
     return this.tripsService.create(user.id, dto);
   }
 
+  @Get()
+  findUpcoming(@CurrentUser() user: AuthenticatedUser) {
+    return this.tripsService.findUpcoming(user.id);
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tripsService.findOneOrThrow(id);
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tripsService.findOneOrThrow(id, user.id);
   }
 }

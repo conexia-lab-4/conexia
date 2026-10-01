@@ -7,7 +7,7 @@ describe('TripsService', () => {
   let service: TripsService;
   let prismaMock: {
     studentProfile: { findUnique: jest.Mock };
-    trip: { create: jest.Mock; findUnique: jest.Mock };
+    trip: { create: jest.Mock; findUnique: jest.Mock; findMany: jest.Mock };
   };
   const userId = 'user-123';
 
@@ -21,7 +21,7 @@ describe('TripsService', () => {
   beforeEach(() => {
     prismaMock = {
       studentProfile: { findUnique: jest.fn() },
-      trip: { create: jest.fn(), findUnique: jest.fn() },
+      trip: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     };
     service = new TripsService(prismaMock as unknown as PrismaService);
   });
@@ -99,22 +99,118 @@ describe('TripsService', () => {
     });
   });
 
+  describe('findUpcoming', () => {
+    it('excluye los viajes publicados por el propio usuario', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00.000Z'));
+      prismaMock.trip.findMany.mockResolvedValue([]);
+
+      await service.findUpcoming('user-123');
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: {
+          driverId: { not: 'user-123' },
+          departureTime: { gt: new Date('2026-10-01T12:00:00.000Z') },
+        },
+        orderBy: { departureTime: 'asc' },
+        include: {
+          driver: { select: { id: true, email: true } },
+          passengers: {
+            include: { user: { select: { id: true, email: true } } },
+          },
+        },
+      });
+
+      jest.useRealTimers();
+    });
+
+    it('calcula availableSeats e isParticipant para cada viaje devuelto', async () => {
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: 'trip-1',
+          driverId: 'otro-driver',
+          capacity: 3,
+          passengers: [{ userId: 'user-123' }],
+        },
+        {
+          id: 'trip-2',
+          driverId: 'otro-driver',
+          capacity: 2,
+          passengers: [],
+        },
+      ]);
+
+      const result = await service.findUpcoming('user-123');
+
+      expect(result[0].availableSeats).toBe(2);
+      expect(result[0].isParticipant).toBe(true);
+      expect(result[1].availableSeats).toBe(2);
+      expect(result[1].isParticipant).toBe(false);
+    });
+  });
+
   describe('findOneOrThrow', () => {
-    it('devuelve el viaje cuando existe', async () => {
-      const trip = { id: 'trip-1', origin: 'Pilar' };
-      prismaMock.trip.findUnique.mockResolvedValue(trip);
+    const driverId = 'driver-1';
+    const baseTrip = {
+      id: 'trip-1',
+      driverId,
+      origin: 'Pilar',
+      destination: 'Palermo',
+      capacity: 3,
+      driver: { id: driverId, email: 'driver@test.com' },
+    };
 
-      const result = await service.findOneOrThrow('trip-1');
+    it('devuelve el viaje con availableSeats e isParticipant en false si no participa', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [
+          {
+            userId: 'otro-user',
+            user: { id: 'otro-user', email: 'otro@test.com' },
+          },
+        ],
+      });
 
-      expect(result).toEqual(trip);
+      const result = await service.findOneOrThrow('trip-1', 'user-ajeno');
+
+      expect(result.availableSeats).toBe(2);
+      expect(result.isParticipant).toBe(false);
+    });
+
+    it('marca isParticipant true cuando el usuario es pasajero', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [
+          {
+            userId: 'user-123',
+            user: { id: 'user-123', email: 'yo@test.com' },
+          },
+        ],
+      });
+
+      const result = await service.findOneOrThrow('trip-1', 'user-123');
+
+      expect(result.isParticipant).toBe(true);
+      expect(result.availableSeats).toBe(2);
+    });
+
+    it('marca isParticipant true cuando el usuario es el conductor', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+
+      const result = await service.findOneOrThrow('trip-1', driverId);
+
+      expect(result.isParticipant).toBe(true);
+      expect(result.availableSeats).toBe(3);
     });
 
     it('lanza NotFoundException cuando no existe', async () => {
       prismaMock.trip.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOneOrThrow('trip-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOneOrThrow('trip-1', 'user-123'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
