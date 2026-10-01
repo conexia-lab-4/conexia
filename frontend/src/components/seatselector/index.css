@@ -1,0 +1,171 @@
+.seat-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.seat-selector__car {
+  position: relative;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.seat-selector__car-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Posiciones relativas al viewBox 220x400 del auto (el frente queda arriba) */
+.seat-selector__seat {
+  position: absolute;
+  width: 26%;
+  height: 20%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    #55585d 0 14%,
+    #74777c 14% 86%,
+    #55585d 86% 100%
+  );
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+/* Almohadón (gris) y respaldo (blanco) */
+.seat-selector__seat::before {
+  content: '';
+  position: absolute;
+  top: 9%;
+  left: 18%;
+  right: 18%;
+  bottom: 15%;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #a7aaaf 0 58%, #f2f2f2 58% 100%);
+}
+
+/* Capa de color para el estado seleccionado */
+.seat-selector__seat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.seat-selector__seat--front-left {
+  top: 39.5%;
+  left: 21.8%;
+}
+
+.seat-selector__seat--front-right {
+  top: 39.5%;
+  left: 52.2%;
+}
+
+.seat-selector__seat--rear-left {
+  top: 63%;
+  left: 21.8%;
+}
+
+.seat-selector__seat--rear-right {
+  top: 63%;
+  left: 52.2%;
+}
+
+.seat-selector__seat--driver {
+  cursor: not-allowed;
+}
+
+.seat-selector__seat:not(.seat-selector__seat--driver):hover {
+  border-color: var(--color-primary-400);
+}
+
+.seat-selector__seat--selected,
+.seat-selector__seat--selected:not(.seat-selector__seat--driver):hover {
+  border-color: var(--color-primary-500);
+}
+
+.seat-selector__seat--selected::after {
+  background: rgba(93, 147, 200, 0.45);
+}
+
+.seat-selector__seat:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+.seat-selector__check {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+}
+
+.seat-selector__side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.seat-selector__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 12px;
+  border-radius: 12px;
+  background: var(--color-grey-100);
+  text-align: center;
+  color: var(--color-black);
+}
+
+.seat-selector__summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary-200);
+}
+
+.seat-selector__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-grey-100);
+  color: var(--color-grey-400);
+}
+
+.seat-selector__note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+@media (max-width: 340px) {
+  .seat-selector {
+    flex-direction: column;
+  }
+
+  .seat-selector__side {
+    width: 100%;
+  }
+}
