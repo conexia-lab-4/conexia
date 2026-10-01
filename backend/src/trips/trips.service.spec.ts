@@ -1,13 +1,25 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
+import { Prisma } from '../../generated/prisma/client';
 
 describe('TripsService', () => {
   let service: TripsService;
   let prismaMock: {
     studentProfile: { findUnique: jest.Mock };
-    trip: { create: jest.Mock; findUnique: jest.Mock; findMany: jest.Mock };
+    trip: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      findMany: jest.Mock;
+      findFirst: jest.Mock;
+    };
+    tripPassenger: { create: jest.Mock; deleteMany: jest.Mock };
+    $transaction: jest.Mock;
   };
   const userId = 'user-123';
 
@@ -21,8 +33,18 @@ describe('TripsService', () => {
   beforeEach(() => {
     prismaMock = {
       studentProfile: { findUnique: jest.fn() },
-      trip: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
+      trip: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+      },
+      tripPassenger: { create: jest.fn(), deleteMany: jest.fn() },
+      $transaction: jest.fn(),
     };
+    prismaMock.$transaction.mockImplementation(
+      (callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock),
+    );
     service = new TripsService(prismaMock as unknown as PrismaService);
   });
 
@@ -211,6 +233,130 @@ describe('TripsService', () => {
       await expect(
         service.findOneOrThrow('trip-1', 'user-123'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('join', () => {
+    const driverId = 'driver-1';
+    const tripId = 'trip-1';
+    const baseTrip = {
+      id: tripId,
+      driverId,
+      departureTime: new Date('2026-10-05T08:00:00.000Z'),
+      arrivalTime: new Date('2026-10-05T09:00:00.000Z'),
+      capacity: 2,
+    };
+
+    it('lanza NotFoundException si el viaje no existe', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(null);
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rechaza al conductor que intenta sumarse a su propio viaje', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+
+      await expect(service.join(tripId, driverId)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('rechaza si el usuario ya participa del viaje', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [{ userId: 'user-123' }],
+      });
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('rechaza si no quedan lugares disponibles', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        capacity: 1,
+        passengers: [{ userId: 'otro-user' }],
+      });
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza si se solapa con otro viaje del usuario (como pasajero o conductor)', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue({ id: 'otro-trip' });
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+    });
+
+    it('suma al usuario como pasajero cuando todo es valido', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      const created = { id: 'passenger-1', tripId, userId: 'user-123' };
+      prismaMock.tripPassenger.create.mockResolvedValue(created);
+
+      const result = await service.join(tripId, 'user-123');
+
+      expect(result).toEqual(created);
+      expect(prismaMock.tripPassenger.create).toHaveBeenCalledWith({
+        data: { tripId, userId: 'user-123' },
+      });
+    });
+
+    it('convierte un conflicto de transaccion (P2034) en ConflictException', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('conflict', {
+          code: 'P2034',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+  });
+
+  describe('leave', () => {
+    it('elimina la participacion cuando existe', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
+
+      await expect(
+        service.leave('trip-1', 'user-123'),
+      ).resolves.toBeUndefined();
+      expect(prismaMock.tripPassenger.deleteMany).toHaveBeenCalledWith({
+        where: { tripId: 'trip-1', userId: 'user-123' },
+      });
+    });
+
+    it('lanza NotFoundException si no participaba', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

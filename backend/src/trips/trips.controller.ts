@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
@@ -23,5 +33,17 @@ export class TripsController {
   @Get(':id')
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.tripsService.findOneOrThrow(id, user.id);
+  }
+
+  @Post(':id/passengers')
+  @HttpCode(HttpStatus.CREATED)
+  join(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tripsService.join(id, user.id);
+  }
+
+  @Delete(':id/passengers')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  leave(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tripsService.leave(id, user.id);
   }
 }
