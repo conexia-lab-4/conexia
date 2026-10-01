@@ -14,6 +14,7 @@ export interface ProfileResponse {
   phone: string | null;
   birthDate: string | null;
   bio: string | null;
+  detourToleranceKm: number | null;
 }
 
 export interface UpsertProfilePayload {
@@ -30,6 +31,7 @@ export interface UpsertProfilePayload {
   phone?: string;
   birthDate?: string;
   bio?: string;
+  detourToleranceKm?: number;
 }
 
 export async function getProfile(): Promise<ProfileResponse | null> {

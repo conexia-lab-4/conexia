@@ -195,7 +195,7 @@
 
 .profile__car-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -239,16 +239,6 @@
 .profile__combobox-option:hover,
 .profile__combobox-option[aria-selected='true'] {
   background: var(--color-primary-100);
-}
-
-.profile__seats {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.profile__seats-subtitle {
-  color: var(--color-grey-400);
 }
 
 .profile__message {

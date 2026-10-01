@@ -5,6 +5,7 @@ import { Button } from '../../components/button';
 import { TextField } from '../../components/textfield';
 import { IconBack } from '../../assets/icons/IconBack.tsx';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown.tsx';
+import { NumberStepper } from '../../components/numberstepper';
 import { IconCar } from '../../assets/icons/IconCar.tsx';
 import { IconBackpack } from '../../assets/icons/IconBackpack.tsx';
 import { UNIVERSITIES } from './universities';
@@ -35,35 +36,6 @@ const CAREERS = [
   'Diseño Industrial',
   'Economía',
 ];
-
-function NumberStepper({
-  onIncrement,
-  onDecrement,
-}: {
-  onIncrement: () => void;
-  onDecrement: () => void;
-}) {
-  return (
-    <span className="year-stepper">
-      <button
-        type="button"
-        className="year-stepper__btn year-stepper__btn--up"
-        onClick={onIncrement}
-        aria-label="Aumentar año"
-      >
-        <IconChevronDown size={10} color="var(--color-grey-400)" />
-      </button>
-      <button
-        type="button"
-        className="year-stepper__btn"
-        onClick={onDecrement}
-        aria-label="Disminuir año"
-      >
-        <IconChevronDown size={10} color="var(--color-grey-400)" />
-      </button>
-    </span>
-  );
-}
 
 function mapProfileToFormState(profile: ProfileResponse) {
   const matchedUniversity = profile.university
@@ -468,6 +440,8 @@ export function Questionnaire() {
                   <NumberStepper
                     onIncrement={handleIncrementYear}
                     onDecrement={handleDecrementYear}
+                    incrementLabel="Aumentar año"
+                    decrementLabel="Disminuir año"
                   />
                 }
               />
@@ -525,6 +499,8 @@ export function Questionnaire() {
                     <NumberStepper
                       onIncrement={handleIncrementSeats}
                       onDecrement={handleDecrementSeats}
+                      incrementLabel="Aumentar asientos"
+                      decrementLabel="Disminuir asientos"
                     />
                   }
                 />

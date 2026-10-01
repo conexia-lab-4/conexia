@@ -12,8 +12,7 @@ import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { IconUser } from '../../assets/icons/IconUser';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
-import { SeatSelector } from '../../components/seatselector';
-import { MAX_AVAILABLE_SEATS } from '../../components/seatselector/constants';
+import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
 import {
   getProfile,
@@ -37,6 +36,7 @@ interface FormState {
   carModel: string;
   carColor: string;
   availableSeats: number;
+  detourToleranceKm: string;
 }
 
 type LoadStatus = 'loading' | 'ready' | 'error';
@@ -55,6 +55,7 @@ const EMPTY_FORM: FormState = {
   carModel: '',
   carColor: '',
   availableSeats: 0,
+  detourToleranceKm: '',
 };
 
 const CAR_COLORS = [
@@ -86,7 +87,11 @@ function profileToForm(profile: ProfileResponse | null): FormState {
     hasCar: profile.hasCar ?? false,
     carModel: profile.carModel ?? '',
     carColor: profile.carColor ?? '',
-    availableSeats: Math.min(profile.availableSeats ?? 0, MAX_AVAILABLE_SEATS),
+    availableSeats: profile.availableSeats ?? 0,
+    detourToleranceKm:
+      profile.detourToleranceKm != null
+        ? String(profile.detourToleranceKm)
+        : '',
   };
 }
 
@@ -106,6 +111,9 @@ function formToPayload(form: FormState): UpsertProfilePayload {
 
   if (form.hasCar) {
     payload.availableSeats = form.availableSeats;
+    if (form.detourToleranceKm !== '') {
+      payload.detourToleranceKm = Number(form.detourToleranceKm);
+    }
     if (form.carModel.trim()) payload.carModel = form.carModel.trim();
     if (form.carColor.trim()) payload.carColor = form.carColor.trim();
   }
@@ -170,6 +178,24 @@ export function Profile() {
     }));
     setSaveMessage(null);
   };
+
+  const handleIncrementSeats = () =>
+    setField('availableSeats', form.availableSeats + 1);
+
+  const handleDecrementSeats = () =>
+    setField('availableSeats', Math.max(1, form.availableSeats - 1));
+
+  const handleIncrementDetour = () =>
+    setField(
+      'detourToleranceKm',
+      String((Number(form.detourToleranceKm) || 0) + 1),
+    );
+
+  const handleDecrementDetour = () =>
+    setField(
+      'detourToleranceKm',
+      String(Math.max(0, (Number(form.detourToleranceKm) || 0) - 1)),
+    );
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -444,16 +470,42 @@ export function Profile() {
                   </div>
                 </div>
 
-                <div className="profile__seats">
-                  <h3 className="text-body-1-bold">Asientos disponibles</h3>
-                  <p className="profile__seats-subtitle text-body-3">
-                    Seleccioná qué asientos ofrecer para compartir tu viaje
-                  </p>
+                <div className="profile__car-fields">
+                  <TextField
+                    variant="filled"
+                    label="Asientos disponibles"
+                    value={
+                      form.availableSeats ? String(form.availableSeats) : ''
+                    }
+                    onChange={() => {}}
+                    readOnly
+                    placeholder="Ej. 2"
+                    rightIcon={
+                      <NumberStepper
+                        onIncrement={handleIncrementSeats}
+                        onDecrement={handleDecrementSeats}
+                        incrementLabel="Aumentar asientos"
+                        decrementLabel="Disminuir asientos"
+                      />
+                    }
+                  />
+                  <TextField
+                    variant="filled"
+                    label="Desvío máximo (km)"
+                    value={form.detourToleranceKm}
+                    onChange={() => {}}
+                    readOnly
+                    placeholder="Ej. 2"
+                    rightIcon={
+                      <NumberStepper
+                        onIncrement={handleIncrementDetour}
+                        onDecrement={handleDecrementDetour}
+                        incrementLabel="Aumentar tolerancia de desvío"
+                        decrementLabel="Disminuir tolerancia de desvío"
+                      />
+                    }
+                  />
                 </div>
-                <SeatSelector
-                  value={form.availableSeats}
-                  onChange={(seats) => setField('availableSeats', seats)}
-                />
               </>
             )}
           </section>
