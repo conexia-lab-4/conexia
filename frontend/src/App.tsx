@@ -9,6 +9,7 @@ import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
 import { Profile } from './pages/profile';
+import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/assignments/new" element={<AddSubject />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/trips/new" element={<PublishTrip />} />
       </Route>
     </Routes>
   );

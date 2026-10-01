@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getSubjects } from '../../lib/subjectsApi';
@@ -31,6 +32,18 @@ export function Home() {
   const [subjectsCount, setSubjectsCount] = useState(0);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [tripPublished] = useState(
+    () => (location.state as { tripPublished?: boolean } | null)?.tripPublished,
+  );
+
+  // Se limpia el state para que el aviso no vuelva a aparecer al recargar
+  useEffect(() => {
+    if (tripPublished) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [tripPublished, navigate, location.pathname]);
 
   const loadHomeData = useCallback(async () => {
     setStatus('loading');
@@ -77,6 +90,12 @@ export function Home() {
         </div>
         <img src={calendarHeader} alt="" className="home__calendar-image" />
       </header>
+
+      {tripPublished && (
+        <p className="home__success-message" role="status">
+          ¡Tu viaje se publicó! Otros estudiantes ya pueden verlo.
+        </p>
+      )}
 
       {status === 'loading' && (
         <p className="home__status-message">
