@@ -80,6 +80,28 @@
   justify-content: center;
 }
 
+.home__trips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home__trips-link {
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  color: var(--color-info-link);
+  text-decoration: none;
+}
+
+.home__trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .home__trips-title {
   font-size: var(--fs-body-1);
   font-weight: var(--fw-semibold);
