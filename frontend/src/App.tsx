@@ -11,6 +11,7 @@ import { AddSubject } from './pages/addSubject';
 import { Profile } from './pages/profile';
 import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
+import { Matches } from './pages/matches';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/assignments/new" element={<AddSubject />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips/new" element={<PublishTrip />} />
+        <Route path="/matches" element={<Matches />} />
       </Route>
     </Routes>
   );
