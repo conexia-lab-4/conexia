@@ -11,6 +11,8 @@ import { IconBook } from '../../assets/icons/IconBook';
 import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { IconUser } from '../../assets/icons/IconUser';
 import { IconCar } from '../../assets/icons/IconCar';
+import { IconChevronDown } from '../../assets/icons/IconChevronDown';
+import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
 import {
   getProfile,
@@ -33,7 +35,8 @@ interface FormState {
   hasCar: boolean;
   carModel: string;
   carColor: string;
-  availableSeats: string;
+  availableSeats: number;
+  detourToleranceKm: string;
 }
 
 type LoadStatus = 'loading' | 'ready' | 'error';
@@ -51,8 +54,24 @@ const EMPTY_FORM: FormState = {
   hasCar: false,
   carModel: '',
   carColor: '',
-  availableSeats: '',
+  availableSeats: 0,
+  detourToleranceKm: '',
 };
+
+const CAR_COLORS = [
+  'Blanco',
+  'Negro',
+  'Gris',
+  'Plata',
+  'Rojo',
+  'Azul',
+  'Verde',
+  'Beige',
+  'Marrón',
+  'Amarillo',
+  'Naranja',
+  'Bordó',
+];
 
 function profileToForm(profile: ProfileResponse | null): FormState {
   if (!profile) return EMPTY_FORM;
@@ -68,8 +87,11 @@ function profileToForm(profile: ProfileResponse | null): FormState {
     hasCar: profile.hasCar ?? false,
     carModel: profile.carModel ?? '',
     carColor: profile.carColor ?? '',
-    availableSeats:
-      profile.availableSeats != null ? String(profile.availableSeats) : '',
+    availableSeats: profile.availableSeats ?? 0,
+    detourToleranceKm:
+      profile.detourToleranceKm != null
+        ? String(profile.detourToleranceKm)
+        : '',
   };
 }
 
@@ -88,7 +110,10 @@ function formToPayload(form: FormState): UpsertProfilePayload {
   if (form.bio.trim()) payload.bio = form.bio.trim();
 
   if (form.hasCar) {
-    payload.availableSeats = Number(form.availableSeats);
+    payload.availableSeats = form.availableSeats;
+    if (form.detourToleranceKm !== '') {
+      payload.detourToleranceKm = Number(form.detourToleranceKm);
+    }
     if (form.carModel.trim()) payload.carModel = form.carModel.trim();
     if (form.carColor.trim()) payload.carColor = form.carColor.trim();
   }
@@ -122,6 +147,7 @@ export function Profile() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<SaveMessage>(null);
+  const [isColorOpen, setIsColorOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -142,13 +168,42 @@ export function Profile() {
     setSaveMessage(null);
   };
 
+  const handleToggleCar = (checked: boolean) => {
+    setForm((prev) => ({
+      ...prev,
+      hasCar: checked,
+      // Al activar el auto se arranca con un asiento ofrecido, como en el diseño
+      availableSeats:
+        checked && prev.availableSeats === 0 ? 1 : prev.availableSeats,
+    }));
+    setSaveMessage(null);
+  };
+
+  const handleIncrementSeats = () =>
+    setField('availableSeats', form.availableSeats + 1);
+
+  const handleDecrementSeats = () =>
+    setField('availableSeats', Math.max(1, form.availableSeats - 1));
+
+  const handleIncrementDetour = () =>
+    setField(
+      'detourToleranceKm',
+      String((Number(form.detourToleranceKm) || 0) + 1),
+    );
+
+  const handleDecrementDetour = () =>
+    setField(
+      'detourToleranceKm',
+      String(Math.max(0, (Number(form.detourToleranceKm) || 0) - 1)),
+    );
+
   const handleSave = async () => {
     if (isSaving) return;
 
-    if (form.hasCar && !form.availableSeats.trim()) {
+    if (form.hasCar && form.availableSeats < 1) {
       setSaveMessage({
         type: 'error',
-        text: 'Indicá cuántos asientos podés ofrecer.',
+        text: 'Seleccioná al menos un asiento para ofrecer.',
       });
       return;
     }
@@ -169,6 +224,11 @@ export function Profile() {
       setIsSaving(false);
     }
   };
+
+  const colorOptions =
+    form.carColor && !CAR_COLORS.includes(form.carColor)
+      ? [form.carColor, ...CAR_COLORS]
+      : CAR_COLORS;
 
   const completion = getProfileCompletion(profile);
   const universityAbbreviation =
@@ -350,38 +410,103 @@ export function Profile() {
                 <h2 className="text-h6">Información del auto</h2>
               </div>
               <ToggleSwitch
-                label="Tengo auto"
+                label="Con auto"
                 checked={form.hasCar}
-                onChange={(checked) => setField('hasCar', checked)}
+                onChange={handleToggleCar}
               />
             </div>
 
             {form.hasCar && (
-              <div className="profile__grid">
-                <TextField
-                  variant="filled"
-                  label="Modelo"
-                  placeholder="Ej. Toyota Etios"
-                  value={form.carModel}
-                  onChange={(e) => setField('carModel', e.target.value)}
-                />
-                <TextField
-                  variant="filled"
-                  label="Color"
-                  placeholder="Ej. Gris"
-                  value={form.carColor}
-                  onChange={(e) => setField('carColor', e.target.value)}
-                />
-                <TextField
-                  variant="filled"
-                  type="number"
-                  min={1}
-                  label="Asientos disponibles"
-                  placeholder="Ej. 2"
-                  value={form.availableSeats}
-                  onChange={(e) => setField('availableSeats', e.target.value)}
-                />
-              </div>
+              <>
+                <div className="profile__car-fields">
+                  <TextField
+                    variant="filled"
+                    label="Modelo del auto"
+                    placeholder="Ej. VW Polo 2025"
+                    value={form.carModel}
+                    onChange={(e) => setField('carModel', e.target.value)}
+                  />
+                  <div className="profile__combobox">
+                    <TextField
+                      variant="filled"
+                      label="Color"
+                      placeholder="Elegí un color"
+                      value={form.carColor}
+                      readOnly
+                      role="combobox"
+                      aria-expanded={isColorOpen}
+                      onClick={() => setIsColorOpen((open) => !open)}
+                      onBlur={() =>
+                        setTimeout(() => setIsColorOpen(false), 150)
+                      }
+                      rightIcon={
+                        <IconChevronDown
+                          size={20}
+                          color="var(--color-grey-400)"
+                        />
+                      }
+                    />
+                    {isColorOpen && (
+                      <ul className="profile__combobox-list" role="listbox">
+                        {colorOptions.map((color) => (
+                          <li key={color}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={form.carColor === color}
+                              className="profile__combobox-option text-body-2"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setField('carColor', color);
+                                setIsColorOpen(false);
+                              }}
+                            >
+                              {color}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile__car-fields">
+                  <TextField
+                    variant="filled"
+                    label="Asientos disponibles"
+                    value={
+                      form.availableSeats ? String(form.availableSeats) : ''
+                    }
+                    onChange={() => {}}
+                    readOnly
+                    placeholder="Ej. 2"
+                    rightIcon={
+                      <NumberStepper
+                        onIncrement={handleIncrementSeats}
+                        onDecrement={handleDecrementSeats}
+                        incrementLabel="Aumentar asientos"
+                        decrementLabel="Disminuir asientos"
+                      />
+                    }
+                  />
+                  <TextField
+                    variant="filled"
+                    label="Desvío máximo (km)"
+                    value={form.detourToleranceKm}
+                    onChange={() => {}}
+                    readOnly
+                    placeholder="Ej. 2"
+                    rightIcon={
+                      <NumberStepper
+                        onIncrement={handleIncrementDetour}
+                        onDecrement={handleDecrementDetour}
+                        incrementLabel="Aumentar tolerancia de desvío"
+                        decrementLabel="Disminuir tolerancia de desvío"
+                      />
+                    }
+                  />
+                </div>
+              </>
             )}
           </section>
 
