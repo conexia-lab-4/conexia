@@ -13,6 +13,8 @@ import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
 import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
+import { Matches } from './pages/matches';
+
 function App() {
   return (
     <Routes>
@@ -37,6 +39,7 @@ function App() {
         <Route path="/trips" element={<Trips />} />
         <Route path="/trips/new" element={<PublishTrip />} />
         <Route path="/trips/:id" element={<TripDetailPage />} />
+        <Route path="/matches" element={<Matches />} />
       </Route>
     </Routes>
   );
