@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TestUtilsModule } from './test-utils/test-utils.module';
+import { TravelIntentsModule } from './travel-intents/travel-intents.module';
 import { TripsModule } from './trips/trips.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { TripsModule } from './trips/trips.module';
     ProfileModule,
     SubjectsModule,
     TripsModule,
+    TravelIntentsModule,
     TestUtilsModule,
   ],
   controllers: [AppController],

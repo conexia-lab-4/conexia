@@ -1,4 +1,4 @@
-import { computeDetourKm } from './detour';
+import { computeDetourKm, effectiveDetourToleranceKm } from './detour';
 
 describe('computeDetourKm', () => {
   const driver = {
@@ -46,5 +46,16 @@ describe('computeDetourKm', () => {
     const detour = await computeDetourKm(geoMock, driver, passenger);
 
     expect(detour).toBeNull();
+  });
+});
+
+describe('effectiveDetourToleranceKm', () => {
+  it('vale 0 cuando la tolerancia no está configurada', () => {
+    expect(effectiveDetourToleranceKm(null)).toBe(0);
+    expect(effectiveDetourToleranceKm(undefined)).toBe(0);
+  });
+
+  it('respeta la tolerancia configurada', () => {
+    expect(effectiveDetourToleranceKm(3)).toBe(3);
   });
 });
