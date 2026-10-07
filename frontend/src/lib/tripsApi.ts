@@ -29,6 +29,7 @@ export interface TripDetail extends Trip {
   driver: TripUser;
   passengers: TripPassenger[];
   availableSeats: number;
+  isDriver: boolean;
   isParticipant: boolean;
 }
 

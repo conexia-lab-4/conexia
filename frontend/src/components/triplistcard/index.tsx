@@ -44,11 +44,18 @@ export function TripListCard({ trip }: TripListCardProps) {
         <span className="trip-list-card__avatar">
           {getInitials(trip.driver.email)}
         </span>
-        {trip.isParticipant && (
+        {trip.isDriver ? (
           <span className="trip-list-card__badge">
             <IconCheck size={12} color="var(--color-success-500)" />
-            Confirmado
+            Conducís
           </span>
+        ) : (
+          trip.isParticipant && (
+            <span className="trip-list-card__badge">
+              <IconCheck size={12} color="var(--color-success-500)" />
+              Confirmado
+            </span>
+          )
         )}
       </div>
 
