@@ -9,7 +9,11 @@ import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
 import { Profile } from './pages/profile';
+import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
+import { Trips } from './pages/trips';
+import { TripDetailPage } from './pages/tripDetails';
+import { Matches } from './pages/matches';
 
 function App() {
   return (
@@ -32,6 +36,10 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/assignments/new" element={<AddSubject />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/trips" element={<Trips />} />
+        <Route path="/trips/new" element={<PublishTrip />} />
+        <Route path="/trips/:id" element={<TripDetailPage />} />
+        <Route path="/matches" element={<Matches />} />
       </Route>
     </Routes>
   );

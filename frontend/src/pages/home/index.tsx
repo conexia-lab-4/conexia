@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getSubjects } from '../../lib/subjectsApi';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
+import { getUpcomingTrips, type TripDetail } from '../../lib/tripsApi';
 import { StatCard } from '../../components/statcard';
 import { NavBar } from '../../components/navbar';
 import { ProfilePendingCard } from '../../components/profilependingcard';
 import { EmptyTripsState } from '../../components/emptytripsstate';
+import { TripListCard } from '../../components/triplistcard';
 import { IconBooks } from '../../assets/icons/IconBooks';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
 import { IconCarFront } from '../../assets/icons/IconCarFront';
@@ -26,21 +29,39 @@ function countCompletedSteps(profile: ProfileResponse | null): number {
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+// Cantidad de viajes que se muestran en Home; el resto se ve en /trips
+const HOME_TRIPS_LIMIT = 3;
+
 export function Home() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [subjectsCount, setSubjectsCount] = useState(0);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [upcomingTrips, setUpcomingTrips] = useState<TripDetail[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [tripPublished] = useState(
+    () => (location.state as { tripPublished?: boolean } | null)?.tripPublished,
+  );
+
+  // Se limpia el state para que el aviso no vuelva a aparecer al recargar
+  useEffect(() => {
+    if (tripPublished) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [tripPublished, navigate, location.pathname]);
 
   const loadHomeData = useCallback(async () => {
     setStatus('loading');
     try {
-      const [subjects, profileData] = await Promise.all([
+      const [subjects, profileData, trips] = await Promise.all([
         getSubjects(),
         getProfile(),
+        getUpcomingTrips(),
       ]);
       setSubjectsCount(subjects.length);
       setProfile(profileData);
+      setUpcomingTrips(trips);
       setStatus('ready');
     } catch (error) {
       console.error('Error al cargar datos del Home:', error);
@@ -77,6 +98,12 @@ export function Home() {
         </div>
         <img src={calendarHeader} alt="" className="home__calendar-image" />
       </header>
+
+      {tripPublished && (
+        <p className="home__success-message" role="status">
+          ¡Tu viaje se publicó! Otros estudiantes ya pueden verlo.
+        </p>
+      )}
 
       {status === 'loading' && (
         <p className="home__status-message">
@@ -136,10 +163,27 @@ export function Home() {
           )}
 
           <section className="home__trips">
-            <h2 className="home__trips-title">Próximos viajes</h2>
-            <div className="home__trips-content">
-              <EmptyTripsState />
+            <div className="home__trips-header">
+              <h2 className="home__trips-title">Próximos viajes</h2>
+              {upcomingTrips.length > HOME_TRIPS_LIMIT && (
+                <Link to="/trips" className="home__trips-link">
+                  Ver todos
+                </Link>
+              )}
             </div>
+            {upcomingTrips.length === 0 ? (
+              <div className="home__trips-content">
+                <EmptyTripsState />
+              </div>
+            ) : (
+              <ul className="home__trips-list">
+                {upcomingTrips.slice(0, HOME_TRIPS_LIMIT).map((trip) => (
+                  <li key={trip.id}>
+                    <TripListCard trip={trip} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </>
       )}

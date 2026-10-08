@@ -50,6 +50,22 @@
   color: var(--color-grey-400);
 }
 
+/* Variant: danger (outlined en rojo, para acciones destructivas) */
+.button--danger {
+  background: transparent;
+  border: 1px solid var(--color-error-500);
+  color: var(--color-error-500);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: var(--color-error-100);
+}
+
+.button--danger:disabled {
+  border-color: var(--color-grey-400);
+  color: var(--color-grey-400);
+}
+
 /* Sizes (el ancho/alto surge del padding + contenido, no se fuerza) */
 .button--small {
   padding: 8px 16px;

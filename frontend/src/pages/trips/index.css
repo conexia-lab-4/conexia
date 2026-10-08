@@ -1,0 +1,139 @@
+.trips {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100vh;
+  padding: 0 10px 110px;
+  background: var(--color-grey-100);
+  box-sizing: border-box;
+}
+
+.trips__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 48px;
+}
+
+.trips__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trips__subtitle {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+}
+
+.trips__header-image {
+  width: 150px;
+  height: 100px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.trips__tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.trips__tab {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--color-grey-200);
+  color: var(--color-grey-400);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.trips__tab--active {
+  background: var(--color-day-selected-bg);
+  color: var(--color-day-selected-text);
+}
+
+.trips__tab:disabled {
+  cursor: not-allowed;
+}
+
+.trips__status {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-grey-400);
+}
+
+.trips__status--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-error-500);
+}
+
+.trips__retry-button {
+  padding: 8px 20px;
+  border: 1px solid var(--color-primary-500);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-primary-500);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.trips__publish-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-primary-200);
+  border-radius: 20px;
+  background: var(--color-info-card-bg);
+}
+
+.trips__publish-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trips__publish-description {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+}
+
+.trips__publish-image {
+  width: 130px;
+  height: 90px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.trips__list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trips__section-title {
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-semibold);
+  color: var(--color-black);
+}
+
+.trips__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

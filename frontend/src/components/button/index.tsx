@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import './index.css';
 
-export type ButtonVariant = 'fulfilled' | 'outlined';
+export type ButtonVariant = 'fulfilled' | 'outlined' | 'danger';
 export type ButtonSize = 'small' | 'medium' | 'large' | 'large-wide';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,7 +19,7 @@ const textClassBySize: Record<ButtonSize, string> = {
 };
 
 function getTextClassName(size: ButtonSize, variant: ButtonVariant): string {
-  if (size === 'large-wide' && variant === 'outlined') {
+  if (size === 'large-wide' && variant !== 'fulfilled') {
     return 'text-body-2-bold';
   }
   return textClassBySize[size];

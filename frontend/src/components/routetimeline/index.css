@@ -1,0 +1,63 @@
+.route-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.route-timeline__stop {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Línea punteada entre origen y destino */
+.route-timeline__stop:first-child::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 4px;
+  height: calc(100% + 2px);
+  border-left: 1px dashed var(--color-grey-300);
+}
+
+.route-timeline__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  border-radius: 50%;
+}
+
+.route-timeline__dot--origin {
+  background: var(--color-success-500);
+}
+
+.route-timeline__dot--destination {
+  background: var(--color-info-icon);
+}
+
+.route-timeline__place {
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-body-2);
+  color: var(--color-black);
+  overflow-wrap: anywhere;
+}
+
+.route-timeline__seats {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  margin-left: 22px;
+  padding: 2px 8px;
+  border-radius: 30px;
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}

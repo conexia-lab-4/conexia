@@ -1,9 +1,11 @@
 import {
   IsBoolean,
+  IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -40,4 +42,38 @@ export class UpsertProfileDto {
   @IsOptional()
   @IsBoolean()
   questionnaireCompleted?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  carModel?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  carColor?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  originAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  phone?: string;
+
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  detourToleranceKm?: number;
 }
