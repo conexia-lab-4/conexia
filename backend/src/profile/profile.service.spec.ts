@@ -202,7 +202,6 @@ describe('ProfileService', () => {
         carModel: null,
         carColor: null,
         originAddress: null,
-        neighborhood: null,
         phone: null,
         birthDate: null,
         bio: null,

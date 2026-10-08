@@ -92,7 +92,7 @@ export function TripDetailPage() {
     }
   };
 
-  const isDriver = trip !== null && trip.driverId === user?.uid;
+  const isDriver = trip?.isDriver ?? false;
   const isFull = trip !== null && trip.availableSeats <= 0;
 
   return (
