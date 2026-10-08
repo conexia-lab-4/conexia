@@ -25,3 +25,10 @@ export async function computeDetourKm(
   if (direct === null || withPassenger === null) return null;
   return withPassenger - direct;
 }
+
+// Tolerancia de desvío del conductor: sin configurar equivale a 0 km
+export function effectiveDetourToleranceKm(
+  detourToleranceKm: number | null | undefined,
+): number {
+  return detourToleranceKm ?? 0;
+}
