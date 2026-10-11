@@ -38,6 +38,10 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trips/new" element={<PublishTrip />} />
+        <Route
+          path="/trips/intents/new"
+          element={<PublishTrip mode="intent" />}
+        />
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
       </Route>
