@@ -242,6 +242,21 @@ describe('TravelIntentsService', () => {
         expect(prismaMock.travelIntent.update).not.toHaveBeenCalled();
       },
     );
+    it('recalcula los matches de la intención al cancelarla', async () => {
+      prismaMock.travelIntent.findUnique.mockResolvedValue({
+        id: 'intent-1',
+        userId,
+        status: 'ACTIVE',
+      });
+      prismaMock.travelIntent.update.mockResolvedValue({
+        id: 'intent-1',
+        status: 'CANCELLED',
+      });
+
+      await service.cancel('intent-1', userId);
+
+      expect(matchingMock.matchIntent).toHaveBeenCalledWith('intent-1');
+    });
   });
 
   describe('findMatchable', () => {

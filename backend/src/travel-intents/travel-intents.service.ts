@@ -96,10 +96,16 @@ export class TravelIntentsService {
       );
     }
 
-    return this.prisma.travelIntent.update({
+    const cancelled = await this.prisma.travelIntent.update({
       where: { id },
       data: { status: TravelIntentStatus.CANCELLED },
     });
+
+    // Una intención cancelada deja de ser matcheable: sus sugerencias
+    // pendientes pasan a INVALIDATED
+    await this.matching.matchIntent(id);
+
+    return cancelled;
   }
 
   // Intenciones que pueden participar de nuevos matches: ACTIVE y con un

@@ -551,6 +551,31 @@ describe('TripsService', () => {
         ConflictException,
       );
     });
+    it('re-ejecuta el matching del viaje después de sumarse', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockResolvedValue({
+        id: 'passenger-1',
+        tripId,
+        userId: 'user-123',
+      });
+
+      await service.join(tripId, 'user-123');
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
+    });
+
+    it('no ejecuta el matching si no pudo sumarse', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(null);
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    });
   });
 
   describe('leave', () => {
@@ -571,6 +596,13 @@ describe('TripsService', () => {
       await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
         NotFoundException,
       );
+    });
+    it('re-ejecuta el matching del viaje después de salir', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.leave('trip-1', 'user-123');
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
     });
   });
 });

@@ -370,6 +370,18 @@ describe('MatchingService', () => {
 
       await expect(service.matchTrip('trip-1')).resolves.toBeUndefined();
     });
+    it('solo evalúa intenciones ACTIVE', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(buildTrip());
+
+      await service.matchTrip('trip-1');
+
+      expect(prismaMock.travelIntent.findMany).toHaveBeenCalledWith({
+        where: {
+          status: 'ACTIVE',
+          arrivalTime: { gt: new Date('2026-10-01T12:00:00.000Z') },
+        },
+      });
+    });
   });
 
   describe('matchIntent', () => {
@@ -410,15 +422,18 @@ describe('MatchingService', () => {
       });
     });
 
-    it('no busca viajes si la intención ya no está activa', async () => {
-      prismaMock.travelIntent.findUnique.mockResolvedValue(
-        buildIntent({ status: 'CANCELLED' }),
-      );
+    it.each(['CANCELLED', 'FULFILLED', 'EXPIRED'])(
+      'no busca viajes si la intención está %s',
+      async (status) => {
+        prismaMock.travelIntent.findUnique.mockResolvedValue(
+          buildIntent({ status }),
+        );
 
-      await service.matchIntent('intent-1');
+        await service.matchIntent('intent-1');
 
-      expect(prismaMock.trip.findMany).not.toHaveBeenCalled();
-      expect(prismaMock.travelMatch.upsert).not.toHaveBeenCalled();
-    });
+        expect(prismaMock.trip.findMany).not.toHaveBeenCalled();
+        expect(prismaMock.travelMatch.upsert).not.toHaveBeenCalled();
+      },
+    );
   });
 });

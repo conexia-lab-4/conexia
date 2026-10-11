@@ -167,16 +167,22 @@ export class TripsService {
 
   async join(tripId: string, userId: string) {
     try {
-      return await this.prisma.$transaction(
+      const passenger = await this.prisma.$transaction(
         (tx) => addPassenger(tx, tripId, userId),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+
+      // El viaje pudo quedar lleno: se recalculan sus sugerencias pendientes
+      await this.matching.matchTrip(tripId);
+
+      return passenger;
     } catch (error) {
       if (isSerializationConflict(error)) {
         throw new ConflictException(
           'No pudimos confirmar tu lugar, intentá de nuevo',
         );
       }
+
       throw error;
     }
   }
@@ -189,6 +195,8 @@ export class TripsService {
     if (deleted.count === 0) {
       throw new NotFoundException('No participás de este viaje');
     }
+
+    await this.matching.matchTrip(tripId);
   }
 
   private async geocodeOrThrow(address: string): Promise<Coordinates> {
