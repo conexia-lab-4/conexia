@@ -8,12 +8,14 @@ import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelIntentStatus } from '../../generated/prisma/client';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
+import { MatchingService } from '../matching/matching.service';
 
 @Injectable()
 export class TravelIntentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
+    private readonly matching: MatchingService,
   ) {}
 
   async create(userId: string, dto: CreateTravelIntentDto) {
@@ -50,7 +52,7 @@ export class TravelIntentsService {
       this.geocodeOrThrow(dto.destination),
     ]);
 
-    return this.prisma.travelIntent.create({
+    const intent = await this.prisma.travelIntent.create({
       data: {
         userId,
         origin: dto.origin,
@@ -63,6 +65,10 @@ export class TravelIntentsService {
         arrivalTime,
       },
     });
+
+    await this.matching.matchIntent(intent.id);
+
+    return intent;
   }
 
   async findMine(userId: string) {

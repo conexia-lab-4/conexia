@@ -10,12 +10,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
+import { MatchingService } from '../matching/matching.service';
 
 @Injectable()
 export class TripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
+    private readonly matching: MatchingService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
@@ -36,7 +38,7 @@ export class TripsService {
       this.geocodeOrThrow(dto.destination),
     ]);
 
-    return this.prisma.trip.create({
+    const trip = await this.prisma.trip.create({
       data: {
         driverId: userId,
         origin: dto.origin,
@@ -51,6 +53,10 @@ export class TripsService {
       },
       include: { passengers: true },
     });
+
+    await this.matching.matchTrip(trip.id);
+
+    return trip;
   }
 
   async findUpcoming(userId: string) {
@@ -152,6 +158,8 @@ export class TripsService {
         },
       },
     });
+
+    await this.matching.matchTrip(updated.id);
 
     return this.withDerivedFields(updated, userId);
   }
