@@ -41,7 +41,7 @@ export interface CreateTripPayload {
 }
 
 // El backend devuelve message como string o, en errores de validación, como array
-async function getErrorMessage(
+export async function getErrorMessage(
   response: Response,
   fallback: string,
 ): Promise<string> {

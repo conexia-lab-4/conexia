@@ -16,6 +16,7 @@ import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
 import { getSubjects } from '../../lib/subjectsApi';
 import { createTrip } from '../../lib/tripsApi';
+import { createTravelIntent } from '../../lib/travelIntentsApi';
 import {
   formatDateLabel,
   getDateOptions,
@@ -29,6 +30,11 @@ import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type Step = 1 | 2 | 3;
+type PublishMode = 'trip' | 'intent';
+
+interface PublishTripProps {
+  mode?: PublishMode;
+}
 
 interface TripForm {
   origin: string;
@@ -46,9 +52,15 @@ const EMPTY_FORM: TripForm = {
   arrivalTime: '',
 };
 
-const STEPS: { id: Step; label: string }[] = [
+const TRIP_STEPS: { id: Step; label: string }[] = [
   { id: 1, label: 'Ruta y horario' },
   { id: 2, label: 'Preferencias' },
+  { id: 3, label: 'Revisar' },
+];
+
+// La intención no tiene preferencias: se saltea el paso 2
+const INTENT_STEPS: { id: Step; label: string }[] = [
+  { id: 1, label: 'Ruta y horario' },
   { id: 3, label: 'Revisar' },
 ];
 
@@ -87,9 +99,11 @@ function formatSeats(seats: number): string {
   return `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`;
 }
 
-export function PublishTrip() {
+export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isIntent = mode === 'intent';
+  const steps = isIntent ? INTENT_STEPS : TRIP_STEPS;
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
@@ -165,6 +179,8 @@ export function PublishTrip() {
     setStepError(null);
     if (step === 1) {
       navigate(-1);
+    } else if (isIntent) {
+      setStep(1);
     } else {
       setStep((prev) => (prev - 1) as Step);
     }
@@ -176,7 +192,7 @@ export function PublishTrip() {
       setStepError(error);
       return;
     }
-    setStep(2);
+    setStep(isIntent ? 3 : 2);
   };
 
   const handlePublish = async () => {
@@ -189,26 +205,41 @@ export function PublishTrip() {
       return;
     }
 
+    const payload = {
+      origin: form.origin.trim(),
+      destination: form.destination.trim(),
+      departureTime: toLocalDate(form.date, form.departureTime).toISOString(),
+      arrivalTime: toLocalDate(form.date, form.arrivalTime).toISOString(),
+    };
+
     setIsPublishing(true);
     setStepError(null);
     try {
-      await createTrip({
-        origin: form.origin.trim(),
-        destination: form.destination.trim(),
-        departureTime: toLocalDate(form.date, form.departureTime).toISOString(),
-        arrivalTime: toLocalDate(form.date, form.arrivalTime).toISOString(),
-      });
-      navigate('/home', { state: { tripPublished: true } });
+      if (isIntent) {
+        await createTravelIntent(payload);
+        navigate('/trips', { state: { intentCreated: true } });
+      } else {
+        await createTrip(payload);
+        navigate('/home', { state: { tripPublished: true } });
+      }
     } catch (err) {
+      // Si una dirección no se reconoce, se corrige en el paso 1:
+      // el form queda en el state, así que no se pierden los datos
+      if (isIntent) setStep(1);
       setStepError(
-        err instanceof Error ? err.message : 'No pudimos publicar el viaje.',
+        err instanceof Error
+          ? err.message
+          : isIntent
+            ? 'No pudimos publicar tu intención de viaje.'
+            : 'No pudimos publicar el viaje.',
       );
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const canPublish = status === 'ready' && Boolean(profile?.hasCar);
+  const canPublish =
+    status === 'ready' && (isIntent || Boolean(profile?.hasCar));
 
   return (
     <div className="publish-trip">
@@ -221,12 +252,14 @@ export function PublishTrip() {
         >
           <IconBack size={24} color="var(--color-black)" />
         </button>
-        <h1 className="text-h5">Publicar viaje</h1>
+        <h1 className="text-h5">
+          {isIntent ? 'Necesito un viaje' : 'Publicar viaje'}
+        </h1>
       </header>
 
       {canPublish && (
         <ol className="publish-trip__steps">
-          {STEPS.map(({ id, label }) => (
+          {steps.map(({ id, label }, index) => (
             <li
               key={id}
               className={[
@@ -242,7 +275,7 @@ export function PublishTrip() {
                 {id < step ? (
                   <IconCheck size={14} color="var(--color-primary-600)" />
                 ) : (
-                  id
+                  index + 1
                 )}
               </span>
               <span className="publish-trip__step-label text-body-3">
@@ -265,7 +298,7 @@ export function PublishTrip() {
         </p>
       )}
 
-      {status === 'ready' && !profile?.hasCar && (
+      {status === 'ready' && !canPublish && (
         <section className="publish-trip__card publish-trip__blocked">
           <span className="publish-trip__blocked-icon">
             <IconCar size={28} color="var(--color-primary-700)" />
@@ -446,7 +479,7 @@ export function PublishTrip() {
         </>
       )}
 
-      {canPublish && step === 2 && (
+      {canPublish && !isIntent && step === 2 && (
         <>
           <div className="publish-trip__heading">
             <h2 className="text-h6">Preferencias del viaje</h2>
@@ -490,7 +523,9 @@ export function PublishTrip() {
       {canPublish && step === 3 && (
         <>
           <div className="publish-trip__heading">
-            <h2 className="text-h6">Revisá tu viaje</h2>
+            <h2 className="text-h6">
+              {isIntent ? 'Revisá tu intención de viaje' : 'Revisá tu viaje'}
+            </h2>
             <p className="publish-trip__muted text-body-3">
               Confirmá que la información sea correcta.
             </p>
@@ -535,17 +570,20 @@ export function PublishTrip() {
             </div>
           </section>
 
-          <section className="publish-trip__card">
-            <h3 className="text-body-1-bold">Preferencias</h3>
-            <div className="publish-trip__summary-pref">
-              <span className="text-body-3">Asientos disponibles</span>
-              <span className="text-body-3">{seats}</span>
-            </div>
-          </section>
+          {!isIntent && (
+            <section className="publish-trip__card">
+              <h3 className="text-body-1-bold">Preferencias</h3>
+              <div className="publish-trip__summary-pref">
+                <span className="text-body-3">Asientos disponibles</span>
+                <span className="text-body-3">{seats}</span>
+              </div>
+            </section>
+          )}
 
           <div className="publish-trip__banner text-body-3">
-            Tu viaje se publicará para que otros estudiantes puedan verlo y
-            solicitar unirse.
+            {isIntent
+              ? 'Tu intención quedará activa para que conductores con un recorrido compatible puedan encontrarte.'
+              : 'Tu viaje se publicará para que otros estudiantes puedan verlo y solicitar unirse.'}
           </div>
 
           {stepError && (
@@ -559,7 +597,11 @@ export function PublishTrip() {
             disabled={isPublishing}
             onClick={handlePublish}
           >
-            {isPublishing ? 'Publicando...' : 'Publicar viaje'}
+            {isPublishing
+              ? 'Publicando...'
+              : isIntent
+                ? 'Publicar intención'
+                : 'Publicar viaje'}
           </Button>
           <button
             type="button"
