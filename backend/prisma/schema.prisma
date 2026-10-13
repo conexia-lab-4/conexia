@@ -90,7 +90,7 @@ model Schedule {
 }
 
 model Trip {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   driverId       String
   origin         String
   originLat      Float?
@@ -101,8 +101,9 @@ model Trip {
   departureTime  DateTime
   arrivalTime    DateTime
   capacity       Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  travelMatches  TravelMatch[]
 
   driver     User            @relation(fields: [driverId], references: [id])
   passengers TripPassenger[]
@@ -141,9 +142,36 @@ model TravelIntent {
   status         TravelIntentStatus @default(ACTIVE)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+  travelMatches  TravelMatch[]
 
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, status])
   @@index([status, departureTime])
+}
+
+enum TravelMatchStatus {
+  SUGGESTED
+  ACCEPTED
+  INVALIDATED
+}
+
+model TravelMatch {
+  id                    String            @id @default(uuid())
+  tripId                String
+  travelIntentId        String
+  score                 Float
+  detourKm              Float
+  departureDeltaMinutes Float
+  arrivalDeltaMinutes   Float
+  algorithmVersion      String
+  status                TravelMatchStatus @default(SUGGESTED)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  trip         Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  travelIntent TravelIntent @relation(fields: [travelIntentId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, travelIntentId])
+  @@index([travelIntentId])
 }

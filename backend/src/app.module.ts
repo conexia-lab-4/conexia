@@ -9,6 +9,7 @@ import { SubjectsModule } from './subjects/subjects.module';
 import { TestUtilsModule } from './test-utils/test-utils.module';
 import { TravelIntentsModule } from './travel-intents/travel-intents.module';
 import { TripsModule } from './trips/trips.module';
+import { TravelMatchesModule } from './travel-matches/travel-matches.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TripsModule } from './trips/trips.module';
     TripsModule,
     TravelIntentsModule,
     TestUtilsModule,
+    TravelMatchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
