@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { Button } from '../../components/button';
@@ -17,9 +17,20 @@ type LoadStatus = 'loading' | 'ready' | 'error';
 export function Trips() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [trips, setTrips] = useState<TripDetail[]>([]);
   const [hasCar, setHasCar] = useState(false);
+  const [intentCreated] = useState(
+    () => (location.state as { intentCreated?: boolean } | null)?.intentCreated,
+  );
+
+  // Se limpia el state para que el aviso no vuelva a aparecer al recargar
+  useEffect(() => {
+    if (intentCreated) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [intentCreated, navigate, location.pathname]);
 
   const loadTrips = useCallback(() => {
     Promise.all([getUpcomingTrips(), getProfile()])
@@ -56,6 +67,12 @@ export function Trips() {
         </div>
         <img src={tripsHeader} alt="" className="trips__header-image" />
       </header>
+
+      {intentCreated && (
+        <p className="trips__success-message" role="status">
+          ¡Listo! Tu intención de viaje está activa.
+        </p>
+      )}
 
       <div className="trips__tabs" role="tablist">
         <button
@@ -99,29 +116,37 @@ export function Trips() {
 
       {status === 'ready' && (
         <>
-          {hasCar && (
-            <section className="trips__publish-card">
-              <div className="trips__publish-text">
-                <h2 className="text-body-1-bold">¿Vas a la facultad?</h2>
-                <p className="trips__publish-description">
-                  Publicá un viaje y compartí asientos con otros estudiantes
-                </p>
+          <section className="trips__publish-card">
+            <div className="trips__publish-text">
+              <h2 className="text-body-1-bold">¿Vas a la facultad?</h2>
+              <p className="trips__publish-description">
+                {hasCar
+                  ? 'Publicá un viaje y compartí asientos, o avisá que necesitás uno'
+                  : 'Avisá cuándo necesitás viajar y encontrá quién te lleve'}
+              </p>
+              <div className="trips__publish-actions">
+                {hasCar && (
+                  <Button
+                    type="button"
+                    variant="fulfilled"
+                    size="medium"
+                    onClick={() => navigate('/trips/new')}
+                  >
+                    Publicar viaje
+                  </Button>
+                )}
                 <Button
                   type="button"
-                  variant="fulfilled"
+                  variant={hasCar ? 'outlined' : 'fulfilled'}
                   size="medium"
-                  onClick={() => navigate('/trips/new')}
+                  onClick={() => navigate('/trips/intents/new')}
                 >
-                  Publicar viaje
+                  Necesito un viaje
                 </Button>
               </div>
-              <img
-                src={publishTripCar}
-                alt=""
-                className="trips__publish-image"
-              />
-            </section>
-          )}
+            </div>
+            <img src={publishTripCar} alt="" className="trips__publish-image" />
+          </section>
 
           <section className="trips__list-section">
             <h2 className="trips__section-title">Próximos viajes</h2>
