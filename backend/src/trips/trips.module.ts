@@ -1,15 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { GeoModule } from '../geo/geo.module';
+import { MatchingModule } from '../matching/matching.module';
 import { TripsService } from './trips.service';
 import { TripsController } from './trips.controller';
-import { GeoModule } from '../geo/geo.module';
 
 @Module({
-  imports: [PrismaModule, GeoModule],
-  // ...igual
-})
-@Module({
-  imports: [PrismaModule, GeoModule],
+  imports: [PrismaModule, GeoModule, MatchingModule],
   controllers: [TripsController],
   providers: [TripsService],
 })

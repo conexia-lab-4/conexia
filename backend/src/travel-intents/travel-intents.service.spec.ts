@@ -6,6 +6,7 @@ import {
 import { TravelIntentsService } from './travel-intents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
+import { MatchingService } from '../matching/matching.service';
 
 describe('TravelIntentsService', () => {
   let service: TravelIntentsService;
@@ -20,6 +21,7 @@ describe('TravelIntentsService', () => {
     };
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
+  let matchingMock: { matchIntent: jest.Mock };
   const userId = 'user-123';
   const now = new Date('2026-10-01T12:00:00.000Z');
 
@@ -52,9 +54,11 @@ describe('TravelIntentsService', () => {
       ),
       getRouteDistanceKm: jest.fn(),
     };
+    matchingMock = { matchIntent: jest.fn().mockResolvedValue(undefined) };
     service = new TravelIntentsService(
       prismaMock as unknown as PrismaService,
       geoMock,
+      matchingMock as unknown as MatchingService,
     );
   });
 
@@ -146,6 +150,23 @@ describe('TravelIntentsService', () => {
         data: { status: 'EXPIRED' },
       });
     });
+
+    it('ejecuta el matching de la intención recién publicada', async () => {
+      prismaMock.travelIntent.create.mockResolvedValue({ id: 'intent-1' });
+
+      await service.create(userId, validDto);
+
+      expect(matchingMock.matchIntent).toHaveBeenCalledWith('intent-1');
+    });
+
+    it('no ejecuta el matching si la intención no se publica', async () => {
+      prismaMock.travelIntent.findFirst.mockResolvedValue({ id: 'otra' });
+
+      await expect(service.create(userId, validDto)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(matchingMock.matchIntent).not.toHaveBeenCalled();
+    });
   });
 
   describe('findMine', () => {
@@ -221,6 +242,21 @@ describe('TravelIntentsService', () => {
         expect(prismaMock.travelIntent.update).not.toHaveBeenCalled();
       },
     );
+    it('recalcula los matches de la intención al cancelarla', async () => {
+      prismaMock.travelIntent.findUnique.mockResolvedValue({
+        id: 'intent-1',
+        userId,
+        status: 'ACTIVE',
+      });
+      prismaMock.travelIntent.update.mockResolvedValue({
+        id: 'intent-1',
+        status: 'CANCELLED',
+      });
+
+      await service.cancel('intent-1', userId);
+
+      expect(matchingMock.matchIntent).toHaveBeenCalledWith('intent-1');
+    });
   });
 
   describe('findMatchable', () => {

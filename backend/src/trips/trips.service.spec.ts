@@ -8,6 +8,7 @@ import { TripsService } from './trips.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
+import { MatchingService } from '../matching/matching.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -24,6 +25,7 @@ describe('TripsService', () => {
     $transaction: jest.Mock;
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
+  let matchingMock: { matchTrip: jest.Mock };
   const userId = 'user-123';
 
   const validDto: CreateTripDto = {
@@ -60,7 +62,12 @@ describe('TripsService', () => {
       ),
       getRouteDistanceKm: jest.fn(),
     };
-    service = new TripsService(prismaMock as unknown as PrismaService, geoMock);
+    matchingMock = { matchTrip: jest.fn().mockResolvedValue(undefined) };
+    service = new TripsService(
+      prismaMock as unknown as PrismaService,
+      geoMock,
+      matchingMock as unknown as MatchingService,
+    );
   });
 
   describe('create', () => {
@@ -163,6 +170,34 @@ describe('TripsService', () => {
         BadRequestException,
       );
       expect(prismaMock.trip.create).not.toHaveBeenCalled();
+    });
+
+    it('ejecuta el matching del viaje recién publicado', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      prismaMock.trip.create.mockResolvedValue({
+        id: 'trip-1',
+        ...validDto,
+        capacity: 3,
+      });
+
+      await service.create(userId, validDto);
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
+    });
+
+    it('no ejecuta el matching si el viaje no se publica', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: false,
+        availableSeats: null,
+      });
+
+      await expect(service.create(userId, validDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
     });
   });
 
@@ -407,6 +442,12 @@ describe('TripsService', () => {
       ).rejects.toThrow(ConflictException);
       expect(prismaMock.trip.update).not.toHaveBeenCalled();
     });
+
+    it('re-ejecuta el matching del viaje después de editarlo', async () => {
+      await service.update(tripId, userId, { origin: 'Pilar' });
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
+    });
   });
 
   describe('join', () => {
@@ -510,6 +551,31 @@ describe('TripsService', () => {
         ConflictException,
       );
     });
+    it('re-ejecuta el matching del viaje después de sumarse', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockResolvedValue({
+        id: 'passenger-1',
+        tripId,
+        userId: 'user-123',
+      });
+
+      await service.join(tripId, 'user-123');
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
+    });
+
+    it('no ejecuta el matching si no pudo sumarse', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(null);
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    });
   });
 
   describe('leave', () => {
@@ -530,6 +596,13 @@ describe('TripsService', () => {
       await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
         NotFoundException,
       );
+    });
+    it('re-ejecuta el matching del viaje después de salir', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.leave('trip-1', 'user-123');
+
+      expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
     });
   });
 });
