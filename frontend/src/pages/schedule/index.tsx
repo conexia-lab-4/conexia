@@ -239,9 +239,9 @@ export function Schedule() {
       </header>
 
       {status === 'loading' && (
-        <p className="schedule-page__status-message">
-          <ConexiaLoader></ConexiaLoader>{' '}
-        </p>
+        <div className="schedule-page__status-message loading-area">
+          <ConexiaLoader />
+        </div>
       )}
 
       {status === 'error' && (
