@@ -11,6 +11,7 @@ export async function addPassenger(
   tx: Prisma.TransactionClient,
   tripId: string,
   userId: string,
+  options: { rejectStarted?: boolean } = {},
 ) {
   const trip = await tx.trip.findUnique({
     where: { id: tripId },
@@ -19,6 +20,13 @@ export async function addPassenger(
 
   if (!trip) {
     throw new NotFoundException('El viaje no existe');
+  }
+
+  // Un viaje que ya salió pasa al historial y no admite nuevos pasajeros
+  if (options.rejectStarted && trip.departureTime <= new Date()) {
+    throw new ConflictException(
+      'El viaje ya empezó y no admite nuevos pasajeros',
+    );
   }
 
   if (trip.driverId === userId) {

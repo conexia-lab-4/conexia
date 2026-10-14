@@ -9,6 +9,7 @@ import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { type TripScope } from './dto/list-my-trips.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
@@ -64,6 +65,27 @@ export class TripsService {
     const trips = await this.prisma.trip.findMany({
       where: { departureTime: { gt: new Date() } },
       orderBy: { departureTime: 'asc' },
+      include: {
+        driver: { select: { id: true, email: true } },
+        passengers: {
+          include: { user: { select: { id: true, email: true } } },
+        },
+      },
+    });
+
+    return trips.map((trip) => this.withDerivedFields(trip, userId));
+  }
+
+  async findMine(userId: string, scope: TripScope = 'upcoming') {
+    const now = new Date();
+    const isHistory = scope === 'history';
+
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        departureTime: isHistory ? { lte: now } : { gt: now },
+        OR: [{ driverId: userId }, { passengers: { some: { userId } } }],
+      },
+      orderBy: { departureTime: isHistory ? 'desc' : 'asc' },
       include: {
         driver: { select: { id: true, email: true } },
         passengers: {
@@ -168,7 +190,7 @@ export class TripsService {
   async join(tripId: string, userId: string) {
     try {
       const passenger = await this.prisma.$transaction(
-        (tx) => addPassenger(tx, tripId, userId),
+        (tx) => addPassenger(tx, tripId, userId, { rejectStarted: true }),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
@@ -188,6 +210,16 @@ export class TripsService {
   }
 
   async leave(tripId: string, userId: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { departureTime: true },
+    });
+
+    // Un viaje que ya salió pasa al historial: no se puede salir de él
+    if (trip && trip.departureTime <= new Date()) {
+      throw new ConflictException('El viaje ya empezó y no se puede abandonar');
+    }
+
     const deleted = await this.prisma.tripPassenger.deleteMany({
       where: { tripId, userId },
     });
@@ -228,6 +260,7 @@ export class TripsService {
     T extends {
       driverId: string;
       capacity: number;
+      departureTime: Date;
       passengers: { userId: string }[];
     },
   >(trip: T, userId: string) {
@@ -241,6 +274,7 @@ export class TripsService {
       availableSeats: trip.capacity - trip.passengers.length,
       isDriver,
       isParticipant,
+      isHistorical: trip.departureTime <= new Date(),
     };
   }
 }
