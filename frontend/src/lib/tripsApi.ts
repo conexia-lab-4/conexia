@@ -31,6 +31,7 @@ export interface TripDetail extends Trip {
   availableSeats: number;
   isDriver: boolean;
   isParticipant: boolean;
+  isHistorical: boolean;
 }
 
 export interface CreateTripPayload {
@@ -73,6 +74,20 @@ export async function getUpcomingTrips(): Promise<TripDetail[]> {
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, 'No pudimos cargar los viajes'),
+    );
+  }
+
+  return response.json();
+}
+
+export type TripScope = 'upcoming' | 'history';
+
+export async function getMyTrips(scope: TripScope): Promise<TripDetail[]> {
+  const response = await authFetch(`/trips/mine?scope=${scope}`);
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'No pudimos cargar tus viajes'),
     );
   }
 

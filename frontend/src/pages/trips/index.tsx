@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
@@ -7,18 +7,29 @@ import { EmptyTripsState } from '../../components/emptytripsstate';
 import { TripListCard } from '../../components/triplistcard';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { getProfile } from '../../lib/profileApi';
-import { getUpcomingTrips, type TripDetail } from '../../lib/tripsApi';
+import {
+  getMyTrips,
+  type TripDetail,
+  type TripScope,
+} from '../../lib/tripsApi';
 import tripsHeader from '../../assets/images/trips-header.png';
 import publishTripCar from '../../assets/images/publish-trip-car.png';
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+const TABS: { scope: TripScope; label: string }[] = [
+  { scope: 'upcoming', label: 'Próximos viajes' },
+  { scope: 'history', label: 'Historial' },
+];
+
 export function Trips() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const [scope, setScope] = useState<TripScope>('upcoming');
+  const [reloadKey, setReloadKey] = useState(0);
   const [trips, setTrips] = useState<TripDetail[]>([]);
   const [hasCar, setHasCar] = useState(false);
   const [intentCreated] = useState(
@@ -32,28 +43,43 @@ export function Trips() {
     }
   }, [intentCreated, navigate, location.pathname]);
 
-  const loadTrips = useCallback(() => {
-    Promise.all([getUpcomingTrips(), getProfile()])
+  useEffect(() => {
+    if (!user) return;
+
+    // Si el usuario cambia de pestaña antes de que termine el pedido, se
+    // ignora la respuesta vieja
+    let ignore = false;
+
+    Promise.all([getMyTrips(scope), getProfile()])
       .then(([tripsData, profile]) => {
+        if (ignore) return;
         setTrips(tripsData);
         setHasCar(Boolean(profile?.hasCar));
         setStatus('ready');
       })
       .catch((error) => {
+        if (ignore) return;
         console.error('Error al cargar los viajes:', error);
         setStatus('error');
       });
-  }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    loadTrips();
-  }, [user, loadTrips]);
+    return () => {
+      ignore = true;
+    };
+  }, [user, scope, reloadKey]);
+
+  const handleTabChange = (next: TripScope) => {
+    if (next === scope) return;
+    setStatus('loading');
+    setScope(next);
+  };
 
   const handleRetry = () => {
     setStatus('loading');
-    loadTrips();
+    setReloadKey((key) => key + 1);
   };
+
+  const isHistory = scope === 'history';
 
   return (
     <div className="trips">
@@ -75,24 +101,18 @@ export function Trips() {
       )}
 
       <div className="trips__tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected="true"
-          className="trips__tab trips__tab--active"
-        >
-          Próximos viajes
-        </button>
-        {/* Historial queda fuera de alcance por ahora */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected="false"
-          className="trips__tab"
-          disabled
-        >
-          Historial
-        </button>
+        {TABS.map((tab) => (
+          <button
+            key={tab.scope}
+            type="button"
+            role="tab"
+            aria-selected={tab.scope === scope}
+            className={`trips__tab${tab.scope === scope ? ' trips__tab--active' : ''}`}
+            onClick={() => handleTabChange(tab.scope)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {status === 'loading' && (
@@ -149,11 +169,21 @@ export function Trips() {
           </section>
 
           <section className="trips__list-section">
-            <h2 className="trips__section-title">Próximos viajes</h2>
+            <h2 className="trips__section-title">
+              {isHistory ? 'Historial' : 'Próximos viajes'}
+            </h2>
             {trips.length === 0 ? (
               <EmptyTripsState
-                title="No hay viajes próximos"
-                subtitle="Cuando otros estudiantes publiquen viajes, van a aparecer acá."
+                title={
+                  isHistory
+                    ? 'Todavía no tenés viajes en el historial'
+                    : 'No tenés viajes próximos'
+                }
+                subtitle={
+                  isHistory
+                    ? 'Los viajes que ya salieron van a aparecer acá.'
+                    : 'Publicá un viaje o avisá que necesitás uno y van a aparecer acá.'
+                }
               />
             ) : (
               <ul className="trips__list">
