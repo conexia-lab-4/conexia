@@ -17,7 +17,7 @@ export function RequireAuth({
   if (status === 'loading') {
     return (
       <div className="require-auth__loading">
-        <ConexiaLoader></ConexiaLoader>
+        <ConexiaLoader />
       </div>
     );
   }

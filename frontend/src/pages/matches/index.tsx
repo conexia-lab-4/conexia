@@ -71,9 +71,9 @@ export function Matches() {
       <MatchFilters active={filter} onChange={setFilter} />
 
       {isLoading && (
-        <p className="matches__status-message">
+        <div className="matches__status-message loading-area">
           <ConexiaLoader />
-        </p>
+        </div>
       )}
 
       {!isLoading && (

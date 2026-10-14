@@ -246,7 +246,7 @@ export function Profile() {
       </header>
 
       {status === 'loading' && (
-        <div className="profile__status">
+        <div className="profile__status loading-area">
           <ConexiaLoader />
         </div>
       )}
