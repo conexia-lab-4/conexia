@@ -15,6 +15,11 @@ import {
 import tripsHeader from '../../assets/images/trips-header.png';
 import publishTripCar from '../../assets/images/publish-trip-car.png';
 import './index.css';
+import { TravelIntentCard } from '../../components/travelintentcard';
+import {
+  getMyTravelIntents,
+  type TravelIntent,
+} from '../../lib/travelIntentsApi';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -31,6 +36,7 @@ export function Trips() {
   const [scope, setScope] = useState<TripScope>('upcoming');
   const [reloadKey, setReloadKey] = useState(0);
   const [trips, setTrips] = useState<TripDetail[]>([]);
+  const [intents, setIntents] = useState<TravelIntent[]>([]);
   const [hasCar, setHasCar] = useState(false);
   const [intentCreated] = useState(
     () => (location.state as { intentCreated?: boolean } | null)?.intentCreated,
@@ -50,10 +56,17 @@ export function Trips() {
     // ignora la respuesta vieja
     let ignore = false;
 
-    Promise.all([getMyTrips(scope), getProfile()])
-      .then(([tripsData, profile]) => {
+    Promise.all([
+      getMyTrips(scope),
+      scope === 'upcoming'
+        ? getMyTravelIntents()
+        : Promise.resolve<TravelIntent[]>([]),
+      getProfile(),
+    ])
+      .then(([tripsData, intentsData, profile]) => {
         if (ignore) return;
         setTrips(tripsData);
+        setIntents(intentsData.filter((intent) => intent.status === 'ACTIVE'));
         setHasCar(Boolean(profile?.hasCar));
         setStatus('ready');
       })
@@ -167,6 +180,19 @@ export function Trips() {
             </div>
             <img src={publishTripCar} alt="" className="trips__publish-image" />
           </section>
+
+          {!isHistory && intents.length > 0 && (
+            <section className="trips__list-section">
+              <h2 className="trips__section-title">Mis intenciones de viaje</h2>
+              <ul className="trips__list">
+                {intents.map((intent) => (
+                  <li key={intent.id}>
+                    <TravelIntentCard intent={intent} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="trips__list-section">
             <h2 className="trips__section-title">
