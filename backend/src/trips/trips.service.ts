@@ -76,16 +76,25 @@ export class TripsService {
     return trips.map((trip) => this.withDerivedFields(trip, userId));
   }
 
-  async findMine(userId: string, scope: TripScope = 'upcoming') {
+  async findMine(
+    userId: string,
+    scope: TripScope = 'upcoming',
+    page: { limit?: number; offset?: number } = {},
+  ) {
     const now = new Date();
     const isHistory = scope === 'history';
+    const direction = isHistory ? 'desc' : 'asc';
 
     const trips = await this.prisma.trip.findMany({
       where: {
         departureTime: isHistory ? { lte: now } : { gt: now },
         OR: [{ driverId: userId }, { passengers: { some: { userId } } }],
       },
-      orderBy: { departureTime: isHistory ? 'desc' : 'asc' },
+      // El id desempata viajes con la misma salida, para que las páginas
+      // no repitan ni salteen viajes
+      orderBy: [{ departureTime: direction }, { id: 'asc' }],
+      take: page.limit,
+      skip: page.offset,
       include: {
         driver: { select: { id: true, email: true } },
         passengers: {

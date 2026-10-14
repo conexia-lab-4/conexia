@@ -285,7 +285,7 @@ describe('TripsService', () => {
 
       expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
         where: { departureTime: { gt: now }, OR: participantFilter },
-        orderBy: { departureTime: 'asc' },
+        orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
         include,
       });
     });
@@ -295,7 +295,7 @@ describe('TripsService', () => {
 
       expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
         where: { departureTime: { lte: now }, OR: participantFilter },
-        orderBy: { departureTime: 'desc' },
+        orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
         include,
       });
     });
@@ -322,6 +322,18 @@ describe('TripsService', () => {
 
       expect(result[0].isHistorical).toBe(true);
       expect(result[1].isHistorical).toBe(false);
+    });
+
+    it('pagina con limit y offset cuando se piden', async () => {
+      await service.findMine(userId, 'upcoming', { limit: 20, offset: 40 });
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: { departureTime: { gt: now }, OR: participantFilter },
+        orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+        take: 20,
+        skip: 40,
+        include,
+      });
     });
   });
 

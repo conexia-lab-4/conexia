@@ -39,7 +39,10 @@ export class TripsController {
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: ListMyTripsDto,
   ) {
-    return this.tripsService.findMine(user.id, query.scope);
+    return this.tripsService.findMine(user.id, query.scope, {
+      limit: query.limit,
+      offset: query.offset,
+    });
   }
 
   @Get(':id')
