@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TravelIntentStatus } from '../../generated/prisma/client';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
 import { MatchingService } from '../matching/matching.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { KpiEventType, Metric } from '../metrics/metric-names';
 
 @Injectable()
 export class TravelIntentsService {
@@ -16,6 +18,7 @@ export class TravelIntentsService {
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
     private readonly matching: MatchingService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async create(userId: string, dto: CreateTravelIntentDto) {
@@ -52,18 +55,28 @@ export class TravelIntentsService {
       this.geocodeOrThrow(dto.destination),
     ]);
 
-    const intent = await this.prisma.travelIntent.create({
-      data: {
-        userId,
-        origin: dto.origin,
-        originLat: originCoords.lat,
-        originLng: originCoords.lng,
-        destination: dto.destination,
-        destinationLat: destinationCoords.lat,
-        destinationLng: destinationCoords.lng,
-        departureTime,
-        arrivalTime,
-      },
+    const intent = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.travelIntent.create({
+        data: {
+          userId,
+          origin: dto.origin,
+          originLat: originCoords.lat,
+          originLng: originCoords.lng,
+          destination: dto.destination,
+          destinationLat: destinationCoords.lat,
+          destinationLng: destinationCoords.lng,
+          departureTime,
+          arrivalTime,
+        },
+      });
+
+      await this.metrics.increment(Metric.INTENTS_PUBLISHED, 1, tx);
+      await this.metrics.recordEvents(
+        [{ type: KpiEventType.INTENT_PUBLISHED, refId: created.id, userId }],
+        tx,
+      );
+
+      return created;
     });
 
     await this.matching.matchIntent(intent.id);

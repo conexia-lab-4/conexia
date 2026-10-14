@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -26,6 +27,7 @@ describe('TripsService', () => {
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchTrip: jest.Mock };
+  let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
   const validDto: CreateTripDto = {
@@ -63,10 +65,15 @@ describe('TripsService', () => {
       getRouteDistanceKm: jest.fn(),
     };
     matchingMock = { matchTrip: jest.fn().mockResolvedValue(undefined) };
+    metricsMock = {
+      increment: jest.fn(),
+      recordEvents: jest.fn().mockResolvedValue(1),
+    };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
       geoMock,
       matchingMock as unknown as MatchingService,
+      metricsMock as unknown as MetricsService,
     );
   });
 
@@ -121,6 +128,26 @@ describe('TripsService', () => {
         },
         include: { passengers: true },
       });
+    });
+
+    it('registra la publicación del viaje en las métricas', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      prismaMock.trip.create.mockResolvedValue({ id: 'trip-1' });
+
+      await service.create(userId, validDto);
+
+      expect(metricsMock.increment).toHaveBeenCalledWith(
+        'trips_published',
+        1,
+        prismaMock,
+      );
+      expect(metricsMock.recordEvents).toHaveBeenCalledWith(
+        [{ type: 'TRIP_PUBLISHED', refId: 'trip-1', userId }],
+        prismaMock,
+      );
     });
 
     it('guarda capacidad 0 si hasCar es true pero availableSeats es null', async () => {
