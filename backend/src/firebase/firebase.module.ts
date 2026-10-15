@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import { DisplayNamesService } from './display-names.service';
 
 @Global()
 @Module({
@@ -22,7 +23,8 @@ import * as admin from 'firebase-admin';
         return admin;
       },
     },
+    DisplayNamesService,
   ],
-  exports: ['FIREBASE_ADMIN'],
+  exports: ['FIREBASE_ADMIN', DisplayNamesService],
 })
 export class FirebaseModule {}

@@ -32,21 +32,16 @@ export function formatSeats(seats: number): string {
   return `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`;
 }
 
-// El backend todavía no guarda el nombre: se arma desde el email
-// ("juan.martinez@uni.edu.ar" → "Juan Martinez")
-export function getDisplayName(email: string): string {
-  const [localPart] = email.split('@');
-  const name = localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map(capitalize)
-    .join(' ');
-  return name || email;
+const FALLBACK_NAME = 'Estudiante';
+
+// El nombre viene de Firebase (displayName); si falta, se muestra "Estudiante"
+export function getPersonName(displayName: string | null | undefined): string {
+  return displayName?.trim() || FALLBACK_NAME;
 }
 
-export function getInitials(email: string): string {
-  return getDisplayName(email)
-    .split(' ')
+export function getInitials(displayName: string | null | undefined): string {
+  return getPersonName(displayName)
+    .split(/\s+/)
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join('');

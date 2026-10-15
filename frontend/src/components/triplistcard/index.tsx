@@ -42,7 +42,7 @@ export function TripListCard({ trip }: TripListCardProps) {
 
       <div className="trip-list-card__driver">
         <span className="trip-list-card__avatar">
-          {getInitials(trip.driver.email)}
+          {getInitials(trip.driver.displayName)}
         </span>
         {trip.isDriver ? (
           <span className="trip-list-card__badge">

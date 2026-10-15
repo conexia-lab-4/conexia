@@ -16,6 +16,7 @@ import {
   addPassenger,
   isSerializationConflict,
 } from '../trips/trip-participation';
+import { DisplayNamesService } from '../firebase/display-names.service';
 
 @Injectable()
 export class TravelMatchesService {
@@ -23,7 +24,90 @@ export class TravelMatchesService {
     private readonly prisma: PrismaService,
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
+    private readonly displayNames: DisplayNamesService,
   ) {}
+
+  async findMine(userId: string) {
+    const now = new Date();
+
+    // Un match pendiente de un viaje que ya salió deja de ser válido
+    await this.prisma.travelMatch.updateMany({
+      where: {
+        status: TravelMatchStatus.SUGGESTED,
+        travelIntent: { userId },
+        trip: { departureTime: { lte: now } },
+      },
+      data: { status: TravelMatchStatus.INVALIDATED },
+    });
+
+    const matches = await this.prisma.travelMatch.findMany({
+      where: {
+        status: TravelMatchStatus.SUGGESTED,
+        travelIntent: { userId, status: TravelIntentStatus.ACTIVE },
+      },
+      orderBy: [
+        { score: 'desc' },
+        { trip: { departureTime: 'asc' } },
+        { id: 'asc' },
+      ],
+      select: {
+        id: true,
+        status: true,
+        score: true,
+        detourKm: true,
+        departureDeltaMinutes: true,
+        arrivalDeltaMinutes: true,
+        trip: {
+          select: {
+            id: true,
+            origin: true,
+            destination: true,
+            departureTime: true,
+            arrivalTime: true,
+            capacity: true,
+            _count: { select: { passengers: true } },
+            driver: {
+              select: {
+                id: true,
+                email: true,
+                studentProfile: {
+                  select: {
+                    career: true,
+                    year: true,
+                    campus: true,
+                    carModel: true,
+                    carColor: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const names = await this.displayNames.getDisplayNames(
+      matches.map((match) => match.trip.driver.id),
+    );
+
+    return matches.map((match) => {
+      const { _count, driver, ...trip } = match.trip;
+
+      return {
+        ...match,
+        trip: {
+          ...trip,
+          availableSeats: trip.capacity - _count.passengers,
+          driver: {
+            id: driver.id,
+            email: driver.email,
+            displayName: names.get(driver.id) ?? null,
+            profile: driver.studentProfile,
+          },
+        },
+      };
+    });
+  }
 
   async accept(matchId: string, userId: string) {
     try {

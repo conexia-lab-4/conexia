@@ -10,6 +10,7 @@ import { CreateTripDto } from './dto/create-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { DisplayNamesService } from '../firebase/display-names.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -27,6 +28,7 @@ describe('TripsService', () => {
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchTrip: jest.Mock };
+  let displayNamesMock: { getDisplayNames: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
@@ -69,11 +71,17 @@ describe('TripsService', () => {
       increment: jest.fn(),
       recordEvents: jest.fn().mockResolvedValue(1),
     };
+    displayNamesMock = {
+      getDisplayNames: jest
+        .fn()
+        .mockResolvedValue(new Map<string, string | null>()),
+    };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
       geoMock,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
+      displayNamesMock as unknown as DisplayNamesService,
     );
   });
 
@@ -254,20 +262,23 @@ describe('TripsService', () => {
         {
           id: 'trip-1',
           driverId: 'otro-driver',
+          driver: { id: 'otro-driver' },
           capacity: 3,
-          passengers: [{ userId: 'user-123' }],
+          passengers: [{ userId: 'user-123', user: { id: 'user-123' } }],
         },
         {
           id: 'trip-2',
           driverId: 'otro-driver',
+          driver: { id: 'otro-driver' },
           capacity: 2,
           passengers: [],
         },
         {
           id: 'trip-3',
           driverId: 'user-123',
+          driver: { id: 'user-123' },
           capacity: 4,
-          passengers: [{ userId: 'otro-user' }],
+          passengers: [{ userId: 'otro-user', user: { id: 'otro-user' } }],
         },
       ]);
 
@@ -282,6 +293,34 @@ describe('TripsService', () => {
       expect(result[2].availableSeats).toBe(3);
       expect(result[2].isDriver).toBe(true);
       expect(result[2].isParticipant).toBe(true);
+    });
+
+    it('pide los nombres de todas las personas en una sola consulta', async () => {
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: 'trip-1',
+          driverId: 'driver-1',
+          driver: { id: 'driver-1' },
+          capacity: 3,
+          passengers: [{ userId: 'pasajero-1', user: { id: 'pasajero-1' } }],
+        },
+        {
+          id: 'trip-2',
+          driverId: 'driver-2',
+          driver: { id: 'driver-2' },
+          capacity: 3,
+          passengers: [],
+        },
+      ]);
+
+      await service.findUpcoming('user-123');
+
+      expect(displayNamesMock.getDisplayNames).toHaveBeenCalledTimes(1);
+      expect(displayNamesMock.getDisplayNames).toHaveBeenCalledWith([
+        'driver-1',
+        'pasajero-1',
+        'driver-2',
+      ]);
     });
   });
 
@@ -335,6 +374,7 @@ describe('TripsService', () => {
           capacity: 3,
           passengers: [],
           departureTime: new Date('2026-10-14T11:00:00.000Z'),
+          driver: { id: userId },
         },
         {
           id: 'trip-2',
@@ -342,6 +382,7 @@ describe('TripsService', () => {
           capacity: 3,
           passengers: [],
           departureTime: new Date('2026-10-14T13:00:00.000Z'),
+          driver: { id: userId },
         },
       ]);
 
@@ -482,6 +523,34 @@ describe('TripsService', () => {
         expect(result.passengers[1].pickupLng).toBeNull();
       });
     });
+
+    it('agrega el displayName del conductor y de cada pasajero', async () => {
+      displayNamesMock.getDisplayNames.mockResolvedValue(
+        new Map([
+          [driverId, 'Ana Pérez'],
+          ['pasajero-1', 'Luis Gómez'],
+        ]),
+      );
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [
+          {
+            userId: 'pasajero-1',
+            user: { id: 'pasajero-1', email: 'uno@test.com' },
+          },
+          {
+            userId: 'pasajero-2',
+            user: { id: 'pasajero-2', email: 'dos@test.com' },
+          },
+        ],
+      });
+
+      const result = await service.findOneOrThrow('trip-1', 'user-ajeno');
+
+      expect(result.driver.displayName).toBe('Ana Pérez');
+      expect(result.passengers[0].user.displayName).toBe('Luis Gómez');
+      expect(result.passengers[1].user.displayName).toBeNull();
+    });
   });
 
   describe('update', () => {
@@ -498,6 +567,7 @@ describe('TripsService', () => {
       departureTime: new Date('2026-10-05T08:00:00.000Z'),
       arrivalTime: new Date('2026-10-05T09:00:00.000Z'),
       capacity: 3,
+      driver: { id: userId, email: 'conductor@test.com' },
     };
     const newCoords = { lat: -34.42, lng: -58.58 };
 
