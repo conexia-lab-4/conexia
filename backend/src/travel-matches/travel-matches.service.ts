@@ -66,8 +66,21 @@ export class TravelMatchesService {
             throw new ConflictException('El viaje ya finalizó');
           }
 
-          await addPassenger(tx, match.tripId, userId);
+          const passenger = await addPassenger(tx, match.tripId, userId);
 
+          // La ubicación se copia: si la intención se cancela o vence después,
+          // el viaje conserva dónde recoger y dejar al pasajero
+          await tx.tripPassenger.update({
+            where: { id: passenger.id },
+            data: {
+              pickupAddress: match.travelIntent.origin,
+              pickupLat: match.travelIntent.originLat,
+              pickupLng: match.travelIntent.originLng,
+              dropoffAddress: match.travelIntent.destination,
+              dropoffLat: match.travelIntent.destinationLat,
+              dropoffLng: match.travelIntent.destinationLng,
+            },
+          });
           await tx.travelIntent.update({
             where: { id: match.travelIntentId },
             data: { status: TravelIntentStatus.FULFILLED },

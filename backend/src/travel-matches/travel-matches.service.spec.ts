@@ -16,7 +16,7 @@ describe('TravelMatchesService', () => {
     };
     travelIntent: { update: jest.Mock };
     trip: { findUnique: jest.Mock; findFirst: jest.Mock };
-    tripPassenger: { create: jest.Mock };
+    tripPassenger: { create: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
   let matchingMock: { matchTrip: jest.Mock };
@@ -46,6 +46,12 @@ describe('TravelMatchesService', () => {
         userId,
         status: 'ACTIVE',
         arrivalTime: future,
+        origin: 'Los Cardales',
+        originLat: -34.3255,
+        originLng: -59.0003,
+        destination: 'Universidad Austral, Pilar',
+        destinationLat: -34.4545,
+        destinationLng: -58.8686,
       },
       ...overrides,
     };
@@ -57,6 +63,7 @@ describe('TravelMatchesService', () => {
     expect(prismaMock.travelMatch.update).not.toHaveBeenCalled();
     expect(prismaMock.travelMatch.updateMany).not.toHaveBeenCalled();
     expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    expect(prismaMock.tripPassenger.update).not.toHaveBeenCalled();
   }
 
   beforeEach(() => {
@@ -82,6 +89,7 @@ describe('TravelMatchesService', () => {
         create: jest
           .fn()
           .mockResolvedValue({ id: 'p-1', tripId: 'trip-1', userId }),
+        update: jest.fn().mockResolvedValue({}),
       },
       $transaction: jest.fn(),
     };
@@ -130,6 +138,17 @@ describe('TravelMatchesService', () => {
     expect(prismaMock.travelMatch.update).toHaveBeenCalledWith({
       where: { id: 'match-1' },
       data: { status: 'ACCEPTED' },
+    });
+    expect(prismaMock.tripPassenger.update).toHaveBeenCalledWith({
+      where: { id: 'p-1' },
+      data: {
+        pickupAddress: 'Los Cardales',
+        pickupLat: -34.3255,
+        pickupLng: -59.0003,
+        dropoffAddress: 'Universidad Austral, Pilar',
+        dropoffLat: -34.4545,
+        dropoffLng: -58.8686,
+      },
     });
   });
 

@@ -16,6 +16,24 @@ import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
 
+type PassengerLocation = {
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  dropoffAddress: string | null;
+  dropoffLat: number | null;
+  dropoffLng: number | null;
+};
+
+const HIDDEN_LOCATION: PassengerLocation = {
+  pickupAddress: null,
+  pickupLat: null,
+  pickupLng: null,
+  dropoffAddress: null,
+  dropoffLat: null,
+  dropoffLng: null,
+};
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -283,7 +301,7 @@ export class TripsService {
       driverId: string;
       capacity: number;
       departureTime: Date;
-      passengers: { userId: string }[];
+      passengers: ({ userId: string } & PassengerLocation)[];
     },
   >(trip: T, userId: string) {
     const isDriver = trip.driverId === userId;
@@ -291,8 +309,18 @@ export class TripsService {
       isDriver ||
       trip.passengers.some((passenger) => passenger.userId === userId);
 
+    // La ubicación de recogida y destino la ven quienes participan del
+    // viaje (conductor y pasajeros); para el resto va en null
+    const passengers = isParticipant
+      ? trip.passengers
+      : trip.passengers.map((passenger) => ({
+          ...passenger,
+          ...HIDDEN_LOCATION,
+        }));
+
     return {
       ...trip,
+      passengers,
       availableSeats: trip.capacity - trip.passengers.length,
       isDriver,
       isParticipant,

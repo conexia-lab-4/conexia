@@ -13,6 +13,7 @@ import {
   joinTrip,
   leaveTrip,
   type TripDetail,
+  type TripPassenger,
 } from '../../lib/tripsApi';
 import {
   formatSeats,
@@ -29,6 +30,15 @@ type ParticipationAction = 'join' | 'leave';
 function getSeatsLabel(availableSeats: number): string {
   if (availableSeats <= 0) return 'Sin lugares libres';
   return `${formatSeats(availableSeats)} ${availableSeats === 1 ? 'libre' : 'libres'}`;
+}
+
+function getPassengerLocation(passenger: TripPassenger): string | null {
+  const parts = [
+    passenger.pickupAddress && `Recoge en ${passenger.pickupAddress}`,
+    passenger.dropoffAddress && `Deja en ${passenger.dropoffAddress}`,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 export function TripDetailPage() {
@@ -187,17 +197,28 @@ export function TripDetailPage() {
               <p className="trip-detail__muted">Todavía no hay pasajeros</p>
             ) : (
               <ul className="trip-detail__passengers">
-                {trip.passengers.map((passenger) => (
-                  <li key={passenger.id} className="trip-detail__passenger">
-                    <span className="trip-detail__passenger-avatar">
-                      {getInitials(passenger.user.email)}
-                    </span>
-                    <span className="trip-detail__passenger-name">
-                      {getDisplayName(passenger.user.email)}
-                      {passenger.userId === user?.uid && ' (vos)'}
-                    </span>
-                  </li>
-                ))}
+                {trip.passengers.map((passenger) => {
+                  const location = getPassengerLocation(passenger);
+
+                  return (
+                    <li key={passenger.id} className="trip-detail__passenger">
+                      <span className="trip-detail__passenger-avatar">
+                        {getInitials(passenger.user.email)}
+                      </span>
+                      <div className="trip-detail__passenger-info">
+                        <span className="trip-detail__passenger-name">
+                          {getDisplayName(passenger.user.email)}
+                          {passenger.userId === user?.uid && ' (vos)'}
+                        </span>
+                        {location && (
+                          <span className="trip-detail__passenger-location">
+                            {location}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>

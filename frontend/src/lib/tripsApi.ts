@@ -23,6 +23,12 @@ export interface TripPassenger {
   userId: string;
   createdAt: string;
   user: TripUser;
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  dropoffAddress: string | null;
+  dropoffLat: number | null;
+  dropoffLng: number | null;
 }
 
 export interface TripDetail extends Trip {
