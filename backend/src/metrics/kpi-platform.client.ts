@@ -109,6 +109,19 @@ export class KpiPlatformClient {
     );
   }
 
+  // Sólo la descripción y la agregación son editables: el id, el tipo y la
+  // unidad quedan fijos desde el registro
+  async updateCatalog(
+    id: string,
+    patch: Partial<Pick<KpiDefinition, 'description' | 'aggregation'>>,
+  ) {
+    await this.request(
+      'PATCH',
+      `/rest/v1/kpi_catalog?id=eq.${encodeURIComponent(id)}`,
+      patch,
+    );
+  }
+
   async registerCatalog(definitions: KpiDefinition[]) {
     await this.request('POST', '/rest/v1/kpi_catalog', definitions);
   }
@@ -134,7 +147,7 @@ export class KpiPlatformClient {
   }
 
   private async request<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PATCH',
     path: string,
     body?: unknown,
     headers: Record<string, string> = {},

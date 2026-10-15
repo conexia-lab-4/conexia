@@ -143,7 +143,7 @@ export const KPI_CATALOG: KpiDefinition[] = [
     kind: 'business',
     unit: '%',
     description:
-      'Porcentaje de usuarios que publicaron un viaje o una intención en los últimos 7 días y obtuvieron al menos un match.',
+      'Porcentaje de usuarios que publicaron un viaje o una intención en los últimos 7 días y obtuvieron al menos un match. Si nadie publicó en la semana, vale 0.',
     source: 'Eventos de publicación y de match de los últimos 7 días',
     aggregation: 'avg',
     justification:
@@ -155,7 +155,7 @@ export const KPI_CATALOG: KpiDefinition[] = [
     kind: 'business',
     unit: '%',
     description:
-      'Matches aceptados sobre aceptados más rechazados en los últimos 7 días. Las invalidaciones del sistema no cuentan como rechazo.',
+      'Matches aceptados sobre aceptados más rechazados en los últimos 7 días. Las invalidaciones del sistema no cuentan como rechazo. Si nadie aceptó ni rechazó en la semana, vale 0.',
     source: 'Eventos de aceptación y rechazo de matches de los últimos 7 días',
     aggregation: 'avg',
     justification: 'Medir el porcentaje de matches utilizados.',

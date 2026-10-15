@@ -184,13 +184,13 @@ describe('KpiCalculatorService', () => {
     });
   });
 
-  it('usuarios con match es null si nadie publicó en la ventana', async () => {
+  it('usuarios con match es 0 si nadie publicó en la ventana', async () => {
     await withRollback(async (calculator, tx) => {
       await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
 
       const { values } = await calculator.calculate(DAY);
 
-      expect(values.users_with_match_7d).toBeNull();
+      expect(values.users_with_match_7d).toBe(0);
     });
   });
 
@@ -216,12 +216,23 @@ describe('KpiCalculatorService', () => {
     });
   });
 
-  it('tasa de aceptación es null si no hubo matches resueltos', async () => {
+  it('tasa de aceptación es 0 si nadie aceptó ni rechazó en la ventana', async () => {
     await withRollback(async (calculator, tx) => {
       await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
 
       const { values } = await calculator.calculate(DAY);
 
+      expect(values.match_acceptance_rate_7d).toBe(0);
+    });
+  });
+
+  it('un día anterior a la instrumentación sigue sin valor en los KPIs de 7 días', async () => {
+    await withRollback(async (calculator, tx) => {
+      await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
+
+      const { values } = await calculator.calculate('2020-03-09');
+
+      expect(values.users_with_match_7d).toBeNull();
       expect(values.match_acceptance_rate_7d).toBeNull();
     });
   });

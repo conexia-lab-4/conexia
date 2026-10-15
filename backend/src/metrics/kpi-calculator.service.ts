@@ -10,9 +10,11 @@ import {
 } from './kpi-catalog';
 import { KpiEventType, Metric } from './metric-names';
 
-// Los porcentajes se informan con dos decimales
+// Los porcentajes se informan con dos decimales. Una semana sin casos vale 0:
+// el dato es conocido (no hubo actividad), a diferencia de un día anterior a
+// la instrumentación
 const percentage = (part: number, total: number) =>
-  total === 0 ? null : Math.round((part / total) * 10000) / 100;
+  total === 0 ? 0 : Math.round((part / total) * 10000) / 100;
 
 @Injectable()
 export class KpiCalculatorService {
@@ -39,7 +41,8 @@ export class KpiCalculatorService {
     );
   }
 
-  // Un valor desconocido se devuelve como null, nunca como 0
+  // Un valor desconocido se devuelve como null, nunca como 0: un día anterior
+  // a la instrumentación o una foto de cierre que no se tomó
   async calculate(day: string): Promise<KpiReport> {
     const date = dayToDate(day);
     const trackingStart = await this.trackingStart();

@@ -123,6 +123,23 @@ describe('KpiPlatformClient', () => {
     );
   });
 
+  it('actualiza un KPI del catálogo filtrando por id', async () => {
+    respond(204, '');
+
+    await client.updateCatalog('users_with_match_7d', {
+      description: 'Nueva descripción',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://example.supabase.co/rest/v1/kpi_catalog?id=eq.users_with_match_7d',
+    );
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body as string)).toEqual({
+      description: 'Nueva descripción',
+    });
+  });
+
   it('una respuesta no exitosa lanza un error con el status y el cuerpo', async () => {
     respond(409, '{"message":"KPI inexistente"}');
 

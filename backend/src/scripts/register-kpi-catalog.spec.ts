@@ -22,6 +22,7 @@ describe('syncCatalog', () => {
     assertProject: jest.Mock;
     listCatalog: jest.Mock;
     registerCatalog: jest.Mock;
+    updateCatalog: jest.Mock;
   };
   const log = jest.fn();
 
@@ -37,6 +38,7 @@ describe('syncCatalog', () => {
         .mockResolvedValue({ team_number: 10, name: 'Conexia', env: 'dev' }),
       listCatalog: jest.fn(),
       registerCatalog: jest.fn(),
+      updateCatalog: jest.fn(),
     };
   });
 
@@ -56,6 +58,23 @@ describe('syncCatalog', () => {
     await run();
 
     expect(client.registerCatalog).not.toHaveBeenCalled();
+    expect(client.updateCatalog).not.toHaveBeenCalled();
+  });
+
+  it('actualiza la descripción y la agregación de un KPI ya registrado', async () => {
+    client.listCatalog.mockResolvedValue([
+      { ...kpi('a'), description: 'Descripción vieja', aggregation: 'avg' },
+      kpi('b'),
+      kpi('c'),
+    ]);
+
+    await run();
+
+    expect(client.updateCatalog).toHaveBeenCalledTimes(1);
+    expect(client.updateCatalog).toHaveBeenCalledWith('a', {
+      description: 'Descripción de a',
+      aggregation: 'sum',
+    });
   });
 
   it('no registra nada si la clave no corresponde al proyecto', async () => {

@@ -23,13 +23,25 @@ export async function syncCatalog(
 
   for (const kpi of catalog) {
     const existing = registered.get(kpi.id);
-    if (
-      existing &&
-      (existing.kind !== kpi.kind || existing.unit !== kpi.unit)
-    ) {
+    if (!existing) continue;
+
+    if (existing.kind !== kpi.kind || existing.unit !== kpi.unit) {
       log(
         `Atención: ${kpi.id} ya está registrado como ${existing.kind}/${existing.unit} y el catálogo local dice ${kpi.kind}/${kpi.unit}`,
       );
+    }
+
+    const patch = {
+      ...(existing.description !== kpi.description && {
+        description: kpi.description,
+      }),
+      ...(existing.aggregation !== kpi.aggregation && {
+        aggregation: kpi.aggregation,
+      }),
+    };
+    if (Object.keys(patch).length > 0) {
+      log(`Actualizando ${Object.keys(patch).join(' y ')} de ${kpi.id}`);
+      await client.updateCatalog(kpi.id, patch);
     }
   }
 
