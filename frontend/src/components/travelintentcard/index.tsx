@@ -5,6 +5,7 @@ import {
   formatTime,
   formatWeekdayShort,
 } from '../../lib/tripFormat';
+import '../triplistcard/index.css';
 import './index.css';
 
 interface TravelIntentCardProps {
@@ -13,18 +14,18 @@ interface TravelIntentCardProps {
 
 export function TravelIntentCard({ intent }: TravelIntentCardProps) {
   return (
-    <div className="travel-intent-card">
-      <div className="travel-intent-card__date">
+    <div className="trip-list-card">
+      <div className="trip-list-card__date">
         <span className="text-body-3">
           {formatWeekdayShort(intent.departureTime)}
         </span>
-        <span className="travel-intent-card__day">
+        <span className="trip-list-card__day">
           {formatDayNumber(intent.departureTime)}
         </span>
         <span className="text-body-3">{formatTime(intent.departureTime)}</span>
       </div>
 
-      <div className="travel-intent-card__route">
+      <div className="trip-list-card__route">
         <RouteTimeline
           origin={intent.origin}
           destination={intent.destination}
