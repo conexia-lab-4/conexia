@@ -1,109 +1,102 @@
+import { authFetch } from './api';
+import { getErrorMessage } from './tripsApi';
+import { getDisplayName, getInitials } from './tripFormat';
+
+// Respuesta de GET /travel-matches
+export interface TravelMatch {
+  id: string;
+  status: string;
+  score: number;
+  detourKm: number;
+  departureDeltaMinutes: number;
+  arrivalDeltaMinutes: number;
+  trip: {
+    id: string;
+    origin: string;
+    destination: string;
+    departureTime: string;
+    arrivalTime: string;
+    capacity: number;
+    availableSeats: number;
+    driver: {
+      id: string;
+      email: string;
+      profile: {
+        career: string | null;
+        year: number | null;
+        campus: string | null;
+        carModel: string | null;
+        carColor: string | null;
+      } | null;
+    };
+  };
+}
+
+// Lo que necesita la card
 export interface Match {
   id: string;
   name: string;
-  photoUrl: string;
-  isOnline: boolean;
-  career: string;
-  year: number;
-  campus: string;
-  hasCar: boolean;
-  availableSeats?: number;
-  hasSimilarSchedule: boolean;
+  initials: string;
+  career: string | null;
+  year: number | null;
+  campus: string | null;
+  availableSeats: number;
   compatibilityPercent: number;
-  sameCampus: boolean;
-  sameCareer: boolean;
 }
 
-const MOCK_MATCHES: Match[] = [
-  {
-    id: '1',
-    name: 'Juan Martínez',
-    photoUrl: 'https://i.pravatar.cc/150?img=12',
-    isOnline: true,
-    career: 'Ingeniería Informática',
-    year: 3,
-    campus: 'Sede Pilar',
-    hasCar: true,
-    availableSeats: 2,
-    hasSimilarSchedule: true,
-    compatibilityPercent: 92,
-    sameCampus: true,
-    sameCareer: true,
-  },
-  {
-    id: '2',
-    name: 'Valentina Rossi',
-    photoUrl: 'https://i.pravatar.cc/150?img=47',
-    isOnline: true,
-    career: 'Medicina',
-    year: 1,
-    campus: 'Sede Pilar',
-    hasCar: true,
-    availableSeats: 1,
-    hasSimilarSchedule: false,
-    compatibilityPercent: 86,
-    sameCampus: true,
-    sameCareer: false,
-  },
-  {
-    id: '3',
-    name: 'Sofia Garcia',
-    photoUrl: 'https://i.pravatar.cc/150?img=32',
-    isOnline: true,
-    career: 'Medicina',
-    year: 1,
-    campus: 'Sede Pilar',
-    hasCar: false,
-    hasSimilarSchedule: true,
-    compatibilityPercent: 72,
-    sameCampus: true,
-    sameCareer: false,
-  },
-  {
-    id: '4',
-    name: 'Juana Rosseti',
-    photoUrl: 'https://i.pravatar.cc/150?img=44',
-    isOnline: true,
-    career: 'Medicina',
-    year: 1,
-    campus: 'Sede Pilar',
-    hasCar: false,
-    hasSimilarSchedule: true,
-    compatibilityPercent: 72,
-    sameCampus: true,
-    sameCareer: false,
-  },
-  {
-    id: '5',
-    name: 'Martín López',
-    photoUrl: 'https://i.pravatar.cc/150?img=8',
-    isOnline: false,
-    career: 'Administración de Empresas',
-    year: 2,
-    campus: 'Sede Centro',
-    hasCar: true,
-    availableSeats: 3,
-    hasSimilarSchedule: false,
-    compatibilityPercent: 65,
-    sameCampus: false,
-    sameCareer: false,
-  },
-  {
-    id: '6',
-    name: 'Camila Fernández',
-    photoUrl: 'https://i.pravatar.cc/150?img=20',
-    isOnline: false,
-    career: 'Ingeniería Informática',
-    year: 4,
-    campus: 'Sede Centro',
-    hasCar: false,
-    hasSimilarSchedule: false,
-    compatibilityPercent: 58,
-    sameCampus: false,
-    sameCareer: true,
-  },
-];
+export function toMatch(travelMatch: TravelMatch): Match {
+  const { driver, availableSeats } = travelMatch.trip;
+
+  return {
+    id: travelMatch.id,
+    name: getDisplayName(driver.email),
+    initials: getInitials(driver.email),
+    career: driver.profile?.career ?? null,
+    year: driver.profile?.year ?? null,
+    campus: driver.profile?.campus ?? null,
+    availableSeats,
+    compatibilityPercent: Math.round(travelMatch.score),
+  };
+}
+
+export async function getTravelMatches(): Promise<TravelMatch[]> {
+  const response = await authFetch('/travel-matches');
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'No pudimos cargar tus matches'),
+    );
+  }
+
+  return response.json();
+}
 
 export async function getMatches(): Promise<Match[]> {
-  return Promise.resolve(MOCK_MATCHES);
+  return (await getTravelMatches()).map(toMatch);
+}
+
+export async function acceptMatch(id: string): Promise<void> {
+  const response = await authFetch(
+    `/travel-matches/${encodeURIComponent(id)}/accept`,
+    { method: 'POST' },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'No pudimos aceptar el match'),
+    );
+  }
+}
+
+export async function rejectMatch(id: string): Promise<void> {
+  const response = await authFetch(
+    `/travel-matches/${encodeURIComponent(id)}/reject`,
+    { method: 'POST' },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'No pudimos rechazar el match'),
+    );
+  }
 }

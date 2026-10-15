@@ -2,7 +2,6 @@ import type { Match } from '../../lib/matchesApi';
 import { CompatibilityRing } from '../compatibilityRing';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { IconCar } from '../../assets/icons/IconCar';
-import { IconClockOutline } from '../../assets/icons/IconClockOutline';
 import { IconSeat } from '../../assets/icons/IconSeat';
 import { IconChevronRight } from '../../assets/icons/IconChevronRight';
 import './index.css';
@@ -22,57 +21,43 @@ interface MatchCardProps {
 }
 
 export function MatchCard({ match, onClick }: MatchCardProps) {
-  const yearLabel = YEAR_LABELS[match.year] ?? `${match.year}° año`;
+  const yearLabel =
+    match.year === null
+      ? null
+      : (YEAR_LABELS[match.year] ?? `${match.year}° año`);
+  const subtitle = [match.career, yearLabel].filter(Boolean).join(' ');
 
   return (
     <button type="button" className="match-card" onClick={onClick}>
       <div className="match-card__avatar-wrapper">
-        <img src={match.photoUrl} alt="" className="match-card__avatar" />
-        {match.isOnline && <span className="match-card__status-dot" />}
+        <span className="match-card__avatar">{match.initials}</span>
       </div>
 
       <div className="match-card__info">
         <span className="match-card__name text-body-2-bold">{match.name}</span>
-        <span className="match-card__subtitle text-body-3">
-          {match.career} {yearLabel}
-        </span>
-        <span className="match-card__location text-body-3">
-          <IconMapPin size={12} color="var(--color-grey-400)" />
-          {match.campus}
-        </span>
+        {subtitle && (
+          <span className="match-card__subtitle text-body-3">{subtitle}</span>
+        )}
+        {match.campus && (
+          <span className="match-card__location text-body-3">
+            <IconMapPin size={12} color="var(--color-grey-400)" />
+            {match.campus}
+          </span>
+        )}
 
         <div className="match-card__badges">
-          {match.hasCar ? (
-            <span className="match-card__badge match-card__badge--positive">
-              <IconCar size={12} color="var(--color-success-700)" />
-              <span className="match-card__badge-text">Con auto</span>
-            </span>
-          ) : (
-            <span className="match-card__badge match-card__badge--negative">
-              <IconCar size={12} color="var(--color-error-700)" />
-              <span className="match-card__badge-text">Sin auto</span>
-            </span>
-          )}
+          <span className="match-card__badge match-card__badge--positive">
+            <IconCar size={12} color="var(--color-success-700)" />
+            <span className="match-card__badge-text">Con auto</span>
+          </span>
 
-          {match.hasCar && match.availableSeats != null && (
-            <span className="match-card__badge match-card__badge--neutral">
-              <IconSeat size={12} color="var(--color-badge-blue-text)" />
-              <span className="match-card__badge-text">
-                {match.availableSeats}{' '}
-                {match.availableSeats === 1 ? 'asiento' : 'asientos'}
-              </span>
+          <span className="match-card__badge match-card__badge--neutral">
+            <IconSeat size={12} color="var(--color-badge-blue-text)" />
+            <span className="match-card__badge-text">
+              {match.availableSeats}{' '}
+              {match.availableSeats === 1 ? 'asiento' : 'asientos'}
             </span>
-          )}
-
-          {!match.hasCar && match.hasSimilarSchedule && (
-            <span className="match-card__badge match-card__badge--neutral">
-              <IconClockOutline
-                size={12}
-                color="var(--color-badge-blue-text)"
-              />
-              <span className="match-card__badge-text">Horarios similares</span>
-            </span>
-          )}
+          </span>
         </div>
       </div>
 
