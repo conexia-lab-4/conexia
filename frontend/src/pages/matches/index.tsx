@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
-import {
-  MatchFilters,
-  type MatchFilterValue,
-} from '../../components/matchFilters';
 import { MatchCard } from '../../components/matchCard';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconSearch } from '../../assets/icons/IconSearch';
@@ -17,7 +13,6 @@ export function Matches() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<MatchFilterValue>('todos');
 
   useEffect(() => {
     getMatches()
@@ -27,23 +22,15 @@ export function Matches() {
 
   const filteredMatches = useMemo(() => {
     const query = search.trim().toLowerCase();
+    if (query === '') return allMatches;
 
-    return allMatches.filter((match) => {
-      const matchesSearch =
-        query === '' ||
+    return allMatches.filter(
+      (match) =>
         match.name.toLowerCase().includes(query) ||
         match.career.toLowerCase().includes(query) ||
-        match.campus.toLowerCase().includes(query);
-
-      const matchesFilter =
-        filter === 'todos' ||
-        (filter === 'misma-sede' && match.sameCampus) ||
-        (filter === 'misma-carrera' && match.sameCareer) ||
-        (filter === 'mismos-horarios' && match.hasSimilarSchedule);
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [allMatches, search, filter]);
+        match.campus.toLowerCase().includes(query),
+    );
+  }, [allMatches, search]);
 
   return (
     <div className="matches">
@@ -68,8 +55,6 @@ export function Matches() {
         leftIcon={<IconSearch size={20} color="var(--color-grey-400)" />}
       />
 
-      <MatchFilters active={filter} onChange={setFilter} />
-
       {isLoading && (
         <div className="matches__status-message loading-area">
           <ConexiaLoader />
@@ -80,7 +65,9 @@ export function Matches() {
         <div className="matches__list">
           {filteredMatches.length === 0 ? (
             <p className="matches__empty">
-              No encontramos estudiantes con esos filtros.
+              {search.trim() === ''
+                ? 'Todavía no tenés matches.'
+                : 'No encontramos resultados para tu búsqueda.'}
             </p>
           ) : (
             filteredMatches.map((match) => (
