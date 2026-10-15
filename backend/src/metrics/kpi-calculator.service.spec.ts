@@ -61,6 +61,17 @@ describe('KpiCalculatorService', () => {
     });
   });
 
+  it('una foto de cierre no adelanta el inicio de la instrumentación', async () => {
+    await withRollback(async (calculator, tx) => {
+      await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 5) });
+
+      await calculator.recordClosingSnapshot('2020-03-09');
+      const report = await calculator.calculate('2020-03-09');
+
+      expect(Object.values(report.values).every((v) => v === null)).toBe(true);
+    });
+  });
+
   it('lee los contadores del día y usa 0 si no hubo actividad', async () => {
     await withRollback(async (calculator, tx) => {
       await tx.dailyMetric.createMany({
@@ -93,14 +104,18 @@ describe('KpiCalculatorService', () => {
     });
   });
 
-  it('la foto de cierre guarda los totales y se puede volver a tomar', async () => {
+  it('la foto de cierre guarda los totales y un reintento no la reemplaza', async () => {
     await withRollback(async (calculator, tx) => {
       const users = await tx.user.count();
       const profiles = await tx.studentProfile.count({
         where: { questionnaireCompleted: true },
       });
 
+      await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
       await calculator.recordClosingSnapshot(DAY);
+      await tx.user.create({
+        data: { id: 'kpi-snapshot-user', email: 'kpi-snapshot@test.local' },
+      });
       await calculator.recordClosingSnapshot(DAY);
       const { values } = await calculator.calculate(DAY);
 
@@ -111,7 +126,9 @@ describe('KpiCalculatorService', () => {
 
   it('usuarios con match: matcheados sobre los que publicaron en los últimos 7 días', async () => {
     await withRollback(async (calculator, tx) => {
-      await tx.dailyMetric.create({ data: metric('2020-03-01', 'x', 0) });
+      await tx.dailyMetric.create({
+        data: metric('2020-03-01', 'api_requests', 0),
+      });
       await tx.kpiEvent.createMany({
         data: [
           // Publicó y matcheó dentro de la ventana
@@ -146,7 +163,9 @@ describe('KpiCalculatorService', () => {
 
   it('usa el día de Argentina para los bordes de la ventana', async () => {
     await withRollback(async (calculator, tx) => {
-      await tx.dailyMetric.create({ data: metric('2020-03-01', 'x', 0) });
+      await tx.dailyMetric.create({
+        data: metric('2020-03-01', 'api_requests', 0),
+      });
       await tx.kpiEvent.createMany({
         data: [
           // 03-11 01:00 UTC es 03-10 22:00 en Argentina: entra
@@ -165,19 +184,21 @@ describe('KpiCalculatorService', () => {
     });
   });
 
-  it('usuarios con match es null si nadie publicó en la ventana', async () => {
+  it('usuarios con match es 0 si nadie publicó en la ventana', async () => {
     await withRollback(async (calculator, tx) => {
       await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
 
       const { values } = await calculator.calculate(DAY);
 
-      expect(values.users_with_match_7d).toBeNull();
+      expect(values.users_with_match_7d).toBe(0);
     });
   });
 
   it('tasa de aceptación: ACCEPTED / (ACCEPTED + REJECTED) en los últimos 7 días', async () => {
     await withRollback(async (calculator, tx) => {
-      await tx.dailyMetric.create({ data: metric('2020-03-01', 'x', 0) });
+      await tx.dailyMetric.create({
+        data: metric('2020-03-01', 'api_requests', 0),
+      });
       await tx.kpiEvent.createMany({
         data: [
           event('MATCH_ACCEPTED', 'p1', 'm1', '2020-03-06T12:00Z'),
@@ -195,12 +216,23 @@ describe('KpiCalculatorService', () => {
     });
   });
 
-  it('tasa de aceptación es null si no hubo matches resueltos', async () => {
+  it('tasa de aceptación es 0 si nadie aceptó ni rechazó en la ventana', async () => {
     await withRollback(async (calculator, tx) => {
       await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
 
       const { values } = await calculator.calculate(DAY);
 
+      expect(values.match_acceptance_rate_7d).toBe(0);
+    });
+  });
+
+  it('un día anterior a la instrumentación sigue sin valor en los KPIs de 7 días', async () => {
+    await withRollback(async (calculator, tx) => {
+      await tx.dailyMetric.create({ data: metric(DAY, 'api_requests', 1) });
+
+      const { values } = await calculator.calculate('2020-03-09');
+
+      expect(values.users_with_match_7d).toBeNull();
       expect(values.match_acceptance_rate_7d).toBeNull();
     });
   });
