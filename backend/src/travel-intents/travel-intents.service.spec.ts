@@ -7,6 +7,7 @@ import { TravelIntentsService } from './travel-intents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
 import { MatchingService } from '../matching/matching.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('TravelIntentsService', () => {
   let service: TravelIntentsService;
@@ -19,9 +20,11 @@ describe('TravelIntentsService', () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchIntent: jest.Mock };
+  let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
   const now = new Date('2026-10-01T12:00:00.000Z');
 
@@ -45,7 +48,11 @@ describe('TravelIntentsService', () => {
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      $transaction: jest.fn(),
     };
+    prismaMock.$transaction.mockImplementation(
+      (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
+    );
     geoMock = {
       geocode: jest.fn((address: string) =>
         Promise.resolve(
@@ -55,10 +62,15 @@ describe('TravelIntentsService', () => {
       getRouteDistanceKm: jest.fn(),
     };
     matchingMock = { matchIntent: jest.fn().mockResolvedValue(undefined) };
+    metricsMock = {
+      increment: jest.fn(),
+      recordEvents: jest.fn().mockResolvedValue(1),
+    };
     service = new TravelIntentsService(
       prismaMock as unknown as PrismaService,
       geoMock,
       matchingMock as unknown as MatchingService,
+      metricsMock as unknown as MetricsService,
     );
   });
 
@@ -87,6 +99,22 @@ describe('TravelIntentsService', () => {
           arrivalTime: new Date(validDto.arrivalTime),
         },
       });
+    });
+
+    it('registra la publicación de la intención en las métricas', async () => {
+      prismaMock.travelIntent.create.mockResolvedValue({ id: 'intent-1' });
+
+      await service.create(userId, validDto);
+
+      expect(metricsMock.increment).toHaveBeenCalledWith(
+        'intents_published',
+        1,
+        prismaMock,
+      );
+      expect(metricsMock.recordEvents).toHaveBeenCalledWith(
+        [{ type: 'INTENT_PUBLISHED', refId: 'intent-1', userId }],
+        prismaMock,
+      );
     });
 
     it('responde 400 y no persiste si el origen no se resuelve', async () => {

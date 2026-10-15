@@ -106,9 +106,9 @@ export function Home() {
       )}
 
       {status === 'loading' && (
-        <p className="home__status-message">
-          <ConexiaLoader></ConexiaLoader>
-        </p>
+        <div className="home__status-message loading-area">
+          <ConexiaLoader />
+        </div>
       )}
 
       {status === 'error' && (

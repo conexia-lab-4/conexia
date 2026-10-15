@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FirebaseModule } from './firebase/firebase.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { ProfileModule } from './profile/profile.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TestUtilsModule } from './test-utils/test-utils.module';
@@ -18,6 +19,7 @@ import { TravelMatchesModule } from './travel-matches/travel-matches.module';
     }),
     FirebaseModule,
     PrismaModule,
+    MetricsModule,
     ProfileModule,
     SubjectsModule,
     TripsModule,

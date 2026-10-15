@@ -13,4 +13,9 @@ export class TravelMatchesController {
   accept(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.travelMatchesService.accept(id, user.id);
   }
+
+  @Post(':id/reject')
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.travelMatchesService.reject(id, user.id);
+  }
 }

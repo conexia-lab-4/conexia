@@ -129,7 +129,7 @@ export function Trips() {
       </div>
 
       {status === 'loading' && (
-        <div className="trips__status">
+        <div className="trips__status loading-area">
           <ConexiaLoader />
         </div>
       )}
@@ -203,7 +203,7 @@ export function Trips() {
                 title={
                   isHistory
                     ? 'Todavía no tenés viajes en el historial'
-                    : 'No tenés viajes próximos'
+                    : 'No hay próximos viajes'
                 }
                 subtitle={
                   isHistory

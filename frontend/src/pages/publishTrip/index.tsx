@@ -287,7 +287,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       )}
 
       {status === 'loading' && (
-        <div className="publish-trip__status">
+        <div className="publish-trip__status loading-area">
           <ConexiaLoader />
         </div>
       )}

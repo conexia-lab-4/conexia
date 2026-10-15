@@ -110,7 +110,7 @@ export function TripDetailPage() {
       </header>
 
       {status === 'loading' && (
-        <div className="trip-detail__status">
+        <div className="trip-detail__status loading-area">
           <ConexiaLoader />
         </div>
       )}
