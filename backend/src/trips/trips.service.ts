@@ -9,11 +9,30 @@ import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { type TripScope } from './dto/list-my-trips.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
+
+type PassengerLocation = {
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  dropoffAddress: string | null;
+  dropoffLat: number | null;
+  dropoffLng: number | null;
+};
+
+const HIDDEN_LOCATION: PassengerLocation = {
+  pickupAddress: null,
+  pickupLat: null,
+  pickupLng: null,
+  dropoffAddress: null,
+  dropoffLat: null,
+  dropoffLng: null,
+};
 
 @Injectable()
 export class TripsService {
@@ -77,6 +96,36 @@ export class TripsService {
     const trips = await this.prisma.trip.findMany({
       where: { departureTime: { gt: new Date() } },
       orderBy: { departureTime: 'asc' },
+      include: {
+        driver: { select: { id: true, email: true } },
+        passengers: {
+          include: { user: { select: { id: true, email: true } } },
+        },
+      },
+    });
+
+    return trips.map((trip) => this.withDerivedFields(trip, userId));
+  }
+
+  async findMine(
+    userId: string,
+    scope: TripScope = 'upcoming',
+    page: { limit?: number; offset?: number } = {},
+  ) {
+    const now = new Date();
+    const isHistory = scope === 'history';
+    const direction = isHistory ? 'desc' : 'asc';
+
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        departureTime: isHistory ? { lte: now } : { gt: now },
+        OR: [{ driverId: userId }, { passengers: { some: { userId } } }],
+      },
+      // El id desempata viajes con la misma salida, para que las páginas
+      // no repitan ni salteen viajes
+      orderBy: [{ departureTime: direction }, { id: 'asc' }],
+      take: page.limit,
+      skip: page.offset,
       include: {
         driver: { select: { id: true, email: true } },
         passengers: {
@@ -181,7 +230,7 @@ export class TripsService {
   async join(tripId: string, userId: string) {
     try {
       const passenger = await this.prisma.$transaction(
-        (tx) => addPassenger(tx, tripId, userId),
+        (tx) => addPassenger(tx, tripId, userId, { rejectStarted: true }),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
@@ -201,6 +250,16 @@ export class TripsService {
   }
 
   async leave(tripId: string, userId: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { departureTime: true },
+    });
+
+    // Un viaje que ya salió pasa al historial: no se puede salir de él
+    if (trip && trip.departureTime <= new Date()) {
+      throw new ConflictException('El viaje ya empezó y no se puede abandonar');
+    }
+
     const deleted = await this.prisma.tripPassenger.deleteMany({
       where: { tripId, userId },
     });
@@ -241,7 +300,8 @@ export class TripsService {
     T extends {
       driverId: string;
       capacity: number;
-      passengers: { userId: string }[];
+      departureTime: Date;
+      passengers: ({ userId: string } & PassengerLocation)[];
     },
   >(trip: T, userId: string) {
     const isDriver = trip.driverId === userId;
@@ -249,11 +309,22 @@ export class TripsService {
       isDriver ||
       trip.passengers.some((passenger) => passenger.userId === userId);
 
+    // La ubicación de recogida y destino la ven quienes participan del
+    // viaje (conductor y pasajeros); para el resto va en null
+    const passengers = isParticipant
+      ? trip.passengers
+      : trip.passengers.map((passenger) => ({
+          ...passenger,
+          ...HIDDEN_LOCATION,
+        }));
+
     return {
       ...trip,
+      passengers,
       availableSeats: trip.capacity - trip.passengers.length,
       isDriver,
       isParticipant,
+      isHistorical: trip.departureTime <= new Date(),
     };
   }
 }

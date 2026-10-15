@@ -1,0 +1,13 @@
+.travel-intent-card__badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 30px;
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}

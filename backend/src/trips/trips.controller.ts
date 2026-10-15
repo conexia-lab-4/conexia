@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
@@ -16,6 +17,7 @@ import type { AuthenticatedUser } from '../auth/current-user.decorator';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { ListMyTripsDto } from './dto/list-my-trips.dto';
 
 @Controller('trips')
 @UseGuards(FirebaseAuthGuard)
@@ -30,6 +32,17 @@ export class TripsController {
   @Get()
   findUpcoming(@CurrentUser() user: AuthenticatedUser) {
     return this.tripsService.findUpcoming(user.id);
+  }
+
+  @Get('mine')
+  findMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListMyTripsDto,
+  ) {
+    return this.tripsService.findMine(user.id, query.scope, {
+      limit: query.limit,
+      offset: query.offset,
+    });
   }
 
   @Get(':id')

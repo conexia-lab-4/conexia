@@ -113,6 +113,12 @@ model TripPassenger {
   id        String   @id @default(uuid())
   tripId    String
   userId    String
+  pickupAddress  String?
+  pickupLat      Float?
+  pickupLng      Float?
+  dropoffAddress String?
+  dropoffLat     Float?
+  dropoffLng     Float?
   createdAt DateTime @default(now())
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
