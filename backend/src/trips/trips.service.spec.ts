@@ -467,12 +467,12 @@ describe('TripsService', () => {
         expect(result.passengers[1].dropoffAddress).toBe('Palermo');
       });
 
-      it('cada pasajero ve solo su propia ubicación', async () => {
+      it('cada pasajero ve la ubicación de todos los pasajeros', async () => {
         const result = await service.findOneOrThrow('trip-1', 'pasajero-1');
 
         expect(result.passengers[0].pickupAddress).toBe('Pilar');
-        expect(result.passengers[1].pickupAddress).toBeNull();
-        expect(result.passengers[1].dropoffLat).toBeNull();
+        expect(result.passengers[1].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].dropoffLat).toBe(-34.58);
       });
 
       it('un usuario ajeno al viaje no ve ninguna ubicación', async () => {

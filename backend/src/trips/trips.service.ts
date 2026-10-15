@@ -309,13 +309,14 @@ export class TripsService {
       isDriver ||
       trip.passengers.some((passenger) => passenger.userId === userId);
 
-    // La ubicación de recogida y destino solo la ven el conductor y cada
-    // pasajero respecto de la suya; para el resto va en null
-    const passengers = trip.passengers.map((passenger) =>
-      isDriver || passenger.userId === userId
-        ? passenger
-        : { ...passenger, ...HIDDEN_LOCATION },
-    );
+    // La ubicación de recogida y destino la ven quienes participan del
+    // viaje (conductor y pasajeros); para el resto va en null
+    const passengers = isParticipant
+      ? trip.passengers
+      : trip.passengers.map((passenger) => ({
+          ...passenger,
+          ...HIDDEN_LOCATION,
+        }));
 
     return {
       ...trip,
