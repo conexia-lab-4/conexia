@@ -1,0 +1,74 @@
+name: KPI Report
+
+# Reporte diario de los KPIs de Conexia a la plataforma común de Lab4.
+# El cron y la ejecución manual corren el mismo script: npm run kpi:report
+on:
+  schedule:
+    # 04:17 UTC = 01:17 en America/Argentina/Buenos_Aires (UTC-3, sin horario
+    # de verano). No es en punto porque GitHub demora los cron de las horas en
+    # punto. Sólo corre desde la branch por defecto del repo
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Día a reportar (YYYY-MM-DD). Vacío: ayer en hora argentina'
+        required: false
+        type: string
+
+# Dos reportes a la vez podrían tomar la foto de cierre en paralelo
+concurrency:
+  group: kpi-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./backend
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      KPI_PLATFORM_URL: ${{ vars.KPI_PLATFORM_URL }}
+      KPI_PLATFORM_ENV: ${{ vars.KPI_PLATFORM_ENV }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      PROJECT_KEY: ${{ secrets.PROJECT_KEY }}
+      # La fecha llega por variable de entorno y no interpolada en el comando
+      KPI_REPORT_DATE: ${{ inputs.date }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+      # Sale con código 1 ante cualquier error: la ejecución queda en rojo
+      - name: Report KPIs
+        run: npm run kpi:report
+
+      # Copia de lo enviado y de la respuesta, también cuando el reporte falla
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpi-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: backend/kpi-reports/
+          if-no-files-found: warn
+          retention-days: 90
