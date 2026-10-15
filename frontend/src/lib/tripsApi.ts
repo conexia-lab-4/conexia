@@ -15,6 +15,7 @@ export interface Trip {
 export interface TripUser {
   id: string;
   email: string;
+  displayName: string | null;
 }
 
 export interface TripPassenger {

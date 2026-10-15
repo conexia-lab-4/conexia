@@ -19,7 +19,7 @@ import {
   formatSeats,
   formatTime,
   formatTripDateTime,
-  getDisplayName,
+  getPersonName,
   getInitials,
 } from '../../lib/tripFormat';
 import '../tripDetails/index.css';
@@ -162,10 +162,10 @@ export function MatchDetailPage() {
 
             <div className="trip-detail__driver">
               <span className="trip-detail__driver-avatar">
-                {getInitials(driver.email)}
+                {getInitials(driver.displayName)}
               </span>
               <span className="trip-detail__driver-name">
-                {getDisplayName(driver.email)}
+                {getPersonName(driver.displayName)}
               </span>
               <span className="trip-detail__verified">
                 <IconCheck size={12} color="var(--color-success-500)" />

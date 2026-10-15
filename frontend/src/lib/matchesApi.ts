@@ -1,6 +1,6 @@
 import { authFetch } from './api';
 import { getErrorMessage } from './tripsApi';
-import { getDisplayName, getInitials } from './tripFormat';
+import { getInitials, getPersonName } from './tripFormat';
 
 // Respuesta de GET /travel-matches
 export interface TravelMatch {
@@ -28,6 +28,7 @@ export interface TravelMatch {
         carModel: string | null;
         carColor: string | null;
       } | null;
+      displayName: string | null;
     };
   };
 }
@@ -49,8 +50,8 @@ export function toMatch(travelMatch: TravelMatch): Match {
 
   return {
     id: travelMatch.id,
-    name: getDisplayName(driver.email),
-    initials: getInitials(driver.email),
+    name: getPersonName(driver.displayName),
+    initials: getInitials(driver.displayName),
     career: driver.profile?.career ?? null,
     year: driver.profile?.year ?? null,
     campus: driver.profile?.campus ?? null,

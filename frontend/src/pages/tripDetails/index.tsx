@@ -19,7 +19,7 @@ import {
   formatSeats,
   formatTime,
   formatTripDateTime,
-  getDisplayName,
+  getPersonName,
   getInitials,
 } from '../../lib/tripFormat';
 import './index.css';
@@ -154,10 +154,10 @@ export function TripDetailPage() {
 
             <div className="trip-detail__driver">
               <span className="trip-detail__driver-avatar">
-                {getInitials(trip.driver.email)}
+                {getInitials(trip.driver.displayName)}
               </span>
               <span className="trip-detail__driver-name">
-                {getDisplayName(trip.driver.email)}
+                {getPersonName(trip.driver.displayName)}
               </span>
               <span className="trip-detail__verified">
                 <IconCheck size={12} color="var(--color-success-500)" />
@@ -203,11 +203,11 @@ export function TripDetailPage() {
                   return (
                     <li key={passenger.id} className="trip-detail__passenger">
                       <span className="trip-detail__passenger-avatar">
-                        {getInitials(passenger.user.email)}
+                        {getInitials(passenger.user.displayName)}
                       </span>
                       <div className="trip-detail__passenger-info">
                         <span className="trip-detail__passenger-name">
-                          {getDisplayName(passenger.user.email)}
+                          {getPersonName(passenger.user.displayName)}
                           {passenger.userId === user?.uid && ' (vos)'}
                         </span>
                         {location && (
