@@ -13,6 +13,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
+    "kpi:catalog": "node -r dotenv/config dist/src/scripts/register-kpi-catalog",
+    "kpi:report": "node -r dotenv/config dist/src/scripts/report-kpis",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch",

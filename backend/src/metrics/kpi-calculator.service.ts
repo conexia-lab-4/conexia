@@ -20,7 +20,9 @@ export class KpiCalculatorService {
 
   // Guarda los totales existentes como foto del cierre de `day`. La toma el
   // proceso de reporte al cerrar el día, porque después no se pueden
-  // reconstruir: los registros pueden haberse borrado o modificado
+  // reconstruir: los registros pueden haberse borrado o modificado.
+  // Queda la primera foto, igual que en la plataforma queda el primer valor
+  // reportado: un reintento no la reemplaza
   async recordClosingSnapshot(day: string) {
     const [registeredUsers, completedProfiles] = await Promise.all([
       this.prisma.user.count(),
@@ -29,8 +31,12 @@ export class KpiCalculatorService {
       }),
     ]);
 
-    await this.setMetric(day, Metric.REGISTERED_USERS, registeredUsers);
-    await this.setMetric(day, Metric.COMPLETED_PROFILES, completedProfiles);
+    await this.insertSnapshot(day, Metric.REGISTERED_USERS, registeredUsers);
+    await this.insertSnapshot(
+      day,
+      Metric.COMPLETED_PROFILES,
+      completedProfiles,
+    );
   }
 
   // Un valor desconocido se devuelve como null, nunca como 0
@@ -120,19 +126,22 @@ export class KpiCalculatorService {
     return percentage(accepted, accepted + Number(row.rejected));
   }
 
-  // Primer día con alguna métrica registrada
+  // Primer día con algún contador registrado. Las fotos no cuentan: se pueden
+  // tomar para un día anterior a la instrumentación y no prueban que entonces
+  // se estuviera midiendo
   private async trackingStart() {
     const { _min } = await this.prisma.dailyMetric.aggregate({
+      where: { metric: { in: [...COUNTER_METRICS] } },
       _min: { date: true },
     });
     return _min.date;
   }
 
-  private async setMetric(day: string, metric: Metric, value: number) {
+  private async insertSnapshot(day: string, metric: Metric, value: number) {
     await this.prisma.$executeRaw`
       INSERT INTO "DailyMetric" ("date", "metric", "value")
       VALUES (${day}::date, ${metric}, ${value})
-      ON CONFLICT ("date", "metric") DO UPDATE SET "value" = EXCLUDED."value"
+      ON CONFLICT ("date", "metric") DO NOTHING
     `;
   }
 
