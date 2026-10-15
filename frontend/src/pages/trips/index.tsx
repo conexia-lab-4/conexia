@@ -96,7 +96,7 @@ export function Trips() {
       </div>
 
       {status === 'loading' && (
-        <div className="trips__status">
+        <div className="trips__status loading-area">
           <ConexiaLoader />
         </div>
       )}
@@ -152,7 +152,7 @@ export function Trips() {
             <h2 className="trips__section-title">Próximos viajes</h2>
             {trips.length === 0 ? (
               <EmptyTripsState
-                title="No hay viajes próximos"
+                title="No hay próximos viajes"
                 subtitle="Cuando otros estudiantes publiquen viajes, van a aparecer acá."
               />
             ) : (

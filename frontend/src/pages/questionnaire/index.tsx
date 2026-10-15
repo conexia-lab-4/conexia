@@ -235,9 +235,9 @@ export function Questionnaire() {
   if (isLoadingProfile) {
     return (
       <div className="questionnaire app-container">
-        <p className="text-body-1" style={{ padding: 40 }}>
-          <ConexiaLoader></ConexiaLoader>
-        </p>
+        <div className="loading-area">
+          <ConexiaLoader />
+        </div>
       </div>
     );
   }
