@@ -14,6 +14,7 @@ import { RequireAuth } from './components/requireAuth';
 import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
 import { Matches } from './pages/matches';
+import { MatchDetailPage } from './pages/matchDetail';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
         />
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
+        <Route path="/matches/:id" element={<MatchDetailPage />} />
       </Route>
     </Routes>
   );

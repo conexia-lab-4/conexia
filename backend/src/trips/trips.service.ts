@@ -15,6 +15,7 @@ import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
+import { DisplayNamesService } from '../firebase/display-names.service';
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -34,6 +35,14 @@ const HIDDEN_LOCATION: PassengerLocation = {
   dropoffLng: null,
 };
 
+type TripWithPeople = {
+  driverId: string;
+  capacity: number;
+  departureTime: Date;
+  driver: { id: string };
+  passengers: ({ userId: string; user: { id: string } } & PassengerLocation)[];
+};
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -41,6 +50,7 @@ export class TripsService {
     private readonly geo: GeoService,
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
+    private readonly displayNames: DisplayNamesService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
@@ -104,7 +114,7 @@ export class TripsService {
       },
     });
 
-    return trips.map((trip) => this.withDerivedFields(trip, userId));
+    return this.presentTrips(trips, userId);
   }
 
   async findMine(
@@ -134,7 +144,7 @@ export class TripsService {
       },
     });
 
-    return trips.map((trip) => this.withDerivedFields(trip, userId));
+    return this.presentTrips(trips, userId);
   }
 
   async findOneOrThrow(id: string, userId: string) {
@@ -152,7 +162,7 @@ export class TripsService {
       throw new NotFoundException('El viaje no existe');
     }
 
-    return this.withDerivedFields(trip, userId);
+    return this.presentTrip(trip, userId);
   }
 
   async update(id: string, userId: string, dto: UpdateTripDto) {
@@ -224,7 +234,7 @@ export class TripsService {
 
     await this.matching.matchTrip(updated.id);
 
-    return this.withDerivedFields(updated, userId);
+    return this.presentTrip(updated, userId);
   }
 
   async join(tripId: string, userId: string) {
@@ -294,6 +304,53 @@ export class TripsService {
       return null;
     }
     return this.geocodeOrThrow(nextAddress ?? currentAddress);
+  }
+
+  private personIds(trip: TripWithPeople): string[] {
+    return [
+      trip.driver.id,
+      ...trip.passengers.map((passenger) => passenger.user.id),
+    ];
+  }
+
+  private attachNames<T extends TripWithPeople>(
+    trip: T,
+    names: Map<string, string | null>,
+  ) {
+    return {
+      ...trip,
+      driver: {
+        ...trip.driver,
+        displayName: names.get(trip.driver.id) ?? null,
+      },
+      passengers: trip.passengers.map((passenger) => ({
+        ...passenger,
+        user: {
+          ...passenger.user,
+          displayName: names.get(passenger.user.id) ?? null,
+        },
+      })),
+    };
+  }
+
+  private async presentTrip<T extends TripWithPeople>(trip: T, userId: string) {
+    const names = await this.displayNames.getDisplayNames(this.personIds(trip));
+
+    return this.withDerivedFields(this.attachNames(trip, names), userId);
+  }
+
+  // Los nombres de todos los viajes se piden en una sola consulta
+  private async presentTrips<T extends TripWithPeople>(
+    trips: T[],
+    userId: string,
+  ) {
+    const names = await this.displayNames.getDisplayNames(
+      trips.flatMap((trip) => this.personIds(trip)),
+    );
+
+    return trips.map((trip) =>
+      this.withDerivedFields(this.attachNames(trip, names), userId),
+    );
   }
 
   private withDerivedFields<

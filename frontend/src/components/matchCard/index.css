@@ -19,12 +19,16 @@
 }
 
 .match-card__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  background: var(--color-grey-100);
+  background: var(--color-primary-200);
+  color: var(--color-primary-500);
+  font-size: var(--fs-h6);
+  font-weight: var(--fw-bold);
 }
 
 .match-card__status-dot {

@@ -4,6 +4,7 @@ import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
+import { DisplayNamesService } from '../firebase/display-names.service';
 
 describe('TravelMatchesService', () => {
   let service: TravelMatchesService;
@@ -105,6 +106,7 @@ describe('TravelMatchesService', () => {
       prismaMock as unknown as PrismaService,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
+      {} as unknown as DisplayNamesService,
     );
   });
 
