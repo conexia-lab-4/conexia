@@ -9,6 +9,8 @@ import {
   TravelMatchStatus,
 } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
+import { KpiEventType } from '../metrics/metric-names';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   addPassenger,
@@ -20,6 +22,7 @@ export class TravelMatchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly matching: MatchingService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async accept(matchId: string, userId: string) {
@@ -63,8 +66,21 @@ export class TravelMatchesService {
             throw new ConflictException('El viaje ya finalizó');
           }
 
-          await addPassenger(tx, match.tripId, userId);
+          const passenger = await addPassenger(tx, match.tripId, userId);
 
+          // La ubicación se copia: si la intención se cancela o vence después,
+          // el viaje conserva dónde recoger y dejar al pasajero
+          await tx.tripPassenger.update({
+            where: { id: passenger.id },
+            data: {
+              pickupAddress: match.travelIntent.origin,
+              pickupLat: match.travelIntent.originLat,
+              pickupLng: match.travelIntent.originLng,
+              dropoffAddress: match.travelIntent.destination,
+              dropoffLat: match.travelIntent.destinationLat,
+              dropoffLng: match.travelIntent.destinationLng,
+            },
+          });
           await tx.travelIntent.update({
             where: { id: match.travelIntentId },
             data: { status: TravelIntentStatus.FULFILLED },
@@ -79,10 +95,17 @@ export class TravelMatchesService {
             data: { status: TravelMatchStatus.INVALIDATED },
           });
 
-          return tx.travelMatch.update({
+          const updated = await tx.travelMatch.update({
             where: { id: match.id },
             data: { status: TravelMatchStatus.ACCEPTED },
           });
+
+          await this.metrics.recordEvents(
+            [{ type: KpiEventType.MATCH_ACCEPTED, refId: match.id, userId }],
+            tx,
+          );
+
+          return updated;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -99,5 +122,50 @@ export class TravelMatchesService {
       }
       throw error;
     }
+  }
+
+  // El rechazo es una decisión del pasajero: a diferencia de INVALIDATED,
+  // cuenta para la tasa de aceptación y el matching no lo vuelve a sugerir
+  async reject(matchId: string, userId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      // Un match ajeno se responde igual que uno inexistente
+      const match = await tx.travelMatch.findFirst({
+        where: { id: matchId, travelIntent: { userId } },
+      });
+
+      if (!match) {
+        throw new NotFoundException('La coincidencia no existe');
+      }
+
+      if (match.status === TravelMatchStatus.REJECTED) {
+        throw new ConflictException('La coincidencia ya fue rechazada');
+      }
+
+      if (match.status !== TravelMatchStatus.SUGGESTED) {
+        throw new ConflictException(
+          'La coincidencia ya no está disponible para rechazar',
+        );
+      }
+
+      // Solo pasa a REJECTED si sigue SUGGESTED: si en el medio se aceptó o
+      // se invalidó, no se pisa ese estado
+      const { count } = await tx.travelMatch.updateMany({
+        where: { id: match.id, status: TravelMatchStatus.SUGGESTED },
+        data: { status: TravelMatchStatus.REJECTED },
+      });
+
+      if (count === 0) {
+        throw new ConflictException(
+          'La coincidencia ya no está disponible para rechazar',
+        );
+      }
+
+      await this.metrics.recordEvents(
+        [{ type: KpiEventType.MATCH_REJECTED, refId: match.id, userId }],
+        tx,
+      );
+
+      return { ...match, status: TravelMatchStatus.REJECTED };
+    });
   }
 }

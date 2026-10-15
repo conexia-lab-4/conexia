@@ -42,3 +42,18 @@ export async function createTravelIntent(
 
   return response.json();
 }
+
+export async function getMyTravelIntents(): Promise<TravelIntent[]> {
+  const response = await authFetch('/travel-intents');
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'No pudimos cargar tus intenciones de viaje',
+      ),
+    );
+  }
+
+  return response.json();
+}

@@ -4,7 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getSubjects } from '../../lib/subjectsApi';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
-import { getUpcomingTrips, type TripDetail } from '../../lib/tripsApi';
+import { getMyTrips, type TripDetail } from '../../lib/tripsApi';
 import { StatCard } from '../../components/statcard';
 import { NavBar } from '../../components/navbar';
 import { ProfilePendingCard } from '../../components/profilependingcard';
@@ -57,7 +57,7 @@ export function Home() {
       const [subjects, profileData, trips] = await Promise.all([
         getSubjects(),
         getProfile(),
-        getUpcomingTrips(),
+        getMyTrips('upcoming'),
       ]);
       setSubjectsCount(subjects.length);
       setProfile(profileData);
@@ -106,9 +106,9 @@ export function Home() {
       )}
 
       {status === 'loading' && (
-        <p className="home__status-message">
-          <ConexiaLoader></ConexiaLoader>
-        </p>
+        <div className="home__status-message loading-area">
+          <ConexiaLoader />
+        </div>
       )}
 
       {status === 'error' && (

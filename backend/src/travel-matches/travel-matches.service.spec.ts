@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
 
@@ -9,15 +10,17 @@ describe('TravelMatchesService', () => {
   let prismaMock: {
     travelMatch: {
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
       update: jest.Mock;
       updateMany: jest.Mock;
     };
     travelIntent: { update: jest.Mock };
     trip: { findUnique: jest.Mock; findFirst: jest.Mock };
-    tripPassenger: { create: jest.Mock };
+    tripPassenger: { create: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
   let matchingMock: { matchTrip: jest.Mock };
+  let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
 
   const userId = 'pasajero-1';
   const future = new Date('2026-10-05T09:00:00.000Z');
@@ -43,6 +46,12 @@ describe('TravelMatchesService', () => {
         userId,
         status: 'ACTIVE',
         arrivalTime: future,
+        origin: 'Los Cardales',
+        originLat: -34.3255,
+        originLng: -59.0003,
+        destination: 'Universidad Austral, Pilar',
+        destinationLat: -34.4545,
+        destinationLng: -58.8686,
       },
       ...overrides,
     };
@@ -54,6 +63,7 @@ describe('TravelMatchesService', () => {
     expect(prismaMock.travelMatch.update).not.toHaveBeenCalled();
     expect(prismaMock.travelMatch.updateMany).not.toHaveBeenCalled();
     expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    expect(prismaMock.tripPassenger.update).not.toHaveBeenCalled();
   }
 
   beforeEach(() => {
@@ -62,6 +72,7 @@ describe('TravelMatchesService', () => {
     prismaMock = {
       travelMatch: {
         findUnique: jest.fn().mockResolvedValue(buildMatch()),
+        findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue({
           id: 'match-1',
           tripId: 'trip-1',
@@ -78,6 +89,7 @@ describe('TravelMatchesService', () => {
         create: jest
           .fn()
           .mockResolvedValue({ id: 'p-1', tripId: 'trip-1', userId }),
+        update: jest.fn().mockResolvedValue({}),
       },
       $transaction: jest.fn(),
     };
@@ -85,9 +97,14 @@ describe('TravelMatchesService', () => {
       (callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock),
     );
     matchingMock = { matchTrip: jest.fn().mockResolvedValue(undefined) };
+    metricsMock = {
+      increment: jest.fn(),
+      recordEvents: jest.fn().mockResolvedValue(1),
+    };
     service = new TravelMatchesService(
       prismaMock as unknown as PrismaService,
       matchingMock as unknown as MatchingService,
+      metricsMock as unknown as MetricsService,
     );
   });
 
@@ -122,6 +139,26 @@ describe('TravelMatchesService', () => {
       where: { id: 'match-1' },
       data: { status: 'ACCEPTED' },
     });
+    expect(prismaMock.tripPassenger.update).toHaveBeenCalledWith({
+      where: { id: 'p-1' },
+      data: {
+        pickupAddress: 'Los Cardales',
+        pickupLat: -34.3255,
+        pickupLng: -59.0003,
+        dropoffAddress: 'Universidad Austral, Pilar',
+        dropoffLat: -34.4545,
+        dropoffLng: -58.8686,
+      },
+    });
+  });
+
+  it('registra la aceptación en las métricas', async () => {
+    await service.accept('match-1', userId);
+
+    expect(metricsMock.recordEvents).toHaveBeenCalledWith(
+      [{ type: 'MATCH_ACCEPTED', refId: 'match-1', userId }],
+      prismaMock,
+    );
   });
 
   it('recalcula las sugerencias del viaje después de aceptar', async () => {
@@ -239,5 +276,79 @@ describe('TravelMatchesService', () => {
       ConflictException,
     );
     expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+  });
+
+  describe('reject', () => {
+    const suggested = {
+      id: 'match-1',
+      tripId: 'trip-1',
+      travelIntentId: 'intent-1',
+      status: 'SUGGESTED',
+    };
+
+    beforeEach(() => {
+      prismaMock.travelMatch.findFirst.mockResolvedValue(suggested);
+      prismaMock.travelMatch.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it('marca el match como REJECTED y registra el rechazo', async () => {
+      const result = await service.reject('match-1', userId);
+
+      expect(result).toEqual({ ...suggested, status: 'REJECTED' });
+      expect(prismaMock.travelMatch.findFirst).toHaveBeenCalledWith({
+        where: { id: 'match-1', travelIntent: { userId } },
+      });
+      expect(prismaMock.travelMatch.updateMany).toHaveBeenCalledWith({
+        where: { id: 'match-1', status: 'SUGGESTED' },
+        data: { status: 'REJECTED' },
+      });
+      expect(metricsMock.recordEvents).toHaveBeenCalledWith(
+        [{ type: 'MATCH_REJECTED', refId: 'match-1', userId }],
+        prismaMock,
+      );
+    });
+
+    it('no suma al pasajero ni recalcula el matching', async () => {
+      await service.reject('match-1', userId);
+
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+      expect(prismaMock.travelIntent.update).not.toHaveBeenCalled();
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    });
+
+    it('responde 404 si el match no existe o es de otro usuario', async () => {
+      prismaMock.travelMatch.findFirst.mockResolvedValue(null);
+
+      await expect(service.reject('match-1', userId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prismaMock.travelMatch.updateMany).not.toHaveBeenCalled();
+      expect(metricsMock.recordEvents).not.toHaveBeenCalled();
+    });
+
+    it.each(['REJECTED', 'ACCEPTED', 'INVALIDATED'])(
+      'no permite rechazar un match %s',
+      async (status) => {
+        prismaMock.travelMatch.findFirst.mockResolvedValue({
+          ...suggested,
+          status,
+        });
+
+        await expect(service.reject('match-1', userId)).rejects.toThrow(
+          ConflictException,
+        );
+        expect(prismaMock.travelMatch.updateMany).not.toHaveBeenCalled();
+        expect(metricsMock.recordEvents).not.toHaveBeenCalled();
+      },
+    );
+
+    it('responde 409 si el match cambió de estado mientras se rechazaba', async () => {
+      prismaMock.travelMatch.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.reject('match-1', userId)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(metricsMock.recordEvents).not.toHaveBeenCalled();
+    });
   });
 });

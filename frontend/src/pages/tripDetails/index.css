@@ -207,6 +207,21 @@
   overflow-wrap: anywhere;
 }
 
+.trip-detail__passenger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trip-detail__passenger-location {
+  font-size: var(--fs-body-3);
+  line-height: var(--lh-body-3);
+  color: var(--color-grey-400);
+  overflow-wrap: anywhere;
+}
+
 .trip-detail__muted {
   font-size: var(--fs-body-2);
   color: var(--color-grey-400);

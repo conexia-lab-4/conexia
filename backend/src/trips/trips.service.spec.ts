@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -26,6 +27,7 @@ describe('TripsService', () => {
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchTrip: jest.Mock };
+  let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
   const validDto: CreateTripDto = {
@@ -63,10 +65,15 @@ describe('TripsService', () => {
       getRouteDistanceKm: jest.fn(),
     };
     matchingMock = { matchTrip: jest.fn().mockResolvedValue(undefined) };
+    metricsMock = {
+      increment: jest.fn(),
+      recordEvents: jest.fn().mockResolvedValue(1),
+    };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
       geoMock,
       matchingMock as unknown as MatchingService,
+      metricsMock as unknown as MetricsService,
     );
   });
 
@@ -121,6 +128,26 @@ describe('TripsService', () => {
         },
         include: { passengers: true },
       });
+    });
+
+    it('registra la publicación del viaje en las métricas', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      prismaMock.trip.create.mockResolvedValue({ id: 'trip-1' });
+
+      await service.create(userId, validDto);
+
+      expect(metricsMock.increment).toHaveBeenCalledWith(
+        'trips_published',
+        1,
+        prismaMock,
+      );
+      expect(metricsMock.recordEvents).toHaveBeenCalledWith(
+        [{ type: 'TRIP_PUBLISHED', refId: 'trip-1', userId }],
+        prismaMock,
+      );
     });
 
     it('guarda capacidad 0 si hasCar es true pero availableSeats es null', async () => {
@@ -258,6 +285,85 @@ describe('TripsService', () => {
     });
   });
 
+  describe('findMine', () => {
+    const now = new Date('2026-10-14T12:00:00.000Z');
+    const include = {
+      driver: { select: { id: true, email: true } },
+      passengers: {
+        include: { user: { select: { id: true, email: true } } },
+      },
+    };
+    const participantFilter = [
+      { driverId: userId },
+      { passengers: { some: { userId } } },
+    ];
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(now);
+      prismaMock.trip.findMany.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('devuelve por defecto los próximos viajes en los que participa', async () => {
+      await service.findMine(userId);
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: { departureTime: { gt: now }, OR: participantFilter },
+        orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+        include,
+      });
+    });
+
+    it('con scope history devuelve los que ya salieron, del más reciente al más viejo', async () => {
+      await service.findMine(userId, 'history');
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: { departureTime: { lte: now }, OR: participantFilter },
+        orderBy: [{ departureTime: 'desc' }, { id: 'asc' }],
+        include,
+      });
+    });
+
+    it('marca como histórico un viaje que ya salió', async () => {
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: 'trip-1',
+          driverId: userId,
+          capacity: 3,
+          passengers: [],
+          departureTime: new Date('2026-10-14T11:00:00.000Z'),
+        },
+        {
+          id: 'trip-2',
+          driverId: userId,
+          capacity: 3,
+          passengers: [],
+          departureTime: new Date('2026-10-14T13:00:00.000Z'),
+        },
+      ]);
+
+      const result = await service.findMine(userId, 'history');
+
+      expect(result[0].isHistorical).toBe(true);
+      expect(result[1].isHistorical).toBe(false);
+    });
+
+    it('pagina con limit y offset cuando se piden', async () => {
+      await service.findMine(userId, 'upcoming', { limit: 20, offset: 40 });
+
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith({
+        where: { departureTime: { gt: now }, OR: participantFilter },
+        orderBy: [{ departureTime: 'asc' }, { id: 'asc' }],
+        take: 20,
+        skip: 40,
+        include,
+      });
+    });
+  });
+
   describe('findOneOrThrow', () => {
     const driverId = 'driver-1';
     const baseTrip = {
@@ -323,6 +429,58 @@ describe('TripsService', () => {
       await expect(
         service.findOneOrThrow('trip-1', 'user-123'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    describe('ubicación de los pasajeros', () => {
+      const location = {
+        pickupAddress: 'Pilar',
+        pickupLat: -34.45,
+        pickupLng: -58.91,
+        dropoffAddress: 'Palermo',
+        dropoffLat: -34.58,
+        dropoffLng: -58.43,
+      };
+      const passengers = [
+        {
+          userId: 'pasajero-1',
+          user: { id: 'pasajero-1', email: 'uno@test.com' },
+          ...location,
+        },
+        {
+          userId: 'pasajero-2',
+          user: { id: 'pasajero-2', email: 'dos@test.com' },
+          ...location,
+        },
+      ];
+
+      beforeEach(() => {
+        prismaMock.trip.findUnique.mockResolvedValue({
+          ...baseTrip,
+          passengers,
+        });
+      });
+
+      it('el conductor ve la ubicación de todos los pasajeros', async () => {
+        const result = await service.findOneOrThrow('trip-1', driverId);
+
+        expect(result.passengers[0].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].dropoffAddress).toBe('Palermo');
+      });
+
+      it('cada pasajero ve la ubicación de todos los pasajeros', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'pasajero-1');
+
+        expect(result.passengers[0].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].dropoffLat).toBe(-34.58);
+      });
+
+      it('un usuario ajeno al viaje no ve ninguna ubicación', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'ajeno');
+
+        expect(result.passengers[0].pickupAddress).toBeNull();
+        expect(result.passengers[1].pickupLng).toBeNull();
+      });
     });
   });
 
@@ -461,6 +619,14 @@ describe('TripsService', () => {
       capacity: 2,
     };
 
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('lanza NotFoundException si el viaje no existe', async () => {
       prismaMock.trip.findUnique.mockResolvedValue(null);
 
@@ -576,9 +742,39 @@ describe('TripsService', () => {
       );
       expect(matchingMock.matchTrip).not.toHaveBeenCalled();
     });
+
+    it('rechaza sumarse a un viaje que ya salió', async () => {
+      jest.setSystemTime(new Date('2026-10-05T08:30:00.000Z'));
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    });
   });
 
   describe('leave', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('rechaza salir de un viaje que ya salió', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-05T08:30:00.000Z'));
+      prismaMock.trip.findUnique.mockResolvedValue({
+        departureTime: new Date('2026-10-05T08:00:00.000Z'),
+      });
+
+      await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.tripPassenger.deleteMany).not.toHaveBeenCalled();
+    });
+
     it('elimina la participacion cuando existe', async () => {
       prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
 

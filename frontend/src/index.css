@@ -143,6 +143,15 @@
   margin: 0 auto;
 }
 
+/* Área que ocupa un estado de carga: llena el espacio libre y centra su contenido */
+.loading-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
 body {
   font-family: var(--font-primary);
   color: var(--color-text);
