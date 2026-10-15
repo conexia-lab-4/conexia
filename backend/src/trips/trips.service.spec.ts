@@ -430,6 +430,58 @@ describe('TripsService', () => {
         service.findOneOrThrow('trip-1', 'user-123'),
       ).rejects.toThrow(NotFoundException);
     });
+
+    describe('ubicación de los pasajeros', () => {
+      const location = {
+        pickupAddress: 'Pilar',
+        pickupLat: -34.45,
+        pickupLng: -58.91,
+        dropoffAddress: 'Palermo',
+        dropoffLat: -34.58,
+        dropoffLng: -58.43,
+      };
+      const passengers = [
+        {
+          userId: 'pasajero-1',
+          user: { id: 'pasajero-1', email: 'uno@test.com' },
+          ...location,
+        },
+        {
+          userId: 'pasajero-2',
+          user: { id: 'pasajero-2', email: 'dos@test.com' },
+          ...location,
+        },
+      ];
+
+      beforeEach(() => {
+        prismaMock.trip.findUnique.mockResolvedValue({
+          ...baseTrip,
+          passengers,
+        });
+      });
+
+      it('el conductor ve la ubicación de todos los pasajeros', async () => {
+        const result = await service.findOneOrThrow('trip-1', driverId);
+
+        expect(result.passengers[0].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].dropoffAddress).toBe('Palermo');
+      });
+
+      it('cada pasajero ve solo su propia ubicación', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'pasajero-1');
+
+        expect(result.passengers[0].pickupAddress).toBe('Pilar');
+        expect(result.passengers[1].pickupAddress).toBeNull();
+        expect(result.passengers[1].dropoffLat).toBeNull();
+      });
+
+      it('un usuario ajeno al viaje no ve ninguna ubicación', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'ajeno');
+
+        expect(result.passengers[0].pickupAddress).toBeNull();
+        expect(result.passengers[1].pickupLng).toBeNull();
+      });
+    });
   });
 
   describe('update', () => {
