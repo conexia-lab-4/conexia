@@ -12,6 +12,8 @@ import { UpdateTripDto } from './dto/update-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
+import { MetricsService } from '../metrics/metrics.service';
+import { KpiEventType, Metric } from '../metrics/metric-names';
 
 @Injectable()
 export class TripsService {
@@ -19,6 +21,7 @@ export class TripsService {
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
     private readonly matching: MatchingService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
@@ -39,20 +42,30 @@ export class TripsService {
       this.geocodeOrThrow(dto.destination),
     ]);
 
-    const trip = await this.prisma.trip.create({
-      data: {
-        driverId: userId,
-        origin: dto.origin,
-        originLat: originCoords.lat,
-        originLng: originCoords.lng,
-        destination: dto.destination,
-        destinationLat: destinationCoords.lat,
-        destinationLng: destinationCoords.lng,
-        departureTime: new Date(dto.departureTime),
-        arrivalTime: new Date(dto.arrivalTime),
-        capacity: profile.availableSeats ?? 0,
-      },
-      include: { passengers: true },
+    const trip = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.trip.create({
+        data: {
+          driverId: userId,
+          origin: dto.origin,
+          originLat: originCoords.lat,
+          originLng: originCoords.lng,
+          destination: dto.destination,
+          destinationLat: destinationCoords.lat,
+          destinationLng: destinationCoords.lng,
+          departureTime: new Date(dto.departureTime),
+          arrivalTime: new Date(dto.arrivalTime),
+          capacity: profile.availableSeats ?? 0,
+        },
+        include: { passengers: true },
+      });
+
+      await this.metrics.increment(Metric.TRIPS_PUBLISHED, 1, tx);
+      await this.metrics.recordEvents(
+        [{ type: KpiEventType.TRIP_PUBLISHED, refId: created.id, userId }],
+        tx,
+      );
+
+      return created;
     });
 
     await this.matching.matchTrip(trip.id);

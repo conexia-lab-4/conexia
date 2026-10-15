@@ -3,10 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { MetricsService } from '../metrics/metrics.service';
+import { Metric } from '../metrics/metric-names';
 
 @Injectable()
 export class SubjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly metrics: MetricsService,
+  ) {}
 
   async create(userId: string, dto: CreateSubjectDto) {
     const schedulesData = dto.schedules.map((schedule) => ({
@@ -16,15 +21,25 @@ export class SubjectsService {
       classroom: schedule.classroom,
     }));
 
-    return this.prisma.subject.create({
-      data: {
-        userId,
-        name: dto.name,
-        color: dto.color,
-        visibleProfile: dto.visibleProfile,
-        schedules: { create: schedulesData },
-      },
-      include: { schedules: true },
+    return this.prisma.$transaction(async (tx) => {
+      const subject = await tx.subject.create({
+        data: {
+          userId,
+          name: dto.name,
+          color: dto.color,
+          visibleProfile: dto.visibleProfile,
+          schedules: { create: schedulesData },
+        },
+        include: { schedules: true },
+      });
+
+      await this.metrics.increment(
+        Metric.SCHEDULES_CREATED,
+        subject.schedules.length,
+        tx,
+      );
+
+      return subject;
     });
   }
 

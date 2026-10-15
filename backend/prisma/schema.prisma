@@ -154,6 +154,7 @@ enum TravelMatchStatus {
   SUGGESTED
   ACCEPTED
   INVALIDATED
+  REJECTED
 }
 
 model TravelMatch {
@@ -174,4 +175,24 @@ model TravelMatch {
 
   @@unique([tripId, travelIntentId])
   @@index([travelIntentId])
+}
+
+
+model DailyMetric {
+  date   DateTime @db.Date   // día en hora argentina
+  metric String              // ej: "trips_published"
+  value  Float
+
+  @@id([date, metric])
+}
+
+model KpiEvent {
+  id         String   @id @default(uuid())
+  type       String   // TRIP_PUBLISHED, INTENT_PUBLISHED, MATCH_CREATED, MATCH_ACCEPTED, MATCH_REJECTED
+  refId      String
+  userId     String   // sin FK a User a propósito
+  occurredAt DateTime @default(now())
+
+  @@unique([type, refId, userId])
+  @@index([type, occurredAt])
 }

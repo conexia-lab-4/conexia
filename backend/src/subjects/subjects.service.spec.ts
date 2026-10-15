@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { MetricsService } from '../metrics/metrics.service';
 
 type SubjectRecord = {
   id: string;
@@ -42,6 +43,7 @@ describe('SubjectsService', () => {
     };
     $transaction: jest.Mock;
   };
+  let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
   const validDto: CreateSubjectDto = {
@@ -74,7 +76,14 @@ describe('SubjectsService', () => {
     prismaMock.$transaction.mockImplementation(
       (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
     );
-    service = new SubjectsService(prismaMock as unknown as PrismaService);
+    metricsMock = {
+      increment: jest.fn(),
+      recordEvents: jest.fn().mockResolvedValue(1),
+    };
+    service = new SubjectsService(
+      prismaMock as unknown as PrismaService,
+      metricsMock as unknown as MetricsService,
+    );
   });
 
   describe('create', () => {
@@ -111,6 +120,11 @@ describe('SubjectsService', () => {
         },
         include: { schedules: true },
       });
+      expect(metricsMock.increment).toHaveBeenCalledWith(
+        'schedules_created',
+        validDto.schedules.length,
+        prismaMock,
+      );
     });
   });
 

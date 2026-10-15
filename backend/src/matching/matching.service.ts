@@ -7,6 +7,8 @@ import {
 import { computeDetourKm, effectiveDetourToleranceKm } from '../geo/detour';
 import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { KpiEventType, Metric } from '../metrics/metric-names';
 import {
   ALGORITHM_VERSION,
   computeScore,
@@ -71,6 +73,8 @@ type Evaluation =
 interface PairOutcome {
   tripId: string;
   travelIntentId: string;
+  driverId: string;
+  passengerId: string;
   evaluation: Evaluation;
 }
 
@@ -96,6 +100,7 @@ export class MatchingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
+    private readonly metrics: MetricsService,
   ) {}
 
   // Nunca lanza: un fallo del matching no debe romper la publicación
@@ -137,6 +142,8 @@ export class MatchingService {
       outcomes.push({
         tripId: trip.id,
         travelIntentId: intent.id,
+        driverId: trip.driverId,
+        passengerId: intent.userId,
         evaluation: await this.evaluatePair(
           trip,
           getRoute,
@@ -175,6 +182,8 @@ export class MatchingService {
       outcomes.push({
         tripId: trip.id,
         travelIntentId: intent.id,
+        driverId: trip.driverId,
+        passengerId: intent.userId,
         evaluation: await this.evaluatePair(
           trip,
           this.lazyRoute(trip),
@@ -375,15 +384,22 @@ export class MatchingService {
   private async persist(scope: Scope, outcomes: PairOutcome[]) {
     const existing = await this.prisma.travelMatch.findMany({ where: scope });
 
-    const accepted = new Set(
+    // Un match aceptado o rechazado no se vuelve a tocar
+    const resolved = new Set(
       existing
-        .filter((match) => match.status === TravelMatchStatus.ACCEPTED)
+        .filter(
+          (match) =>
+            match.status === TravelMatchStatus.ACCEPTED ||
+            match.status === TravelMatchStatus.REJECTED,
+        )
         .map((match) => pairKey(match.tripId, match.travelIntentId)),
     );
 
     const matches: {
       tripId: string;
       travelIntentId: string;
+      driverId: string;
+      passengerId: string;
       metrics: MatchMetrics;
     }[] = [];
     const undecided = new Set<string>();
@@ -394,6 +410,8 @@ export class MatchingService {
         matches.push({
           tripId: outcome.tripId,
           travelIntentId: outcome.travelIntentId,
+          driverId: outcome.driverId,
+          passengerId: outcome.passengerId,
           metrics: evaluation.metrics,
         });
       } else if (evaluation.kind === 'error') {
@@ -405,28 +423,9 @@ export class MatchingService {
       matches.map((match) => pairKey(match.tripId, match.travelIntentId)),
     );
 
-    // Un match aceptado no se vuelve a tocar
-    const upserts = matches
-      .filter(
-        (match) => !accepted.has(pairKey(match.tripId, match.travelIntentId)),
-      )
-      .map(({ tripId, travelIntentId, metrics }) =>
-        this.prisma.travelMatch.upsert({
-          where: { tripId_travelIntentId: { tripId, travelIntentId } },
-          create: {
-            tripId,
-            travelIntentId,
-            ...metrics,
-            algorithmVersion: ALGORITHM_VERSION,
-            status: TravelMatchStatus.SUGGESTED,
-          },
-          update: {
-            ...metrics,
-            algorithmVersion: ALGORITHM_VERSION,
-            status: TravelMatchStatus.SUGGESTED,
-          },
-        }),
-      );
+    const pending = matches.filter(
+      (match) => !resolved.has(pairKey(match.tripId, match.travelIntentId)),
+    );
 
     // Las sugerencias que ya no se cumplen quedan como historial
     const staleIds = existing
@@ -440,15 +439,54 @@ export class MatchingService {
       })
       .map((match) => match.id);
 
-    if (upserts.length === 0 && staleIds.length === 0) return;
+    if (pending.length === 0 && staleIds.length === 0) return;
 
-    await this.prisma.$transaction([
-      ...upserts,
-      this.prisma.travelMatch.updateMany({
+    await this.prisma.$transaction(async (tx) => {
+      for (const { tripId, travelIntentId, metrics } of pending) {
+        await tx.travelMatch.upsert({
+          where: { tripId_travelIntentId: { tripId, travelIntentId } },
+          create: {
+            tripId,
+            travelIntentId,
+            ...metrics,
+            algorithmVersion: ALGORITHM_VERSION,
+            status: TravelMatchStatus.SUGGESTED,
+          },
+          update: {
+            ...metrics,
+            algorithmVersion: ALGORITHM_VERSION,
+            status: TravelMatchStatus.SUGGESTED,
+          },
+        });
+      }
+
+      await tx.travelMatch.updateMany({
         where: { id: { in: staleIds } },
         data: { status: TravelMatchStatus.INVALIDATED },
-      }),
-    ]);
+      });
+
+      // Un par cuenta como match nuevo una sola vez, aunque se recalcule
+      // o pase por INVALIDATED y vuelva a sugerirse. Se cuenta por el lado
+      // del conductor para no sumar dos veces el mismo par
+      const created = await this.metrics.recordEvents(
+        pending.map((match) => ({
+          type: KpiEventType.MATCH_CREATED,
+          refId: pairKey(match.tripId, match.travelIntentId),
+          userId: match.driverId,
+        })),
+        tx,
+      );
+      await this.metrics.increment(Metric.MATCHES_CREATED, created, tx);
+
+      await this.metrics.recordEvents(
+        pending.map((match) => ({
+          type: KpiEventType.MATCH_CREATED,
+          refId: pairKey(match.tripId, match.travelIntentId),
+          userId: match.passengerId,
+        })),
+        tx,
+      );
+    });
   }
 
   private logFailure(subject: string, error: unknown) {
