@@ -220,31 +220,38 @@ export function TripDetailPage() {
                   Enviar mensaje al conductor
                 </Button>
 
-                {trip.isParticipant ? (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="large-wide"
-                    onClick={() => handleParticipation('leave')}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Saliendo...' : 'Salir del viaje'}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    size="large-wide"
-                    onClick={() => handleParticipation('join')}
-                    disabled={isSubmitting || isFull}
-                  >
-                    {isFull
-                      ? 'Sin lugares disponibles'
-                      : isSubmitting
-                        ? 'Sumándote...'
-                        : 'Sumarme al viaje'}
-                  </Button>
+                {trip.isHistorical && (
+                  <p className="trip-detail__muted trip-detail__driver-note">
+                    Este viaje ya salió
+                  </p>
                 )}
+
+                {!trip.isHistorical &&
+                  (trip.isParticipant ? (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="large-wide"
+                      onClick={() => handleParticipation('leave')}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Saliendo...' : 'Salir del viaje'}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      size="large-wide"
+                      onClick={() => handleParticipation('join')}
+                      disabled={isSubmitting || isFull}
+                    >
+                      {isFull
+                        ? 'Sin lugares disponibles'
+                        : isSubmitting
+                          ? 'Sumándote...'
+                          : 'Sumarme al viaje'}
+                    </Button>
+                  ))}
               </>
             )}
           </div>
