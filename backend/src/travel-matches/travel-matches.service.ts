@@ -16,6 +16,7 @@ import {
   addPassenger,
   isSerializationConflict,
 } from '../trips/trip-participation';
+import { DisplayNamesService } from '../firebase/display-names.service';
 
 @Injectable()
 export class TravelMatchesService {
@@ -23,6 +24,7 @@ export class TravelMatchesService {
     private readonly prisma: PrismaService,
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
+    private readonly displayNames: DisplayNamesService,
   ) {}
 
   async findMine(userId: string) {
@@ -84,6 +86,10 @@ export class TravelMatchesService {
       },
     });
 
+    const names = await this.displayNames.getDisplayNames(
+      matches.map((match) => match.trip.driver.id),
+    );
+
     return matches.map((match) => {
       const { _count, driver, ...trip } = match.trip;
 
@@ -95,6 +101,7 @@ export class TravelMatchesService {
           driver: {
             id: driver.id,
             email: driver.email,
+            displayName: names.get(driver.id) ?? null,
             profile: driver.studentProfile,
           },
         },
