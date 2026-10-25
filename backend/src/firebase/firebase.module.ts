@@ -18,6 +18,7 @@ import { DisplayNamesService } from './display-names.service';
                 '\n',
               ),
             }),
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
           });
         }
         return admin;
