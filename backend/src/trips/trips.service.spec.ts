@@ -10,7 +10,10 @@ import { CreateTripDto } from './dto/create-trip.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { DisplayNamesService } from '../firebase/display-names.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -28,7 +31,7 @@ describe('TripsService', () => {
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchTrip: jest.Mock };
-  let displayNamesMock: { getDisplayNames: jest.Mock };
+  let displayNamesMock: { getPublicUsers: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
@@ -72,9 +75,9 @@ describe('TripsService', () => {
       recordEvents: jest.fn().mockResolvedValue(1),
     };
     displayNamesMock = {
-      getDisplayNames: jest
+      getPublicUsers: jest
         .fn()
-        .mockResolvedValue(new Map<string, string | null>()),
+        .mockResolvedValue(new Map<string, PublicUser>()),
     };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
@@ -315,8 +318,8 @@ describe('TripsService', () => {
 
       await service.findUpcoming('user-123');
 
-      expect(displayNamesMock.getDisplayNames).toHaveBeenCalledTimes(1);
-      expect(displayNamesMock.getDisplayNames).toHaveBeenCalledWith([
+      expect(displayNamesMock.getPublicUsers).toHaveBeenCalledTimes(1);
+      expect(displayNamesMock.getPublicUsers).toHaveBeenCalledWith([
         'driver-1',
         'pasajero-1',
         'driver-2',
@@ -524,11 +527,11 @@ describe('TripsService', () => {
       });
     });
 
-    it('agrega el displayName del conductor y de cada pasajero', async () => {
-      displayNamesMock.getDisplayNames.mockResolvedValue(
+    it('agrega el displayName y la foto del conductor y de cada pasajero', async () => {
+      displayNamesMock.getPublicUsers.mockResolvedValue(
         new Map([
-          [driverId, 'Ana Pérez'],
-          ['pasajero-1', 'Luis Gómez'],
+          [driverId, { displayName: 'Ana Pérez', photoUrl: 'https://foto/d1' }],
+          ['pasajero-1', { displayName: 'Luis Gómez', photoUrl: null }],
         ]),
       );
       prismaMock.trip.findUnique.mockResolvedValue({
@@ -550,6 +553,9 @@ describe('TripsService', () => {
       expect(result.driver.displayName).toBe('Ana Pérez');
       expect(result.passengers[0].user.displayName).toBe('Luis Gómez');
       expect(result.passengers[1].user.displayName).toBeNull();
+      expect(result.driver.photoUrl).toBe('https://foto/d1');
+      expect(result.passengers[0].user.photoUrl).toBeNull();
+      expect(result.passengers[1].user.photoUrl).toBeNull();
     });
   });
 

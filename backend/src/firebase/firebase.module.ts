@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import { AvatarStorageService } from './avatar-storage.service';
 import { DisplayNamesService } from './display-names.service';
 
 @Global()
@@ -25,7 +26,8 @@ import { DisplayNamesService } from './display-names.service';
       },
     },
     DisplayNamesService,
+    AvatarStorageService,
   ],
-  exports: ['FIREBASE_ADMIN', DisplayNamesService],
+  exports: ['FIREBASE_ADMIN', DisplayNamesService, AvatarStorageService],
 })
 export class FirebaseModule {}

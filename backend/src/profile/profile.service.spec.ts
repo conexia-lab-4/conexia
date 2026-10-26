@@ -2,6 +2,11 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
+import { AvatarStorageService } from '../firebase/avatar-storage.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
 
 type StudentProfileRecord = {
   id: string;
@@ -30,6 +35,8 @@ describe('ProfileService', () => {
       upsert: jest.Mock<Promise<StudentProfileRecord>, [unknown]>;
     };
   };
+  let avatarStorageMock: { uploadAvatar: jest.Mock };
+  let displayNamesMock: { getPublicUsers: jest.Mock };
   const userId = 'user-123';
 
   const validDto: UpsertProfileDto = {
@@ -56,7 +63,17 @@ describe('ProfileService', () => {
         upsert: jest.fn<Promise<StudentProfileRecord>, [unknown]>(),
       },
     };
-    service = new ProfileService(prismaMock as unknown as PrismaService);
+    avatarStorageMock = { uploadAvatar: jest.fn() };
+    displayNamesMock = {
+      getPublicUsers: jest
+        .fn()
+        .mockResolvedValue(new Map<string, PublicUser>()),
+    };
+    service = new ProfileService(
+      prismaMock as unknown as PrismaService,
+      avatarStorageMock as unknown as AvatarStorageService,
+      displayNamesMock as unknown as DisplayNamesService,
+    );
   });
 
   describe('getProfile', () => {
@@ -83,7 +100,7 @@ describe('ProfileService', () => {
 
       const result = await service.getProfile(userId);
 
-      expect(result).toEqual(profile);
+      expect(result).toEqual({ ...profile, photoUrl: null });
       expect(prismaMock.studentProfile.findUnique).toHaveBeenCalledWith({
         where: { userId },
       });
@@ -113,6 +130,21 @@ describe('ProfileService', () => {
       const result = await service.getProfile(userId);
 
       expect(result.hasCar).toBeNull();
+    });
+
+    it('incluye la foto del usuario cuando tiene una', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        id: 'profile-1',
+        userId,
+      } as StudentProfileRecord);
+      displayNamesMock.getPublicUsers.mockResolvedValue(
+        new Map([[userId, { displayName: null, photoUrl: 'https://foto/u' }]]),
+      );
+
+      const result = await service.getProfile(userId);
+
+      expect(result.photoUrl).toBe('https://foto/u');
+      expect(displayNamesMock.getPublicUsers).toHaveBeenCalledWith([userId]);
     });
 
     it('lanza NotFoundException cuando el usuario no tiene perfil', async () => {
@@ -148,7 +180,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, validDto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -291,7 +323,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, dto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -354,7 +386,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, dto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -415,6 +447,21 @@ describe('ProfileService', () => {
       });
 
       await expect(service.upsertProfile(userId, dto)).resolves.toBeDefined();
+    });
+  });
+
+  describe('updatePhoto', () => {
+    it('sube la foto como avatar del usuario y devuelve su URL', async () => {
+      const photo = { buffer: Buffer.from('img') } as Express.Multer.File;
+      avatarStorageMock.uploadAvatar.mockResolvedValue('https://foto/nueva');
+
+      const result = await service.updatePhoto(userId, photo);
+
+      expect(avatarStorageMock.uploadAvatar).toHaveBeenCalledWith(
+        userId,
+        photo,
+      );
+      expect(result).toEqual({ photoUrl: 'https://foto/nueva' });
     });
   });
 });
