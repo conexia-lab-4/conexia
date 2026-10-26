@@ -1,0 +1,63 @@
+.camera-capture__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.camera-capture {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  background-color: var(--color-white);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.camera-capture__title {
+  font-family: var(--font-primary);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-h6);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.camera-capture__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background-color: var(--color-grey-500);
+  border-radius: 12px;
+}
+
+.camera-capture__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Espejada, como se ven los selfies */
+  transform: scaleX(-1);
+}
+
+.camera-capture__status {
+  position: absolute;
+  padding: 0 24px;
+  font-size: var(--fs-body-2);
+  color: var(--color-white);
+  text-align: center;
+}
+
+.camera-capture__actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
