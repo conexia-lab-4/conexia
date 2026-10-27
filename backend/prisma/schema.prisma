@@ -23,9 +23,11 @@ model StudentProfile {
   id                     String    @id @default(uuid())
   userId                 String    @unique
   university             String?
+  universityId           String?
   career                 String?
   year                   Int?
   campus                 String?
+  campusId               String?
   hasCar                 Boolean?
   availableSeats         Int?
   questionnaireCompleted Boolean   @default(false)
@@ -40,6 +42,8 @@ model StudentProfile {
   updatedAt              DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+  universityRef University? @relation(fields: [universityId], references: [id])
+  campusRef     Campus?     @relation(fields: [campusId], references: [id])
 }
 
 enum DayOfWeek {
@@ -207,6 +211,7 @@ model University {
   id       String   @id
   name     String   @unique
   campuses Campus[]
+  studentProfiles StudentProfile[]
 }
 
 model Campus {
@@ -216,6 +221,7 @@ model Campus {
   address      String
   latitude     Float
   longitude    Float
+  studentProfiles StudentProfile[]
 
   university University @relation(fields: [universityId], references: [id])
 

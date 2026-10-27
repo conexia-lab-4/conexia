@@ -36,6 +36,7 @@ export class ProfileService {
     }
 
     const availableSeats = dto.hasCar === false ? null : dto.availableSeats;
+    const catalog = await this.resolveCatalogSelection(userId, dto);
 
     const data = {
       university: dto.university,
@@ -52,6 +53,7 @@ export class ProfileService {
       birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       bio: dto.bio,
       detourToleranceKm: dto.detourToleranceKm,
+      ...catalog,
     };
 
     const profile = await this.prisma.studentProfile.upsert({
@@ -61,5 +63,65 @@ export class ProfileService {
     });
 
     return profile;
+  }
+
+  // La universidad y la sede salen siempre del catálogo: nunca se crean a
+  // partir de texto libre
+  private async resolveCatalogSelection(userId: string, dto: UpsertProfileDto) {
+    if (dto.campusId !== undefined) {
+      const campus = await this.prisma.campus.findUnique({
+        where: { id: dto.campusId },
+        include: { university: true },
+      });
+
+      if (!campus) {
+        throw new BadRequestException('La sede elegida no existe');
+      }
+
+      if (
+        dto.universityId !== undefined &&
+        dto.universityId !== campus.universityId
+      ) {
+        throw new BadRequestException(
+          'La sede no pertenece a la universidad elegida',
+        );
+      }
+
+      return {
+        universityId: campus.universityId,
+        campusId: campus.id,
+        university: campus.university.name,
+        campus: campus.name,
+      };
+    }
+
+    if (dto.universityId === undefined) {
+      return {};
+    }
+
+    const university = await this.prisma.university.findUnique({
+      where: { id: dto.universityId },
+    });
+
+    if (!university) {
+      throw new BadRequestException('La universidad elegida no existe');
+    }
+
+    const current = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { campusRef: { select: { universityId: true } } },
+    });
+
+    // Cambiar de universidad deja sin efecto la sede anterior
+    if (current?.campusRef?.universityId === university.id) {
+      return { universityId: university.id, university: university.name };
+    }
+
+    return {
+      universityId: university.id,
+      university: university.name,
+      campusId: null,
+      campus: null,
+    };
   }
 }
