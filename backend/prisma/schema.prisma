@@ -202,3 +202,22 @@ model KpiEvent {
   @@unique([type, refId, userId])
   @@index([type, occurredAt])
 }
+
+model University {
+  id       String   @id
+  name     String   @unique
+  campuses Campus[]
+}
+
+model Campus {
+  id           String @id
+  universityId String
+  name         String
+  address      String
+  latitude     Float
+  longitude    Float
+
+  university University @relation(fields: [universityId], references: [id])
+
+  @@unique([universityId, name])
+}
