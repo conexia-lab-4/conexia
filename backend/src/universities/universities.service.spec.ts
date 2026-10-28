@@ -6,11 +6,13 @@ describe('UniversitiesService', () => {
   let service: UniversitiesService;
   let prismaMock: {
     university: { findMany: jest.Mock; findUnique: jest.Mock };
+    campus: { findMany: jest.Mock };
   };
 
   beforeEach(() => {
     prismaMock = {
       university: { findMany: jest.fn(), findUnique: jest.fn() },
+      campus: { findMany: jest.fn() },
     };
     service = new UniversitiesService(prismaMock as unknown as PrismaService);
   });
@@ -59,5 +61,28 @@ describe('UniversitiesService', () => {
     await expect(service.findCampuses('inexistente')).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('findAllCampuses devuelve todas las sedes con su universidad, ordenadas', async () => {
+    const campuses = [
+      {
+        id: 'ua-pilar',
+        universityId: 'ua',
+        name: 'Sede Pilar',
+        address: 'Mariano Acosta 1611, Pilar',
+        latitude: -34.451549,
+        longitude: -58.862084,
+        university: { id: 'ua', name: 'Universidad Austral' },
+      },
+    ];
+    prismaMock.campus.findMany.mockResolvedValue(campuses);
+
+    const result = await service.findAllCampuses();
+
+    expect(result).toEqual(campuses);
+    expect(prismaMock.campus.findMany).toHaveBeenCalledWith({
+      include: { university: { select: { id: true, name: true } } },
+      orderBy: [{ university: { name: 'asc' } }, { name: 'asc' }],
+    });
   });
 });

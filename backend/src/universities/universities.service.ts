@@ -21,4 +21,11 @@ export class UniversitiesService {
 
     return university.campuses;
   }
+
+  findAllCampuses() {
+    return this.prisma.campus.findMany({
+      include: { university: { select: { id: true, name: true } } },
+      orderBy: [{ university: { name: 'asc' } }, { name: 'asc' }],
+    });
+  }
 }
