@@ -102,6 +102,8 @@ model Trip {
   destination    String
   destinationLat Float?
   destinationLng Float?
+  campusId       String?
+  routeDirection RouteDirection?
   departureTime  DateTime
   arrivalTime    DateTime
   capacity       Int
@@ -111,6 +113,7 @@ model Trip {
 
   driver     User            @relation(fields: [driverId], references: [id])
   passengers TripPassenger[]
+  campus     Campus?         @relation(fields: [campusId], references: [id])
 }
 
 model TripPassenger {
@@ -147,6 +150,8 @@ model TravelIntent {
   destination    String
   destinationLat Float
   destinationLng Float
+  campusId       String?
+  routeDirection RouteDirection?
   departureTime  DateTime
   arrivalTime    DateTime
   status         TravelIntentStatus @default(ACTIVE)
@@ -155,6 +160,7 @@ model TravelIntent {
   travelMatches  TravelMatch[]
 
   user User @relation(fields: [userId], references: [id])
+  campus Campus? @relation(fields: [campusId], references: [id])
 
   @@index([userId, status])
   @@index([status, departureTime])
@@ -222,8 +228,15 @@ model Campus {
   latitude     Float
   longitude    Float
   studentProfiles StudentProfile[]
+  trips           Trip[]
+  travelIntents   TravelIntent[]
 
   university University @relation(fields: [universityId], references: [id])
 
   @@unique([universityId, name])
+}
+
+enum RouteDirection {
+  TO_CAMPUS
+  FROM_CAMPUS
 }
