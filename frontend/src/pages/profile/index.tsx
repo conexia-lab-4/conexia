@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
 import { ToggleSwitch } from '../../components/toggleswitch';
 import { Button } from '../../components/button';
+import { Avatar } from '../../components/avatar';
+import { CameraCapture } from '../../components/cameraCapture';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconGraduationCap } from '../../assets/icons/IconGraduationCap';
@@ -12,11 +14,13 @@ import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { IconUser } from '../../assets/icons/IconUser';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
+import { IconPencil } from '../../assets/icons/IconPencil';
 import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
 import {
   getProfile,
   upsertProfile,
+  uploadProfilePhoto,
   type ProfileResponse,
   type UpsertProfilePayload,
 } from '../../lib/profileApi';
@@ -27,6 +31,7 @@ import {
   type CatalogUniversity,
 } from '../../lib/universitiesApi';
 import { getProfileCompletion } from '../../lib/profileCompletion';
+import { resizeImage } from '../../lib/resizeImage';
 import './index.css';
 
 interface FormState {
@@ -47,6 +52,25 @@ interface FormState {
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type SaveMessage = { type: 'success' | 'error'; text: string } | null;
+
+// En celulares y tablets el input con `capture` abre la cámara nativa; en la
+// compu el navegador lo ignora y hay que usar la webcam con getUserMedia
+function isTouchDevice(): boolean {
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
+async function detectCamera(): Promise<boolean> {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    // Sin la API (p. ej. fuera de https) el input con `capture` igual funciona
+    return isTouchDevice();
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.some((device) => device.kind === 'videoinput');
+  } catch {
+    return false;
+  }
+}
 
 const EMPTY_FORM: FormState = {
   universityId: null,
@@ -131,16 +155,6 @@ function formToPayload(form: FormState): UpsertProfilePayload {
   return payload;
 }
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join('');
-}
-
 function formatMemberSince(creationTime: string | undefined): string {
   if (!creationTime) return '-';
   const text = new Date(creationTime).toLocaleDateString('es-AR', {
@@ -168,6 +182,15 @@ export function Profile() {
   const [failedCampusesFor, setFailedCampusesFor] = useState<string | null>(
     null,
   );
+
+  // La foto elegida se sube recién al tocar "Guardar cambios"
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
+  const [hasCamera, setHasCamera] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -207,6 +230,73 @@ export function Profile() {
       cancelled = true;
     };
   }, [form.universityId]);
+
+  // "Tomar foto" solo se ofrece si el dispositivo tiene cámara
+  useEffect(() => {
+    let active = true;
+    const updateCamera = () =>
+      detectCamera().then((available) => {
+        if (active) setHasCamera(available);
+      });
+
+    updateCamera();
+    navigator.mediaDevices?.addEventListener?.('devicechange', updateCamera);
+    return () => {
+      active = false;
+      navigator.mediaDevices?.removeEventListener?.(
+        'devicechange',
+        updateCamera,
+      );
+    };
+  }, []);
+
+  // Con una foto sin guardar, el navegador avisa antes de recargar o cerrar.
+  // Los cambios de sección no se pueden frenar: la app usa <BrowserRouter>
+  useEffect(() => {
+    if (!pendingPhoto) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingPhoto]);
+
+  // Libera la vista previa anterior cuando cambia o se descarta
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const selectPhoto = (file: File) => {
+    setPendingPhoto(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setSaveMessage(null);
+  };
+
+  const handlePhotoSelected = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Permite volver a elegir la misma foto
+    event.target.value = '';
+    setIsPhotoMenuOpen(false);
+    // Si canceló, queda la foto previa
+    if (!file) return;
+    selectPhoto(file);
+  };
+
+  const handleTakePhoto = () => {
+    setIsPhotoMenuOpen(false);
+    if (isTouchDevice()) {
+      cameraInputRef.current?.click();
+    } else {
+      setIsCameraOpen(true);
+    }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setIsCameraOpen(false);
+    selectPhoto(file);
+  };
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -267,7 +357,28 @@ export function Profile() {
     setSaveMessage(null);
     try {
       const saved = await upsertProfile(formToPayload(form));
-      setProfile(saved);
+      let photoUrl = saved.photoUrl;
+
+      if (pendingPhoto) {
+        try {
+          ({ photoUrl } = await uploadProfilePhoto(
+            await resizeImage(pendingPhoto),
+          ));
+          setPendingPhoto(null);
+          setPreviewUrl(null);
+        } catch {
+          // Los datos ya se guardaron; la foto queda pendiente para reintentar
+          setProfile(saved);
+          setForm(profileToForm(saved));
+          setSaveMessage({
+            type: 'error',
+            text: 'Guardamos tus datos, pero no pudimos subir la foto. Intentá de nuevo.',
+          });
+          return;
+        }
+      }
+
+      setProfile({ ...saved, photoUrl });
       setForm(profileToForm(saved));
       setSaveMessage({ type: 'success', text: 'Cambios guardados.' });
     } catch {
@@ -327,8 +438,58 @@ export function Profile() {
         <>
           <section className="profile__card profile__summary">
             <div className="profile__summary-top">
-              <div className="profile__avatar">
-                {getInitials(user?.displayName)}
+              <div className="profile__avatar-wrapper">
+                <button
+                  type="button"
+                  className="profile__avatar-button"
+                  aria-label="Cambiar foto de perfil"
+                  aria-expanded={isPhotoMenuOpen}
+                  onClick={() => setIsPhotoMenuOpen((open) => !open)}
+                >
+                  <Avatar
+                    className="profile__avatar"
+                    photoUrl={previewUrl ?? profile?.photoUrl}
+                    name={user?.displayName}
+                  />
+                  <span className="profile__avatar-edit">
+                    <IconPencil size={12} color="var(--color-white)" />
+                  </span>
+                </button>
+                {isPhotoMenuOpen && (
+                  <div className="profile__photo-menu">
+                    {hasCamera && (
+                      <button
+                        type="button"
+                        className="profile__photo-option text-body-3"
+                        onClick={handleTakePhoto}
+                      >
+                        Tomar foto
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="profile__photo-option text-body-3"
+                      onClick={() => galleryInputRef.current?.click()}
+                    >
+                      Elegir de la galería
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  hidden
+                  onChange={handlePhotoSelected}
+                />
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handlePhotoSelected}
+                />
               </div>
               <div className="profile__identity">
                 <span className="profile__name text-body-1-bold">
@@ -341,6 +502,11 @@ export function Profile() {
                   <span className="profile__verified text-body-3">
                     <IconCheck size={12} color="var(--color-success-700)" />
                     Perfil Verificado
+                  </span>
+                )}
+                {pendingPhoto && (
+                  <span className="profile__photo-pending text-body-3">
+                    Foto sin guardar · Tocá "Guardar cambios"
                   </span>
                 )}
               </div>
@@ -671,6 +837,13 @@ export function Profile() {
       <button type="button" className="profile__logout" onClick={logout}>
         Cerrar sesión
       </button>
+
+      {isCameraOpen && (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onCancel={() => setIsCameraOpen(false)}
+        />
+      )}
 
       <NavBar activeItem="perfil" />
     </div>
