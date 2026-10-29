@@ -9,6 +9,8 @@ import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconClock } from '../../assets/icons/IconClock';
+import { IconCar } from '../../assets/icons/IconCar';
+import { IconPhone } from '../../assets/icons/IconPhone';
 import {
   getTrip,
   joinTrip,
@@ -105,6 +107,12 @@ export function TripDetailPage() {
   const isDriver = trip?.isDriver ?? false;
   const isFull = trip !== null && trip.availableSeats <= 0;
 
+  const driverProfile = trip?.driver.studentProfile;
+  const car = [driverProfile?.carModel, driverProfile?.carColor]
+    .filter(Boolean)
+    .join(' · ');
+  const driverPhone = driverProfile?.phone;
+
   return (
     <div className="trip-detail">
       <header className="trip-detail__header">
@@ -185,6 +193,24 @@ export function TripDetailPage() {
                 </dt>
                 <dd>{formatTime(trip.arrivalTime)}</dd>
               </div>
+              {car && (
+                <div className="trip-detail__info-row">
+                  <dt>
+                    <IconCar size={18} color="var(--color-grey-400)" />
+                    Auto
+                  </dt>
+                  <dd>{car}</dd>
+                </div>
+              )}
+              {driverPhone && (
+                <div className="trip-detail__info-row">
+                  <dt>
+                    <IconPhone size={18} color="var(--color-grey-400)" />
+                    Teléfono
+                  </dt>
+                  <dd>{driverPhone}</dd>
+                </div>
+              )}
             </dl>
           </section>
 
