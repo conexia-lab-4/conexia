@@ -5,6 +5,7 @@ import { auth } from '../../lib/firebase';
 import { getSubjects } from '../../lib/subjectsApi';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
 import { getMyTrips, type TripDetail } from '../../lib/tripsApi';
+import { getTravelMatches } from '../../lib/matchesApi';
 import { StatCard } from '../../components/statcard';
 import { NavBar } from '../../components/navbar';
 import { ProfilePendingCard } from '../../components/profilependingcard';
@@ -37,6 +38,8 @@ const HOME_TRIPS_LIMIT = 3;
 export function Home() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [subjectsCount, setSubjectsCount] = useState(0);
+  const [matchesCount, setMatchesCount] = useState(0);
+  const [historyCount, setHistoryCount] = useState(0);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [upcomingTrips, setUpcomingTrips] = useState<TripDetail[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
@@ -57,14 +60,19 @@ export function Home() {
   const loadHomeData = useCallback(async () => {
     setStatus('loading');
     try {
-      const [subjects, profileData, trips] = await Promise.all([
-        getSubjects(),
-        getProfile(),
-        getMyTrips('upcoming'),
-      ]);
+      const [subjects, profileData, trips, historyTrips, matches] =
+        await Promise.all([
+          getSubjects(),
+          getProfile(),
+          getMyTrips('upcoming'),
+          getMyTrips('history'),
+          getTravelMatches(),
+        ]);
       setSubjectsCount(subjects.length);
       setProfile(profileData);
       setUpcomingTrips(trips);
+      setHistoryCount(historyTrips.length);
+      setMatchesCount(matches.length);
       setStatus('ready');
     } catch (error) {
       console.error('Error al cargar datos del Home:', error);
@@ -138,19 +146,19 @@ export function Home() {
             />
             <StatCard
               label="Matches"
-              value={0}
+              value={matchesCount}
               icon={<IconUsersThree color="var(--color-primary-700)" />}
               iconBgColor="var(--color-primary-200)"
             />
             <StatCard
               label="Viajes Pendientes"
-              value={0}
+              value={upcomingTrips.length}
               icon={<IconCarFront color="var(--color-primary-700)" />}
               iconBgColor="var(--color-stat-icon-pending-bg)"
             />
             <StatCard
               label="Total viajes"
-              value={0}
+              value={upcomingTrips.length + historyCount}
               icon={<IconRoute color="var(--color-primary-700)" />}
               iconBgColor="var(--color-stat-icon-total-bg)"
             />
