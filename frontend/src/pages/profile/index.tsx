@@ -300,6 +300,12 @@ export function Profile() {
       ? [form.career, ...CAREERS]
       : CAREERS;
 
+  // "Guardar cambios" solo aparece si hay algo distinto de lo guardado
+  const savedForm = profileToForm(profile);
+  const hasChanges = (Object.keys(form) as (keyof FormState)[]).some(
+    (key) => form[key] !== savedForm[key],
+  );
+
   const colorOptions =
     form.carColor && !CAR_COLORS.includes(form.carColor)
       ? [form.carColor, ...CAR_COLORS]
@@ -720,15 +726,17 @@ export function Profile() {
             </p>
           )}
 
-          <Button
-            type="button"
-            variant="fulfilled"
-            size="large-wide"
-            disabled={isSaving}
-            onClick={handleSave}
-          >
-            {isSaving ? 'Guardando...' : 'Guardar cambios'}
-          </Button>
+          {hasChanges && (
+            <Button
+              type="button"
+              variant="fulfilled"
+              size="large-wide"
+              disabled={isSaving}
+              onClick={handleSave}
+            >
+              {isSaving ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          )}
         </>
       )}
 
