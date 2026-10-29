@@ -22,3 +22,18 @@ export async function getUniversityCampuses(
 
   return response.json();
 }
+
+export interface CatalogUniversity {
+  id: string;
+  name: string;
+}
+
+export async function getUniversities(): Promise<CatalogUniversity[]> {
+  const response = await authFetch('/universities');
+
+  if (!response.ok) {
+    throw new Error('No pudimos cargar las universidades');
+  }
+
+  return response.json();
+}
