@@ -414,11 +414,14 @@ export function Profile() {
       ? [form.career, ...CAREERS]
       : CAREERS;
 
-  // "Guardar cambios" solo aparece si hay algo distinto de lo guardado
+  // "Guardar cambios" solo aparece si hay datos distintos de lo guardado o una
+  // foto elegida que todavía no se subió
   const savedForm = profileToForm(profile);
-  const hasChanges = (Object.keys(form) as (keyof FormState)[]).some(
-    (key) => form[key] !== savedForm[key],
-  );
+  const hasChanges =
+    pendingPhoto !== null ||
+    (Object.keys(form) as (keyof FormState)[]).some(
+      (key) => form[key] !== savedForm[key],
+    );
 
   const colorOptions =
     form.carColor && !CAR_COLORS.includes(form.carColor)
