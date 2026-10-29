@@ -43,12 +43,13 @@ export class ProfileService {
 
     const availableSeats = dto.hasCar === false ? null : dto.availableSeats;
     const catalog = await this.resolveCatalogSelection(userId, dto);
+    // Con IDs, los nombres salen del catálogo; sin IDs, no pueden contradecirlo
+    const names =
+      'universityId' in catalog ? {} : await this.resolveNames(userId, dto);
 
     const data = {
-      university: dto.university,
       career: dto.career,
       year: dto.year,
-      campus: dto.campus,
       hasCar: dto.hasCar,
       availableSeats,
       questionnaireCompleted: dto.questionnaireCompleted,
@@ -60,6 +61,7 @@ export class ProfileService {
       bio: dto.bio,
       detourToleranceKm: dto.detourToleranceKm,
       ...catalog,
+      ...names,
     };
 
     const profile = await this.prisma.studentProfile.upsert({
@@ -143,5 +145,44 @@ export class ProfileService {
       campusId: null,
       campus: null,
     };
+  }
+
+  // Sin IDs en el pedido, los nombres escritos no pueden contradecir al
+  // catálogo: si el perfil ya eligió universidad o sede del catálogo, tienen
+  // que coincidir con los nombres canónicos
+  private async resolveNames(userId: string, dto: UpsertProfileDto) {
+    if (dto.university === undefined && dto.campus === undefined) {
+      return {};
+    }
+
+    const current = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        universityRef: { select: { name: true } },
+        campusRef: { select: { name: true } },
+      },
+    });
+
+    // Perfiles anteriores al catálogo: se conserva el texto como siempre
+    if (!current?.universityRef) {
+      return { university: dto.university, campus: dto.campus };
+    }
+
+    if (
+      dto.university !== undefined &&
+      dto.university !== current.universityRef.name
+    ) {
+      throw new BadRequestException(
+        'El nombre de la universidad no coincide con la elegida del catálogo',
+      );
+    }
+
+    if (dto.campus !== undefined && dto.campus !== current.campusRef?.name) {
+      throw new BadRequestException(
+        'El nombre de la sede no coincide con la elegida del catálogo',
+      );
+    }
+
+    return {};
   }
 }
