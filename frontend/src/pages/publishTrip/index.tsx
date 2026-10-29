@@ -15,8 +15,11 @@ import { IconClock } from '../../assets/icons/IconClock';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
 import { getSubjects } from '../../lib/subjectsApi';
-import { createTrip } from '../../lib/tripsApi';
+import { createTrip, type RouteDirection } from '../../lib/tripsApi';
 import { createTravelIntent } from '../../lib/travelIntentsApi';
+import { getUniversityCampuses, type Campus } from '../../lib/universitiesApi';
+import { UNIVERSITIES } from '../questionnaire/universities';
+import { IconArrowsDownUp } from '../../assets/icons/IconArrowsDownUp';
 import {
   formatDateLabel,
   getDateOptions,
@@ -37,16 +40,19 @@ interface PublishTripProps {
 }
 
 interface TripForm {
-  origin: string;
-  destination: string;
+  // Dirección de la casa; el otro extremo es siempre la sede
+  home: string;
+  direction: RouteDirection;
+  campusId: string | null;
   date: string;
   departureTime: string;
   arrivalTime: string;
 }
 
 const EMPTY_FORM: TripForm = {
-  origin: '',
-  destination: '',
+  home: '',
+  direction: 'TO_CAMPUS',
+  campusId: null,
   date: '',
   departureTime: '',
   arrivalTime: '',
@@ -64,8 +70,17 @@ const INTENT_STEPS: { id: Step; label: string }[] = [
   { id: 3, label: 'Revisar' },
 ];
 
-function getDefaultDestination(profile: ProfileResponse | null): string {
-  return [profile?.university, profile?.campus].filter(Boolean).join(' – ');
+// Perfiles anteriores al catálogo: se reconoce la universidad por su nombre
+function getProfileUniversityId(profile: ProfileResponse | null) {
+  return (
+    profile?.universityId ??
+    UNIVERSITIES.find((u) => u.name === profile?.university)?.id ??
+    null
+  );
+}
+
+function getCampusLabel(universityName: string | null, campus: Campus) {
+  return [universityName, campus.name].filter(Boolean).join(' – ');
 }
 
 function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
@@ -77,9 +92,14 @@ function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
   };
 }
 
-function validateRoute(form: TripForm): string | null {
-  if (!form.origin.trim()) return 'Ingresá desde dónde salís.';
-  if (!form.destination.trim()) return 'Ingresá hacia dónde vas.';
+function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
+  if (!hasUniversity) return 'Completá tu universidad en Mi Perfil.';
+  if (!form.home.trim()) {
+    return form.direction === 'TO_CAMPUS'
+      ? 'Ingresá desde dónde salís.'
+      : 'Ingresá hacia dónde vas.';
+  }
+  if (!form.campusId) return 'Elegí tu sede.';
   if (!form.date) return 'Elegí la fecha del viaje.';
   if (!form.departureTime) return 'Elegí el horario de salida.';
   if (!form.arrivalTime) return 'Elegí el horario de llegada.';
@@ -113,6 +133,8 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     null,
   );
   const [isDateOpen, setIsDateOpen] = useState(false);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [isCampusOpen, setIsCampusOpen] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -123,14 +145,22 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       // Los horarios son opcionales: si fallan, el viaje se carga a mano
       getSubjects().catch(() => []),
     ])
-      .then(([profileData, subjects]) => {
+      .then(async ([profileData, subjects]) => {
         const options = getScheduleOptions(subjects);
+        const universityId = getProfileUniversityId(profileData);
+        const campusOptions = universityId
+          ? await getUniversityCampuses(universityId).catch(() => [])
+          : [];
         const baseForm: TripForm = {
           ...EMPTY_FORM,
-          origin: profileData?.originAddress ?? '',
-          destination: getDefaultDestination(profileData),
+          home: profileData?.originAddress ?? '',
+          // La sede del perfil queda como predeterminada
+          campusId:
+            campusOptions.find((campus) => campus.id === profileData?.campusId)
+              ?.id ?? null,
         };
         setProfile(profileData);
+        setCampuses(campusOptions);
         setScheduleOptions(options);
         // Se precarga con la próxima clase de la cursada
         if (options.length > 0) {
@@ -150,6 +180,15 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const selectedSchedule =
     scheduleOptions.find((option) => option.id === selectedScheduleId) ?? null;
   const seats = profile?.availableSeats ?? 0;
+  const hasUniversity = Boolean(getProfileUniversityId(profile));
+  const universityName = profile?.university ?? null;
+  const selectedCampus = campuses.find((campus) => campus.id === form.campusId);
+  const campusLabel = selectedCampus
+    ? getCampusLabel(universityName, selectedCampus)
+    : '';
+  const toCampus = form.direction === 'TO_CAMPUS';
+  const origin = toCampus ? form.home.trim() : campusLabel;
+  const destination = toCampus ? campusLabel : form.home.trim();
 
   const setField = <K extends keyof TripForm>(key: K, value: TripForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -163,6 +202,14 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   ) => {
     setField(key, value);
     setSelectedScheduleId(null);
+  };
+
+  const handleSwapDirection = () => {
+    setForm((prev) => ({
+      ...prev,
+      direction: prev.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS',
+    }));
+    setStepError(null);
   };
 
   const handleSelectSchedule = (option: ScheduleOption) => {
@@ -187,7 +234,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   };
 
   const handleNextFromRoute = () => {
-    const error = validateRoute(form);
+    const error = validateRoute(form, hasUniversity);
     if (error) {
       setStepError(error);
       return;
@@ -198,16 +245,19 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const handlePublish = async () => {
     if (isPublishing) return;
 
-    const error = validateRoute(form);
-    if (error) {
+    const error = validateRoute(form, hasUniversity);
+    const campusId = form.campusId;
+    if (error || !campusId) {
       setStep(1);
-      setStepError(error);
+      setStepError(error ?? 'Elegí tu sede.');
       return;
     }
 
     const payload = {
-      origin: form.origin.trim(),
-      destination: form.destination.trim(),
+      origin,
+      destination,
+      campusId,
+      routeDirection: form.direction,
       departureTime: toLocalDate(form.date, form.departureTime).toISOString(),
       arrivalTime: toLocalDate(form.date, form.arrivalTime).toISOString(),
     };
@@ -237,6 +287,57 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       setIsPublishing(false);
     }
   };
+
+  const renderHomeField = (label: string) => (
+    <TextField
+      variant="filled"
+      label={label}
+      placeholder="Ej. Av. Corrientes 1234"
+      value={form.home}
+      onChange={(e) => setField('home', e.target.value)}
+      leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+    />
+  );
+
+  // La universidad es la del perfil: solo se elige entre sus sedes
+  const renderCampusField = (label: string) => (
+    <div className="publish-trip__combobox">
+      <TextField
+        variant="filled"
+        label={label}
+        placeholder="Elegí una sede"
+        value={campusLabel}
+        readOnly
+        role="combobox"
+        aria-expanded={isCampusOpen}
+        onClick={() => setIsCampusOpen((open) => !open)}
+        onBlur={() => setTimeout(() => setIsCampusOpen(false), 150)}
+        leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+        rightIcon={<IconChevronDown size={20} color="var(--color-grey-400)" />}
+      />
+      {isCampusOpen && campuses.length > 0 && (
+        <ul className="publish-trip__combobox-list" role="listbox">
+          {campuses.map((campus) => (
+            <li key={campus.id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={form.campusId === campus.id}
+                className="publish-trip__combobox-option text-body-2"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setField('campusId', campus.id);
+                  setIsCampusOpen(false);
+                }}
+              >
+                {getCampusLabel(universityName, campus)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
   const canPublish =
     status === 'ready' && (isIntent || Boolean(profile?.hasCar));
@@ -331,30 +432,20 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
           <section className="publish-trip__route">
             <div className="publish-trip__route-row">
               <span className="publish-trip__dot publish-trip__dot--origin" />
-              <TextField
-                variant="filled"
-                label="Desde"
-                placeholder="Ej. Av. Corrientes 1234"
-                value={form.origin}
-                onChange={(e) => setField('origin', e.target.value)}
-                leftIcon={
-                  <IconMapPin size={18} color="var(--color-primary-600)" />
-                }
-              />
+              {toCampus ? renderHomeField('Desde') : renderCampusField('Desde')}
             </div>
             <div className="publish-trip__route-row">
               <span className="publish-trip__dot publish-trip__dot--destination" />
-              <TextField
-                variant="filled"
-                label="Hasta"
-                placeholder="Ej. Universidad Austral – Pilar"
-                value={form.destination}
-                onChange={(e) => setField('destination', e.target.value)}
-                leftIcon={
-                  <IconMapPin size={18} color="var(--color-primary-600)" />
-                }
-              />
+              {toCampus ? renderCampusField('Hasta') : renderHomeField('Hasta')}
             </div>
+            <button
+              type="button"
+              className="publish-trip__swap"
+              onClick={handleSwapDirection}
+              aria-label="Invertir recorrido"
+            >
+              <IconArrowsDownUp size={20} color="var(--color-primary-700)" />
+            </button>
           </section>
 
           <section className="publish-trip__field">
@@ -535,11 +626,11 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             <div className="publish-trip__summary-route">
               <div className="publish-trip__summary-stop">
                 <span className="publish-trip__dot publish-trip__dot--origin" />
-                <span className="text-body-2-bold">{form.origin}</span>
+                <span className="text-body-2-bold">{origin}</span>
               </div>
               <div className="publish-trip__summary-stop">
                 <span className="publish-trip__dot publish-trip__dot--destination" />
-                <span className="text-body-2-bold">{form.destination}</span>
+                <span className="text-body-2-bold">{destination}</span>
               </div>
             </div>
 
