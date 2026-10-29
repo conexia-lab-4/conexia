@@ -26,6 +26,7 @@ import {
   getScheduleOptions,
   nextOccurrence,
   suggestDepartureTime,
+  suggestReturnArrivalTime,
   toLocalDate,
   type ScheduleOption,
 } from './tripDates';
@@ -84,6 +85,15 @@ function getCampusLabel(universityName: string | null, campus: Campus) {
 }
 
 function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
+  // Al regreso, la salida es al terminar la clase
+  if (form.direction === 'FROM_CAMPUS') {
+    return {
+      ...form,
+      date: nextOccurrence(option.dayOfWeek, option.endTime),
+      departureTime: option.endTime,
+      arrivalTime: suggestReturnArrivalTime(option.endTime),
+    };
+  }
   return {
     ...form,
     date: nextOccurrence(option.dayOfWeek, option.startTime),
@@ -205,10 +215,13 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   };
 
   const handleSwapDirection = () => {
-    setForm((prev) => ({
-      ...prev,
-      direction: prev.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS',
-    }));
+    setForm((prev) => {
+      const direction: RouteDirection =
+        prev.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
+      const next = { ...prev, direction };
+      // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
+      return selectedSchedule ? formFromSchedule(next, selectedSchedule) : next;
+    });
     setStepError(null);
   };
 
@@ -518,7 +531,10 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
           </section>
           {selectedSchedule && (
             <p className="publish-trip__muted text-body-3">
-              Llegada al inicio de tu cursada: {selectedSchedule.subjectName}
+              {toCampus
+                ? 'Llegada al inicio de tu cursada'
+                : 'Salida al finalizar tu cursada'}
+              : {selectedSchedule.subjectName}{' '}
               {selectedSchedule.classroom
                 ? ` (${selectedSchedule.classroom})`
                 : ''}
