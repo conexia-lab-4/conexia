@@ -4,6 +4,7 @@ import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { Button } from '../../components/button';
 import { RouteTimeline } from '../../components/routetimeline';
+import { Avatar } from '../../components/avatar';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCheck } from '../../assets/icons/IconCheck';
@@ -20,7 +21,6 @@ import {
   formatTime,
   formatTripDateTime,
   getPersonName,
-  getInitials,
 } from '../../lib/tripFormat';
 import './index.css';
 
@@ -153,9 +153,11 @@ export function TripDetailPage() {
             </div>
 
             <div className="trip-detail__driver">
-              <span className="trip-detail__driver-avatar">
-                {getInitials(trip.driver.displayName)}
-              </span>
+              <Avatar
+                className="trip-detail__driver-avatar"
+                photoUrl={trip.driver.photoUrl}
+                name={trip.driver.displayName}
+              />
               <span className="trip-detail__driver-name">
                 {getPersonName(trip.driver.displayName)}
               </span>
@@ -202,9 +204,11 @@ export function TripDetailPage() {
 
                   return (
                     <li key={passenger.id} className="trip-detail__passenger">
-                      <span className="trip-detail__passenger-avatar">
-                        {getInitials(passenger.user.displayName)}
-                      </span>
+                      <Avatar
+                        className="trip-detail__passenger-avatar"
+                        photoUrl={passenger.user.photoUrl}
+                        name={passenger.user.displayName}
+                      />
                       <div className="trip-detail__passenger-info">
                         <span className="trip-detail__passenger-name">
                           {getPersonName(passenger.user.displayName)}
