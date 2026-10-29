@@ -11,6 +11,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -29,6 +30,7 @@ describe('TripsService', () => {
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
   let matchingMock: { matchTrip: jest.Mock };
   let displayNamesMock: { getDisplayNames: jest.Mock };
+  let chatMock: { syncParticipants: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
@@ -76,12 +78,14 @@ describe('TripsService', () => {
         .fn()
         .mockResolvedValue(new Map<string, string | null>()),
     };
+    chatMock = { syncParticipants: jest.fn().mockResolvedValue(undefined) };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
       geoMock,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
       displayNamesMock as unknown as DisplayNamesService,
+      chatMock as unknown as ChatService,
     );
   });
 
@@ -804,6 +808,23 @@ describe('TripsService', () => {
       expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
     });
 
+    it('suma al nuevo pasajero al chat del viaje', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockResolvedValue({
+        id: 'passenger-1',
+        tripId,
+        userId: 'user-123',
+      });
+
+      await service.join(tripId, 'user-123');
+
+      expect(chatMock.syncParticipants).toHaveBeenCalledWith(tripId);
+    });
+
     it('no ejecuta el matching si no pudo sumarse', async () => {
       prismaMock.trip.findUnique.mockResolvedValue(null);
 
@@ -869,6 +890,23 @@ describe('TripsService', () => {
       await service.leave('trip-1', 'user-123');
 
       expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
+    });
+
+    it('saca del chat del viaje a quien sale', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.leave('trip-1', 'user-123');
+
+      expect(chatMock.syncParticipants).toHaveBeenCalledWith('trip-1');
+    });
+
+    it('no toca el chat si no participaba', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(chatMock.syncParticipants).not.toHaveBeenCalled();
     });
   });
 });

@@ -16,6 +16,7 @@ import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
 import { DisplayNamesService } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -51,6 +52,7 @@ export class TripsService {
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
     private readonly displayNames: DisplayNamesService,
+    private readonly chat: ChatService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
@@ -246,6 +248,7 @@ export class TripsService {
 
       // El viaje pudo quedar lleno: se recalculan sus sugerencias pendientes
       await this.matching.matchTrip(tripId);
+      await this.chat.syncParticipants(tripId);
 
       return passenger;
     } catch (error) {
@@ -279,6 +282,8 @@ export class TripsService {
     }
 
     await this.matching.matchTrip(tripId);
+    // Quien sale pierde acceso al chat del viaje
+    await this.chat.syncParticipants(tripId);
   }
 
   private async geocodeOrThrow(address: string): Promise<Coordinates> {

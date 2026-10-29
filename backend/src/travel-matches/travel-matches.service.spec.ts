@@ -5,6 +5,7 @@ import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 
 describe('TravelMatchesService', () => {
   let service: TravelMatchesService;
@@ -22,6 +23,7 @@ describe('TravelMatchesService', () => {
   };
   let matchingMock: { matchTrip: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
+  let chatMock: { syncParticipants: jest.Mock };
 
   const userId = 'pasajero-1';
   const future = new Date('2026-10-05T09:00:00.000Z');
@@ -102,11 +104,13 @@ describe('TravelMatchesService', () => {
       increment: jest.fn(),
       recordEvents: jest.fn().mockResolvedValue(1),
     };
+    chatMock = { syncParticipants: jest.fn().mockResolvedValue(undefined) };
     service = new TravelMatchesService(
       prismaMock as unknown as PrismaService,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
       {} as unknown as DisplayNamesService,
+      chatMock as unknown as ChatService,
     );
   });
 
@@ -167,6 +171,12 @@ describe('TravelMatchesService', () => {
     await service.accept('match-1', userId);
 
     expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
+  });
+
+  it('suma al pasajero al chat del viaje después de aceptar', async () => {
+    await service.accept('match-1', userId);
+
+    expect(chatMock.syncParticipants).toHaveBeenCalledWith('trip-1');
   });
 
   it('responde 404 si el match no existe', async () => {

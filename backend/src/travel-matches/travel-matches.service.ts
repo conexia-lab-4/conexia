@@ -17,6 +17,7 @@ import {
   isSerializationConflict,
 } from '../trips/trip-participation';
 import { DisplayNamesService } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 
 @Injectable()
 export class TravelMatchesService {
@@ -25,6 +26,7 @@ export class TravelMatchesService {
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
     private readonly displayNames: DisplayNamesService,
+    private readonly chat: ChatService,
   ) {}
 
   async findMine(userId: string) {
@@ -196,6 +198,7 @@ export class TravelMatchesService {
 
       // El viaje pudo quedar lleno: se recalculan las demás sugerencias
       await this.matching.matchTrip(accepted.tripId);
+      await this.chat.syncParticipants(accepted.tripId);
 
       return accepted;
     } catch (error) {
