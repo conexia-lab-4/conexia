@@ -145,6 +145,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [isCampusOpen, setIsCampusOpen] = useState(false);
+  const [campusesFailed, setCampusesFailed] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -158,8 +159,13 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       .then(async ([profileData, subjects]) => {
         const options = getScheduleOptions(subjects);
         const universityId = getProfileUniversityId(profileData);
+        let campusLoadFailed = false;
         const campusOptions = universityId
-          ? await getUniversityCampuses(universityId).catch(() => [])
+          ? await getUniversityCampuses(universityId).catch((error) => {
+              console.error('Error al cargar las sedes:', error);
+              campusLoadFailed = true;
+              return [] as Campus[];
+            })
           : [];
         const baseForm: TripForm = {
           ...EMPTY_FORM,
@@ -171,6 +177,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         };
         setProfile(profileData);
         setCampuses(campusOptions);
+        setCampusesFailed(campusLoadFailed);
         setScheduleOptions(options);
         // Se precarga con la próxima clase de la cursada
         if (options.length > 0) {
@@ -316,9 +323,10 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const renderCampusField = (label: string) => (
     <div className="publish-trip__combobox">
       <TextField
-        variant="filled"
+        variant={campusesFailed ? 'error' : 'filled'}
         label={label}
         placeholder="Elegí una sede"
+        helperText={campusesFailed ? 'No pudimos cargar las sedes.' : undefined}
         value={campusLabel}
         readOnly
         role="combobox"
