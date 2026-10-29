@@ -16,6 +16,7 @@ import tripsHeader from '../../assets/images/trips-header.png';
 import publishTripCar from '../../assets/images/publish-trip-car.png';
 import './index.css';
 import { TravelIntentCard } from '../../components/travelintentcard';
+import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import {
   getMyTravelIntents,
   type TravelIntent,
@@ -38,6 +39,7 @@ export function Trips() {
   const [trips, setTrips] = useState<TripDetail[]>([]);
   const [intents, setIntents] = useState<TravelIntent[]>([]);
   const [hasCar, setHasCar] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [intentCreated] = useState(
     () => (location.state as { intentCreated?: boolean } | null)?.intentCreated,
   );
@@ -158,23 +160,13 @@ export function Trips() {
                   : 'Avisá cuándo necesitás viajar y encontrá quién te lleve'}
               </p>
               <div className="trips__publish-actions">
-                {hasCar && (
-                  <Button
-                    type="button"
-                    variant="fulfilled"
-                    size="medium"
-                    onClick={() => navigate('/trips/new')}
-                  >
-                    Publicar viaje
-                  </Button>
-                )}
                 <Button
                   type="button"
-                  variant={hasCar ? 'outlined' : 'fulfilled'}
+                  variant="fulfilled"
                   size="medium"
-                  onClick={() => navigate('/trips/intents/new')}
+                  onClick={() => setIsDrawerOpen(true)}
                 >
-                  Necesito un viaje
+                  Publicar viaje
                 </Button>
               </div>
             </div>
@@ -222,6 +214,13 @@ export function Trips() {
             )}
           </section>
         </>
+      )}
+
+      {isDrawerOpen && (
+        <QuickActionsDrawer
+          hasCar={hasCar}
+          onClose={() => setIsDrawerOpen(false)}
+        />
       )}
 
       <NavBar activeItem="viajes" />
