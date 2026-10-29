@@ -10,6 +10,8 @@ import { NavBar } from '../../components/navbar';
 import { ProfilePendingCard } from '../../components/profilependingcard';
 import { EmptyTripsState } from '../../components/emptytripsstate';
 import { TripListCard } from '../../components/triplistcard';
+import { PublishTripCard } from '../../components/publishtripcard';
+import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import { IconBooks } from '../../assets/icons/IconBooks';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
 import { IconCarFront } from '../../assets/icons/IconCarFront';
@@ -38,6 +40,7 @@ export function Home() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [upcomingTrips, setUpcomingTrips] = useState<TripDetail[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const [tripPublished] = useState(
@@ -162,6 +165,13 @@ export function Home() {
             </div>
           )}
 
+          <div className="home__publish-card">
+            <PublishTripCard
+              hasCar={Boolean(profile?.hasCar)}
+              onPublish={() => setIsDrawerOpen(true)}
+            />
+          </div>
+
           <section className="home__trips">
             <div className="home__trips-header">
               <h2 className="home__trips-title">Próximos viajes</h2>
@@ -186,6 +196,13 @@ export function Home() {
             )}
           </section>
         </>
+      )}
+
+      {isDrawerOpen && (
+        <QuickActionsDrawer
+          hasCar={Boolean(profile?.hasCar)}
+          onClose={() => setIsDrawerOpen(false)}
+        />
       )}
 
       <NavBar activeItem="home" />

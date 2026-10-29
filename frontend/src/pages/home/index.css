@@ -65,6 +65,10 @@
   padding: 0 10px;
 }
 
+.home__publish-card {
+  padding: 0 10px;
+}
+
 .home__trips {
   display: flex;
   flex-direction: column;
