@@ -28,6 +28,7 @@ import {
   type CatalogUniversity,
 } from '../../lib/universitiesApi';
 import { getProfileCompletion } from '../../lib/profileCompletion';
+import { applyMinimum, parseNumericInput } from '../../lib/numberInput';
 import './index.css';
 
 interface FormState {
@@ -537,7 +538,13 @@ export function Profile() {
                 label="Año de cursada"
                 placeholder="Ej. 3"
                 value={form.year}
-                onChange={(e) => setField('year', e.target.value)}
+                inputMode="numeric"
+                onChange={(e) =>
+                  setField(
+                    'year',
+                    applyMinimum(parseNumericInput(e.target.value, 6), 1),
+                  )
+                }
               />
               <div className="profile__full">
                 <TextField
@@ -649,11 +656,16 @@ export function Profile() {
                   <TextField
                     variant="filled"
                     label="Asientos disponibles"
+                    inputMode="numeric"
                     value={
                       form.availableSeats ? String(form.availableSeats) : ''
                     }
-                    onChange={() => {}}
-                    readOnly
+                    onChange={(e) =>
+                      setField(
+                        'availableSeats',
+                        Number(parseNumericInput(e.target.value)),
+                      )
+                    }
                     placeholder="Ej. 2"
                     rightIcon={
                       <NumberStepper
@@ -667,9 +679,14 @@ export function Profile() {
                   <TextField
                     variant="filled"
                     label="Desvío máximo (km)"
+                    inputMode="numeric"
                     value={form.detourToleranceKm}
-                    onChange={() => {}}
-                    readOnly
+                    onChange={(e) =>
+                      setField(
+                        'detourToleranceKm',
+                        parseNumericInput(e.target.value),
+                      )
+                    }
                     placeholder="Ej. 2"
                     rightIcon={
                       <NumberStepper

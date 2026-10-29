@@ -20,6 +20,7 @@ import {
   type UpsertProfilePayload,
 } from '../../lib/profileApi';
 import { getUniversityCampuses, type Campus } from '../../lib/universitiesApi';
+import { applyMinimum, parseNumericInput } from '../../lib/numberInput';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import ConexiaLoader from '../../components/ConexiaLoader/index.tsx';
@@ -456,10 +457,12 @@ export function Questionnaire() {
               </div>
               <TextField
                 type="text"
+                inputMode="numeric"
                 label="Año de cursada"
                 value={year}
-                onChange={() => {}}
-                readOnly
+                onChange={(e) =>
+                  setYear(applyMinimum(parseNumericInput(e.target.value, 6), 1))
+                }
                 placeholder="Seleccioná una opción"
                 rightIcon={
                   <NumberStepper
@@ -551,10 +554,14 @@ export function Questionnaire() {
               <div className="questionnaire__seats">
                 <TextField
                   type="text"
+                  inputMode="numeric"
                   label="¿Cuántos lugares podrías ofrecer?"
                   value={availableSeats}
-                  onChange={() => {}}
-                  readOnly
+                  onChange={(e) =>
+                    setAvailableSeats(
+                      applyMinimum(parseNumericInput(e.target.value), 1),
+                    )
+                  }
                   placeholder="Ej. 2"
                   rightIcon={
                     <NumberStepper
