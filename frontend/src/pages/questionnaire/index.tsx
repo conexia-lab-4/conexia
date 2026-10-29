@@ -9,6 +9,7 @@ import { NumberStepper } from '../../components/numberstepper';
 import { IconCar } from '../../assets/icons/IconCar.tsx';
 import { IconBackpack } from '../../assets/icons/IconBackpack.tsx';
 import { UNIVERSITIES } from './universities';
+import { CAREERS } from './careers';
 import './index.css';
 import { IconCheck } from '../../assets/icons/IconCheck.tsx';
 import { useNavigate } from 'react-router-dom';
@@ -24,19 +25,6 @@ import { auth } from '../../lib/firebase';
 import ConexiaLoader from '../../components/ConexiaLoader/index.tsx';
 
 const TOTAL_STEPS = 3;
-
-const CAREERS = [
-  'Ingeniería en Informática',
-  'Administración de Empresas',
-  'Derecho',
-  'Medicina',
-  'Arquitectura',
-  'Comunicación',
-  'Psicología',
-  'Contador Público',
-  'Diseño Industrial',
-  'Economía',
-];
 
 function mapProfileToFormState(profile: ProfileResponse) {
   // Perfiles anteriores al catálogo: se reconoce la universidad por su nombre

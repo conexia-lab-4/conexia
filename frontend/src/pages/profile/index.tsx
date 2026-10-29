@@ -14,6 +14,7 @@ import { IconCar } from '../../assets/icons/IconCar';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
 import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
+import { CAREERS } from '../questionnaire/careers';
 import {
   getProfile,
   upsertProfile,
@@ -160,6 +161,7 @@ export function Profile() {
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [isUniversityOpen, setIsUniversityOpen] = useState(false);
   const [isCampusOpen, setIsCampusOpen] = useState(false);
+  const [isCareerOpen, setIsCareerOpen] = useState(false);
   const [universities, setUniversities] = useState<CatalogUniversity[]>([]);
   const [loadedCampuses, setLoadedCampuses] = useState<{
     universityId: string;
@@ -290,6 +292,11 @@ export function Profile() {
     Boolean(form.universityId) &&
     !campusesFailed &&
     loadedCampuses?.universityId !== form.universityId;
+
+  const careerOptions =
+    form.career && !CAREERS.includes(form.career)
+      ? [form.career, ...CAREERS]
+      : CAREERS;
 
   const colorOptions =
     form.carColor && !CAR_COLORS.includes(form.carColor)
@@ -440,13 +447,43 @@ export function Profile() {
                   </ul>
                 )}
               </div>
-              <TextField
-                variant="filled"
-                label="Carrera"
-                placeholder="Ej. Ingeniería en Informática"
-                value={form.career}
-                onChange={(e) => setField('career', e.target.value)}
-              />
+              <div className="profile__combobox">
+                <TextField
+                  variant="filled"
+                  label="Carrera"
+                  placeholder="Elegí una carrera"
+                  value={form.career}
+                  readOnly
+                  role="combobox"
+                  aria-expanded={isCareerOpen}
+                  onClick={() => setIsCareerOpen((open) => !open)}
+                  onBlur={() => setTimeout(() => setIsCareerOpen(false), 150)}
+                  rightIcon={
+                    <IconChevronDown size={20} color="var(--color-grey-400)" />
+                  }
+                />
+                {isCareerOpen && (
+                  <ul className="profile__combobox-list" role="listbox">
+                    {careerOptions.map((career) => (
+                      <li key={career}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={form.career === career}
+                          className="profile__combobox-option text-body-2"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setField('career', career);
+                            setIsCareerOpen(false);
+                          }}
+                        >
+                          {career}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="profile__combobox">
                 <TextField
                   variant={campusesFailed ? 'error' : 'filled'}
