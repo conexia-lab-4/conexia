@@ -42,9 +42,13 @@ export interface TripDetail extends Trip {
   isHistorical: boolean;
 }
 
+export type RouteDirection = 'TO_CAMPUS' | 'FROM_CAMPUS';
+
 export interface CreateTripPayload {
   origin: string;
   destination: string;
+  campusId: string;
+  routeDirection: RouteDirection;
   departureTime: string;
   arrivalTime: string;
 }

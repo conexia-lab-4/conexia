@@ -27,6 +27,7 @@ describe('TripsService', () => {
       update: jest.Mock;
     };
     tripPassenger: { create: jest.Mock; deleteMany: jest.Mock };
+    campus: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
@@ -38,12 +39,23 @@ describe('TripsService', () => {
   const validDto: CreateTripDto = {
     origin: 'Pilar',
     destination: 'Palermo',
+    campusId: 'ua-pilar',
+    routeDirection: 'TO_CAMPUS',
     departureTime: '2026-10-05T08:00:00.000Z',
     arrivalTime: '2026-10-05T09:00:00.000Z',
   };
 
   const originCoords = { lat: -34.4587, lng: -58.9142 };
   const destinationCoords = { lat: -34.5889, lng: -58.4306 };
+  const campus = {
+    id: 'ua-pilar',
+    name: 'Sede Pilar',
+    latitude: -34.4515,
+    longitude: -58.8621,
+    university: { id: 'ua', name: 'Universidad Austral' },
+  };
+  const campusLabel = 'Universidad Austral - Sede Pilar';
+  const campusCoords = { lat: campus.latitude, lng: campus.longitude };
 
   beforeEach(() => {
     prismaMock = {
@@ -56,8 +68,10 @@ describe('TripsService', () => {
         update: jest.fn(),
       },
       tripPassenger: { create: jest.fn(), deleteMany: jest.fn() },
+      campus: { findUnique: jest.fn() },
       $transaction: jest.fn(),
     };
+    prismaMock.campus.findUnique.mockResolvedValue(campus);
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock),
     );
@@ -111,7 +125,7 @@ describe('TripsService', () => {
       expect(prismaMock.trip.create).not.toHaveBeenCalled();
     });
 
-    it('publica el viaje con las coordenadas geocodificadas y los asientos del perfil', async () => {
+    it('publica el viaje con la casa geocodificada, la sede del catálogo y los asientos del perfil', async () => {
       prismaMock.studentProfile.findUnique.mockResolvedValue({
         hasCar: true,
         availableSeats: 3,
@@ -122,23 +136,92 @@ describe('TripsService', () => {
       const result = await service.create(userId, validDto);
 
       expect(result).toEqual(created);
+      expect(geoMock.geocode).toHaveBeenCalledTimes(1);
       expect(geoMock.geocode).toHaveBeenCalledWith(validDto.origin);
-      expect(geoMock.geocode).toHaveBeenCalledWith(validDto.destination);
       expect(prismaMock.trip.create).toHaveBeenCalledWith({
         data: {
           driverId: userId,
           origin: validDto.origin,
           originLat: originCoords.lat,
           originLng: originCoords.lng,
-          destination: validDto.destination,
-          destinationLat: destinationCoords.lat,
-          destinationLng: destinationCoords.lng,
+          destination: campusLabel,
+          destinationLat: campusCoords.lat,
+          destinationLng: campusCoords.lng,
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
           departureTime: new Date(validDto.departureTime),
           arrivalTime: new Date(validDto.arrivalTime),
           capacity: 3,
         },
         include: { passengers: true },
       });
+    });
+
+    it('en la vuelta la sede es el origen y la casa es el destino', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      geoMock.geocode.mockResolvedValue(destinationCoords);
+      prismaMock.trip.create.mockResolvedValue({ id: 'trip-1' });
+
+      await service.create(userId, {
+        ...validDto,
+        routeDirection: 'FROM_CAMPUS',
+      });
+
+      expect(geoMock.geocode).toHaveBeenCalledWith(validDto.destination);
+      expect(prismaMock.trip.create).toHaveBeenCalledWith({
+        data: {
+          driverId: userId,
+          origin: campusLabel,
+          originLat: campusCoords.lat,
+          originLng: campusCoords.lng,
+          destination: validDto.destination,
+          destinationLat: destinationCoords.lat,
+          destinationLng: destinationCoords.lng,
+          campusId: 'ua-pilar',
+          routeDirection: 'FROM_CAMPUS',
+          departureTime: new Date(validDto.departureTime),
+          arrivalTime: new Date(validDto.arrivalTime),
+          capacity: 3,
+        },
+        include: { passengers: true },
+      });
+    });
+
+    it('ignora el texto escrito para el extremo de la universidad', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      prismaMock.trip.create.mockResolvedValue({ id: 'trip-1' });
+
+      await service.create(userId, {
+        ...validDto,
+        destination: 'Cualquier cosa',
+      });
+
+      expect(geoMock.geocode).not.toHaveBeenCalledWith('Cualquier cosa');
+      expect(prismaMock.trip.create).toHaveBeenCalledTimes(1);
+      const [{ data }] = prismaMock.trip.create.mock.calls[0] as [
+        { data: { destination: string } },
+      ];
+      expect(data.destination).toBe(campusLabel);
+    });
+
+    it('responde 400 y no crea el viaje si la sede no existe', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        hasCar: true,
+        availableSeats: 3,
+      });
+      prismaMock.campus.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(userId, validDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(geoMock.geocode).not.toHaveBeenCalled();
+      expect(prismaMock.trip.create).not.toHaveBeenCalled();
     });
 
     it('registra la publicación del viaje en las métricas', async () => {
@@ -195,18 +278,19 @@ describe('TripsService', () => {
       expect(prismaMock.trip.create).not.toHaveBeenCalled();
     });
 
-    it('responde 400 y no crea el viaje si el destino no se puede resolver', async () => {
+    it('responde 400 y no crea el viaje si la casa (destino en la vuelta) no se puede resolver', async () => {
       prismaMock.studentProfile.findUnique.mockResolvedValue({
         hasCar: true,
         availableSeats: 3,
       });
-      geoMock.geocode.mockImplementation((address: string) =>
-        Promise.resolve(address === validDto.origin ? originCoords : null),
-      );
+      geoMock.geocode.mockResolvedValue(null);
 
-      await expect(service.create(userId, validDto)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(userId, {
+          ...validDto,
+          routeDirection: 'FROM_CAMPUS',
+        }),
+      ).rejects.toThrow(BadRequestException);
       expect(prismaMock.trip.create).not.toHaveBeenCalled();
     });
 
@@ -574,6 +658,8 @@ describe('TripsService', () => {
       arrivalTime: new Date('2026-10-05T09:00:00.000Z'),
       capacity: 3,
       driver: { id: userId, email: 'conductor@test.com' },
+      campusId: null,
+      routeDirection: null,
     };
     const newCoords = { lat: -34.42, lng: -58.58 };
 
@@ -681,6 +767,136 @@ describe('TripsService', () => {
       await service.update(tripId, userId, { origin: 'Pilar' });
 
       expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
+    });
+
+    describe('viajes con sede', () => {
+      const tripWithCampus = {
+        ...existingTrip,
+        destination: campusLabel,
+        destinationLat: campusCoords.lat,
+        destinationLng: campusCoords.lng,
+        campusId: 'ua-pilar',
+        routeDirection: 'TO_CAMPUS',
+      };
+
+      beforeEach(() => {
+        prismaMock.trip.findUnique.mockResolvedValue(tripWithCampus);
+      });
+
+      it('conserva sede y direcciones sin geocodificar si solo cambia el horario', async () => {
+        await service.update(tripId, userId, {
+          departureTime: '2026-10-05T07:30:00.000Z',
+        });
+
+        expect(geoMock.geocode).not.toHaveBeenCalled();
+        expect(updateData()).toMatchObject({
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+          origin: 'Pilar',
+          destination: campusLabel,
+        });
+      });
+
+      it('al cambiar de sede, el extremo de la universidad usa las coordenadas de la nueva sede', async () => {
+        prismaMock.campus.findUnique.mockResolvedValue({
+          id: 'uba-paternal',
+          name: 'Sede Paternal',
+          latitude: -34.5934,
+          longitude: -58.4855,
+          university: { id: 'uba', name: 'Universidad de Buenos Aires' },
+        });
+
+        await service.update(tripId, userId, { campusId: 'uba-paternal' });
+
+        expect(geoMock.geocode).not.toHaveBeenCalled();
+        expect(updateData()).toMatchObject({
+          campusId: 'uba-paternal',
+          destination: 'Universidad de Buenos Aires - Sede Paternal',
+          destinationLat: -34.5934,
+          destinationLng: -58.4855,
+          origin: 'Pilar',
+          originLat: originCoords.lat,
+          originLng: originCoords.lng,
+        });
+      });
+
+      it('al invertir el recorrido, la casa pasa al otro extremo sin geocodificar de nuevo', async () => {
+        await service.update(tripId, userId, {
+          routeDirection: 'FROM_CAMPUS',
+        });
+
+        expect(geoMock.geocode).not.toHaveBeenCalled();
+        expect(updateData()).toMatchObject({
+          routeDirection: 'FROM_CAMPUS',
+          origin: campusLabel,
+          originLat: campusCoords.lat,
+          originLng: campusCoords.lng,
+          destination: 'Pilar',
+          destinationLat: originCoords.lat,
+          destinationLng: originCoords.lng,
+        });
+      });
+
+      it('ignora el texto escrito para el extremo de la universidad', async () => {
+        await service.update(tripId, userId, { destination: 'Otro lado' });
+
+        expect(geoMock.geocode).not.toHaveBeenCalled();
+        expect(updateData()).toMatchObject({ destination: campusLabel });
+      });
+
+      it('geocodifica la casa solo si su dirección cambió', async () => {
+        geoMock.geocode.mockResolvedValue(newCoords);
+
+        await service.update(tripId, userId, { origin: 'Tigre' });
+
+        expect(geoMock.geocode).toHaveBeenCalledTimes(1);
+        expect(geoMock.geocode).toHaveBeenCalledWith('Tigre');
+        expect(updateData()).toMatchObject({
+          origin: 'Tigre',
+          originLat: newCoords.lat,
+          originLng: newCoords.lng,
+          destination: campusLabel,
+        });
+      });
+
+      it('rechaza una sede que no existe', async () => {
+        prismaMock.campus.findUnique.mockResolvedValue(null);
+
+        await expect(
+          service.update(tripId, userId, { campusId: 'no-existe' }),
+        ).rejects.toThrow(BadRequestException);
+        expect(prismaMock.trip.update).not.toHaveBeenCalled();
+      });
+
+      it('re-ejecuta el matching después de cambiar de sede', async () => {
+        await service.update(tripId, userId, { campusId: 'ua-pilar' });
+
+        expect(matchingMock.matchTrip).toHaveBeenCalledWith(tripId);
+      });
+    });
+
+    describe('viajes anteriores al catálogo', () => {
+      it('rechaza mandar solo la sede, sin la dirección del recorrido', async () => {
+        await expect(
+          service.update(tripId, userId, { campusId: 'ua-pilar' }),
+        ).rejects.toThrow(BadRequestException);
+        expect(prismaMock.trip.update).not.toHaveBeenCalled();
+      });
+
+      it('les asigna sede y dirección sin geocodificar si la casa no cambió', async () => {
+        await service.update(tripId, userId, {
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+        });
+
+        expect(geoMock.geocode).not.toHaveBeenCalled();
+        expect(updateData()).toMatchObject({
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+          origin: 'Pilar',
+          destination: campusLabel,
+        });
+      });
     });
   });
 

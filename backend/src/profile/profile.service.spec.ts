@@ -34,6 +34,8 @@ describe('ProfileService', () => {
       findUnique: jest.Mock<Promise<StudentProfileRecord | null>, [unknown]>;
       upsert: jest.Mock<Promise<StudentProfileRecord>, [unknown]>;
     };
+    campus: { findUnique: jest.Mock };
+    university: { findUnique: jest.Mock };
   };
   let avatarStorageMock: { uploadAvatar: jest.Mock };
   let displayNamesMock: { getPublicUsers: jest.Mock };
@@ -62,6 +64,8 @@ describe('ProfileService', () => {
         findUnique: jest.fn<Promise<StudentProfileRecord | null>, [unknown]>(),
         upsert: jest.fn<Promise<StudentProfileRecord>, [unknown]>(),
       },
+      campus: { findUnique: jest.fn() },
+      university: { findUnique: jest.fn() },
     };
     avatarStorageMock = { uploadAvatar: jest.fn() };
     displayNamesMock = {
@@ -447,6 +451,307 @@ describe('ProfileService', () => {
       });
 
       await expect(service.upsertProfile(userId, dto)).resolves.toBeDefined();
+    });
+  });
+
+  describe('upsertProfile con catálogo de universidades', () => {
+    const austral = { id: 'ua', name: 'Universidad Austral' };
+    const pilar = {
+      id: 'ua-pilar',
+      universityId: 'ua',
+      name: 'Sede Pilar',
+      university: austral,
+    };
+    const savedProfile: StudentProfileRecord = {
+      id: 'profile-1',
+      userId,
+      university: null,
+      career: null,
+      year: null,
+      campus: null,
+      hasCar: null,
+      availableSeats: null,
+      questionnaireCompleted: false,
+      carModel: null,
+      carColor: null,
+      originAddress: null,
+      phone: null,
+      birthDate: null,
+      bio: null,
+      detourToleranceKm: null,
+    };
+    // Perfil actual del usuario con una sede de la universidad indicada
+    const currentProfileWithCampusOf = (universityId: string | null) =>
+      ({
+        campusRef: universityId ? { universityId } : null,
+      }) as unknown as StudentProfileRecord;
+
+    // Perfil actual con la universidad y la sede elegidas del catálogo
+    const currentProfileNamed = (
+      university: string | null,
+      campus: string | null,
+    ) =>
+      ({
+        universityRef: university ? { name: university } : null,
+        campusRef: campus ? { name: campus } : null,
+      }) as unknown as StudentProfileRecord;
+
+    beforeEach(() => {
+      prismaMock.studentProfile.upsert.mockResolvedValue(savedProfile);
+    });
+
+    it('guarda universidad y sede del catálogo y completa los textos con sus nombres', async () => {
+      prismaMock.campus.findUnique.mockResolvedValue(pilar);
+
+      await service.upsertProfile(userId, {
+        universityId: 'ua',
+        campusId: 'ua-pilar',
+      });
+
+      expect(prismaMock.campus.findUnique).toHaveBeenCalledWith({
+        where: { id: 'ua-pilar' },
+        include: { university: true },
+      });
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+        create: {
+          userId,
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+      });
+    });
+
+    it('deduce la universidad cuando solo llega la sede', async () => {
+      prismaMock.campus.findUnique.mockResolvedValue(pilar);
+
+      await service.upsertProfile(userId, { campusId: 'ua-pilar' });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+        create: {
+          userId,
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+      });
+    });
+
+    it('los nombres del catálogo pisan los textos enviados en la misma request', async () => {
+      prismaMock.campus.findUnique.mockResolvedValue(pilar);
+
+      await service.upsertProfile(userId, {
+        university: 'Otra',
+        campus: 'Otra sede',
+        campusId: 'ua-pilar',
+      });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+        create: {
+          userId,
+          universityId: 'ua',
+          campusId: 'ua-pilar',
+          university: 'Universidad Austral',
+          campus: 'Sede Pilar',
+        },
+      });
+    });
+
+    it('rechaza una sede que no existe', async () => {
+      prismaMock.campus.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.upsertProfile(userId, { campusId: 'no-existe' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza una sede que no pertenece a la universidad elegida', async () => {
+      prismaMock.campus.findUnique.mockResolvedValue(pilar);
+
+      await expect(
+        service.upsertProfile(userId, {
+          universityId: 'uba',
+          campusId: 'ua-pilar',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza una universidad que no existe', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.upsertProfile(userId, { universityId: 'no-existe' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('borra la sede cuando se elige solo la universidad y el perfil no tenía sede', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(austral);
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileWithCampusOf(null),
+      );
+
+      await service.upsertProfile(userId, { universityId: 'ua' });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          universityId: 'ua',
+          university: 'Universidad Austral',
+          campusId: null,
+          campus: null,
+        },
+        create: {
+          userId,
+          universityId: 'ua',
+          university: 'Universidad Austral',
+          campusId: null,
+          campus: null,
+        },
+      });
+    });
+
+    it('borra la sede cuando la sede actual es de otra universidad', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(austral);
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileWithCampusOf('uba'),
+      );
+
+      await service.upsertProfile(userId, { universityId: 'ua' });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          universityId: 'ua',
+          university: 'Universidad Austral',
+          campusId: null,
+          campus: null,
+        },
+        create: {
+          userId,
+          universityId: 'ua',
+          university: 'Universidad Austral',
+          campusId: null,
+          campus: null,
+        },
+      });
+    });
+
+    it('conserva la sede cuando es de la misma universidad que se elige', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(austral);
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileWithCampusOf('ua'),
+      );
+
+      await service.upsertProfile(userId, { universityId: 'ua' });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: { universityId: 'ua', university: 'Universidad Austral' },
+        create: {
+          userId,
+          universityId: 'ua',
+          university: 'Universidad Austral',
+        },
+      });
+    });
+
+    it('rechaza un nombre de universidad que contradice al catálogo del perfil', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { university: 'Cualquier cosa' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un nombre de sede que contradice al catálogo del perfil', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { campus: 'Otra sede' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un nombre de sede si el perfil no tiene una sede del catálogo', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', null),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { campus: 'Cualquier cosa' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('acepta nombres iguales a los del catálogo sin modificarlos', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await service.upsertProfile(userId, {
+        university: 'Universidad Austral',
+        campus: 'Sede Pilar',
+        career: 'Medicina',
+      });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: { career: 'Medicina' },
+        create: { userId, career: 'Medicina' },
+      });
+    });
+
+    it('ignora el nombre de sede enviado cuando se conserva la sede del catálogo', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(austral);
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileWithCampusOf('ua'),
+      );
+
+      await service.upsertProfile(userId, {
+        universityId: 'ua',
+        campus: 'Otra sede',
+      });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: { universityId: 'ua', university: 'Universidad Austral' },
+        create: {
+          userId,
+          universityId: 'ua',
+          university: 'Universidad Austral',
+        },
+      });
     });
   });
 

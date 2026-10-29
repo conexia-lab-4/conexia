@@ -3,8 +3,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsEnum,
 } from 'class-validator';
 import { ArrivalAfterDeparture } from './arrival-after-departure.validator';
+import { RouteDirection } from '../../../generated/prisma/client';
 
 export class UpdateTripDto {
   @IsOptional()
@@ -25,4 +27,13 @@ export class UpdateTripDto {
   @IsDateString()
   @ArrivalAfterDeparture()
   arrivalTime?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  campusId?: string;
+
+  @IsOptional()
+  @IsEnum(RouteDirection)
+  routeDirection?: RouteDirection;
 }
