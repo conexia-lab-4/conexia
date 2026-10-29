@@ -2,6 +2,11 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
+import { AvatarStorageService } from '../firebase/avatar-storage.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
 
 type StudentProfileRecord = {
   id: string;
@@ -32,6 +37,8 @@ describe('ProfileService', () => {
     campus: { findUnique: jest.Mock };
     university: { findUnique: jest.Mock };
   };
+  let avatarStorageMock: { uploadAvatar: jest.Mock };
+  let displayNamesMock: { getPublicUsers: jest.Mock };
   const userId = 'user-123';
 
   const validDto: UpsertProfileDto = {
@@ -60,7 +67,17 @@ describe('ProfileService', () => {
       campus: { findUnique: jest.fn() },
       university: { findUnique: jest.fn() },
     };
-    service = new ProfileService(prismaMock as unknown as PrismaService);
+    avatarStorageMock = { uploadAvatar: jest.fn() };
+    displayNamesMock = {
+      getPublicUsers: jest
+        .fn()
+        .mockResolvedValue(new Map<string, PublicUser>()),
+    };
+    service = new ProfileService(
+      prismaMock as unknown as PrismaService,
+      avatarStorageMock as unknown as AvatarStorageService,
+      displayNamesMock as unknown as DisplayNamesService,
+    );
   });
 
   describe('getProfile', () => {
@@ -87,7 +104,7 @@ describe('ProfileService', () => {
 
       const result = await service.getProfile(userId);
 
-      expect(result).toEqual(profile);
+      expect(result).toEqual({ ...profile, photoUrl: null });
       expect(prismaMock.studentProfile.findUnique).toHaveBeenCalledWith({
         where: { userId },
       });
@@ -117,6 +134,21 @@ describe('ProfileService', () => {
       const result = await service.getProfile(userId);
 
       expect(result.hasCar).toBeNull();
+    });
+
+    it('incluye la foto del usuario cuando tiene una', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue({
+        id: 'profile-1',
+        userId,
+      } as StudentProfileRecord);
+      displayNamesMock.getPublicUsers.mockResolvedValue(
+        new Map([[userId, { displayName: null, photoUrl: 'https://foto/u' }]]),
+      );
+
+      const result = await service.getProfile(userId);
+
+      expect(result.photoUrl).toBe('https://foto/u');
+      expect(displayNamesMock.getPublicUsers).toHaveBeenCalledWith([userId]);
     });
 
     it('lanza NotFoundException cuando el usuario no tiene perfil', async () => {
@@ -152,7 +184,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, validDto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -295,7 +327,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, dto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -358,7 +390,7 @@ describe('ProfileService', () => {
 
       const result = await service.upsertProfile(userId, dto);
 
-      expect(result).toEqual(created);
+      expect(result).toEqual({ ...created, photoUrl: null });
       expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -452,6 +484,16 @@ describe('ProfileService', () => {
     const currentProfileWithCampusOf = (universityId: string | null) =>
       ({
         campusRef: universityId ? { universityId } : null,
+      }) as unknown as StudentProfileRecord;
+
+    // Perfil actual con la universidad y la sede elegidas del catálogo
+    const currentProfileNamed = (
+      university: string | null,
+      campus: string | null,
+    ) =>
+      ({
+        universityRef: university ? { name: university } : null,
+        campusRef: campus ? { name: campus } : null,
       }) as unknown as StudentProfileRecord;
 
     beforeEach(() => {
@@ -637,6 +679,94 @@ describe('ProfileService', () => {
           university: 'Universidad Austral',
         },
       });
+    });
+
+    it('rechaza un nombre de universidad que contradice al catálogo del perfil', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { university: 'Cualquier cosa' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un nombre de sede que contradice al catálogo del perfil', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { campus: 'Otra sede' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un nombre de sede si el perfil no tiene una sede del catálogo', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', null),
+      );
+
+      await expect(
+        service.upsertProfile(userId, { campus: 'Cualquier cosa' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.studentProfile.upsert).not.toHaveBeenCalled();
+    });
+
+    it('acepta nombres iguales a los del catálogo sin modificarlos', async () => {
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileNamed('Universidad Austral', 'Sede Pilar'),
+      );
+
+      await service.upsertProfile(userId, {
+        university: 'Universidad Austral',
+        campus: 'Sede Pilar',
+        career: 'Medicina',
+      });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: { career: 'Medicina' },
+        create: { userId, career: 'Medicina' },
+      });
+    });
+
+    it('ignora el nombre de sede enviado cuando se conserva la sede del catálogo', async () => {
+      prismaMock.university.findUnique.mockResolvedValue(austral);
+      prismaMock.studentProfile.findUnique.mockResolvedValue(
+        currentProfileWithCampusOf('ua'),
+      );
+
+      await service.upsertProfile(userId, {
+        universityId: 'ua',
+        campus: 'Otra sede',
+      });
+
+      expect(prismaMock.studentProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: { universityId: 'ua', university: 'Universidad Austral' },
+        create: {
+          userId,
+          universityId: 'ua',
+          university: 'Universidad Austral',
+        },
+      });
+    });
+  });
+
+  describe('updatePhoto', () => {
+    it('sube la foto como avatar del usuario y devuelve su URL', async () => {
+      const photo = { buffer: Buffer.from('img') } as Express.Multer.File;
+      avatarStorageMock.uploadAvatar.mockResolvedValue('https://foto/nueva');
+
+      const result = await service.updatePhoto(userId, photo);
+
+      expect(avatarStorageMock.uploadAvatar).toHaveBeenCalledWith(
+        userId,
+        photo,
+      );
+      expect(result).toEqual({ photoUrl: 'https://foto/nueva' });
     });
   });
 });

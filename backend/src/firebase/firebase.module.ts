@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import { AvatarStorageService } from './avatar-storage.service';
 import { DisplayNamesService } from './display-names.service';
 
 @Global()
@@ -18,13 +19,15 @@ import { DisplayNamesService } from './display-names.service';
                 '\n',
               ),
             }),
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
           });
         }
         return admin;
       },
     },
     DisplayNamesService,
+    AvatarStorageService,
   ],
-  exports: ['FIREBASE_ADMIN', DisplayNamesService],
+  exports: ['FIREBASE_ADMIN', DisplayNamesService, AvatarStorageService],
 })
 export class FirebaseModule {}

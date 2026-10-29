@@ -16,6 +16,7 @@ export interface TripUser {
   id: string;
   email: string;
   displayName: string | null;
+  photoUrl: string | null;
 }
 
 export interface TripPassenger {

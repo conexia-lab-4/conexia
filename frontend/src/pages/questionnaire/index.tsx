@@ -120,7 +120,10 @@ export function Questionnaire() {
     let cancelled = false;
     getUniversityCampuses(universityId)
       .then((items) => {
-        if (!cancelled) setLoadedCampuses({ universityId, items });
+        if (cancelled) return;
+        setLoadedCampuses({ universityId, items });
+        // Si antes había fallado y ahora funcionó, se borra el error
+        setFailedCampusesFor((prev) => (prev === universityId ? null : prev));
       })
       .catch(() => {
         if (!cancelled) setFailedCampusesFor(universityId);
