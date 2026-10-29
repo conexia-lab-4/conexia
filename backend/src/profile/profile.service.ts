@@ -4,11 +4,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AvatarStorageService } from '../firebase/avatar-storage.service';
+import { DisplayNamesService } from '../firebase/display-names.service';
 import { UpsertProfileDto } from './dto/upsert-profile.dto';
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly avatarStorage: AvatarStorageService,
+    private readonly displayNames: DisplayNamesService,
+  ) {}
 
   async getProfile(userId: string) {
     const profile = await this.prisma.studentProfile.findUnique({
@@ -19,7 +25,7 @@ export class ProfileService {
       throw new NotFoundException('El usuario todavía no completó su perfil');
     }
 
-    return profile;
+    return this.withPhoto(profile);
   }
 
   async upsertProfile(userId: string, dto: UpsertProfileDto) {
@@ -60,6 +66,20 @@ export class ProfileService {
       create: { userId, ...data },
     });
 
-    return profile;
+    return this.withPhoto(profile);
+  }
+
+  async updatePhoto(userId: string, photo: Express.Multer.File) {
+    const photoUrl = await this.avatarStorage.uploadAvatar(userId, photo);
+    return { photoUrl };
+  }
+
+  // La foto vive en Firebase Auth; sin foto (o si Firebase falla) queda null
+  private async withPhoto<T extends { userId: string }>(profile: T) {
+    const users = await this.displayNames.getPublicUsers([profile.userId]);
+    return {
+      ...profile,
+      photoUrl: users.get(profile.userId)?.photoUrl ?? null,
+    };
   }
 }

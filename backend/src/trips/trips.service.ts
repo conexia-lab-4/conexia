@@ -15,7 +15,10 @@ import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
-import { DisplayNamesService } from '../firebase/display-names.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -313,43 +316,45 @@ export class TripsService {
     ];
   }
 
-  private attachNames<T extends TripWithPeople>(
+  private attachPublicUsers<T extends TripWithPeople>(
     trip: T,
-    names: Map<string, string | null>,
+    users: Map<string, PublicUser>,
   ) {
     return {
       ...trip,
       driver: {
         ...trip.driver,
-        displayName: names.get(trip.driver.id) ?? null,
+        displayName: users.get(trip.driver.id)?.displayName ?? null,
+        photoUrl: users.get(trip.driver.id)?.photoUrl ?? null,
       },
       passengers: trip.passengers.map((passenger) => ({
         ...passenger,
         user: {
           ...passenger.user,
-          displayName: names.get(passenger.user.id) ?? null,
+          displayName: users.get(passenger.user.id)?.displayName ?? null,
+          photoUrl: users.get(passenger.user.id)?.photoUrl ?? null,
         },
       })),
     };
   }
 
   private async presentTrip<T extends TripWithPeople>(trip: T, userId: string) {
-    const names = await this.displayNames.getDisplayNames(this.personIds(trip));
+    const users = await this.displayNames.getPublicUsers(this.personIds(trip));
 
-    return this.withDerivedFields(this.attachNames(trip, names), userId);
+    return this.withDerivedFields(this.attachPublicUsers(trip, users), userId);
   }
 
-  // Los nombres de todos los viajes se piden en una sola consulta
+  // Los nombres y fotos de todos los viajes se piden en una sola consulta
   private async presentTrips<T extends TripWithPeople>(
     trips: T[],
     userId: string,
   ) {
-    const names = await this.displayNames.getDisplayNames(
+    const users = await this.displayNames.getPublicUsers(
       trips.flatMap((trip) => this.personIds(trip)),
     );
 
     return trips.map((trip) =>
-      this.withDerivedFields(this.attachNames(trip, names), userId),
+      this.withDerivedFields(this.attachPublicUsers(trip, users), userId),
     );
   }
 
