@@ -4,6 +4,7 @@ import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { Button } from '../../components/button';
 import { RouteTimeline } from '../../components/routetimeline';
+import { Avatar } from '../../components/avatar';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCar } from '../../assets/icons/IconCar';
@@ -20,7 +21,6 @@ import {
   formatTime,
   formatTripDateTime,
   getPersonName,
-  getInitials,
 } from '../../lib/tripFormat';
 import '../tripDetails/index.css';
 
@@ -161,9 +161,11 @@ export function MatchDetailPage() {
             </div>
 
             <div className="trip-detail__driver">
-              <span className="trip-detail__driver-avatar">
-                {getInitials(driver.displayName)}
-              </span>
+              <Avatar
+                className="trip-detail__driver-avatar"
+                photoUrl={driver.photoUrl}
+                name={driver.displayName}
+              />
               <span className="trip-detail__driver-name">
                 {getPersonName(driver.displayName)}
               </span>

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubjectsController } from './subjects.controller';
 import { SubjectsService } from './subjects.service';
+import { ScheduleExtractionService } from './schedule-extraction.service';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { AuthenticatedUser } from '../auth/current-user.decorator';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -14,6 +15,7 @@ describe('SubjectsController', () => {
     updateSubject: jest.Mock;
     removeSubject: jest.Mock;
   };
+  let extractionMock: { extract: jest.Mock };
 
   beforeEach(async () => {
     serviceMock = {
@@ -22,9 +24,13 @@ describe('SubjectsController', () => {
       updateSubject: jest.fn(),
       removeSubject: jest.fn(),
     };
+    extractionMock = { extract: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SubjectsController],
-      providers: [{ provide: SubjectsService, useValue: serviceMock }],
+      providers: [
+        { provide: SubjectsService, useValue: serviceMock },
+        { provide: ScheduleExtractionService, useValue: extractionMock },
+      ],
     })
       .overrideGuard(FirebaseAuthGuard)
       .useValue({ canActivate: jest.fn(() => true) })
@@ -87,5 +93,20 @@ describe('SubjectsController', () => {
       'user-autenticado',
       'subject-1',
     );
+  });
+
+  it('extract devuelve el borrador leído de la imagen sin guardar materias', async () => {
+    const image = {
+      buffer: Buffer.from('img'),
+      mimetype: 'image/png',
+    } as Express.Multer.File;
+    const draft = { subjects: [] };
+    extractionMock.extract.mockResolvedValue(draft);
+
+    const result = await controller.extract(image);
+
+    expect(extractionMock.extract).toHaveBeenCalledWith(image);
+    expect(result).toBe(draft);
+    expect(serviceMock.create).not.toHaveBeenCalled();
   });
 });

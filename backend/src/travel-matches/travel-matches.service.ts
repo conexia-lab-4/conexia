@@ -88,7 +88,7 @@ export class TravelMatchesService {
       },
     });
 
-    const names = await this.displayNames.getDisplayNames(
+    const users = await this.displayNames.getPublicUsers(
       matches.map((match) => match.trip.driver.id),
     );
 
@@ -103,7 +103,8 @@ export class TravelMatchesService {
           driver: {
             id: driver.id,
             email: driver.email,
-            displayName: names.get(driver.id) ?? null,
+            displayName: users.get(driver.id)?.displayName ?? null,
+            photoUrl: users.get(driver.id)?.photoUrl ?? null,
             profile: driver.studentProfile,
           },
         },

@@ -90,7 +90,7 @@ export class ChatService {
       trip.driverId,
       ...trip.passengers.map((passenger) => passenger.userId),
     ];
-    const names = await this.displayNames.getDisplayNames(participantIds);
+    const users = await this.displayNames.getPublicUsers(participantIds);
 
     return {
       tripId,
@@ -102,7 +102,8 @@ export class ChatService {
         participantIds.map((id) => [
           id,
           {
-            displayName: names.get(id) ?? null,
+            displayName: users.get(id)?.displayName ?? null,
+            photoUrl: users.get(id)?.photoUrl ?? null,
             role: id === trip.driverId ? 'DRIVER' : 'PASSENGER',
           },
         ]),

@@ -7,7 +7,7 @@ import { DisplayNamesService } from '../firebase/display-names.service';
 describe('ChatService', () => {
   let service: ChatService;
   let prismaMock: { trip: { findUnique: jest.Mock } };
-  let displayNamesMock: { getDisplayNames: jest.Mock };
+  let displayNamesMock: { getPublicUsers: jest.Mock };
   let ref: { get: jest.Mock; update: jest.Mock };
   let tx: { get: jest.Mock; set: jest.Mock; update: jest.Mock };
   let doc: jest.Mock;
@@ -26,10 +26,10 @@ describe('ChatService', () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     prismaMock = { trip: { findUnique: jest.fn().mockResolvedValue(trip) } };
     displayNamesMock = {
-      getDisplayNames: jest.fn().mockResolvedValue(
+      getPublicUsers: jest.fn().mockResolvedValue(
         new Map([
-          ['driver-1', 'Ana'],
-          ['pasajero-1', null],
+          ['driver-1', { displayName: 'Ana', photoUrl: 'https://foto/ana' }],
+          ['pasajero-1', { displayName: null, photoUrl: null }],
         ]),
       ),
     };
@@ -69,8 +69,12 @@ describe('ChatService', () => {
     departureTime: admin.firestore.Timestamp.fromDate(departureTime),
     participantIds: ['driver-1', 'pasajero-1'],
     participants: {
-      'driver-1': { displayName: 'Ana', role: 'DRIVER' },
-      'pasajero-1': { displayName: null, role: 'PASSENGER' },
+      'driver-1': {
+        displayName: 'Ana',
+        photoUrl: 'https://foto/ana',
+        role: 'DRIVER',
+      },
+      'pasajero-1': { displayName: null, photoUrl: null, role: 'PASSENGER' },
     },
   };
 
