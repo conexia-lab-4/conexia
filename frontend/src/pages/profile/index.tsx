@@ -12,6 +12,7 @@ import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { IconUser } from '../../assets/icons/IconUser';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
+import { IconSignOut } from '../../assets/icons/IconSignOut.tsx';
 import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
 import { CAREERS } from '../questionnaire/careers';
@@ -317,6 +318,15 @@ export function Profile() {
         <p className="profile__subtitle text-body-2">
           Completá tu información para mejorar tus matches
         </p>
+        <button
+          type="button"
+          className="profile__logout-icon"
+          onClick={logout}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <IconSignOut size={24} color="var(--color-grey-400)" />
+        </button>
       </header>
 
       {status === 'loading' && (
@@ -721,10 +731,6 @@ export function Profile() {
           </Button>
         </>
       )}
-
-      <button type="button" className="profile__logout" onClick={logout}>
-        Cerrar sesión
-      </button>
 
       <NavBar activeItem="perfil" />
     </div>
