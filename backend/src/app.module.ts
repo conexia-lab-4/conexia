@@ -11,6 +11,7 @@ import { TestUtilsModule } from './test-utils/test-utils.module';
 import { TravelIntentsModule } from './travel-intents/travel-intents.module';
 import { TripsModule } from './trips/trips.module';
 import { TravelMatchesModule } from './travel-matches/travel-matches.module';
+import { UniversitiesModule } from './universities/universities.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TravelMatchesModule } from './travel-matches/travel-matches.module';
     TravelIntentsModule,
     TestUtilsModule,
     TravelMatchesModule,
+    UniversitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

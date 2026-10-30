@@ -23,9 +23,11 @@ model StudentProfile {
   id                     String    @id @default(uuid())
   userId                 String    @unique
   university             String?
+  universityId           String?
   career                 String?
   year                   Int?
   campus                 String?
+  campusId               String?
   hasCar                 Boolean?
   availableSeats         Int?
   questionnaireCompleted Boolean   @default(false)
@@ -40,6 +42,8 @@ model StudentProfile {
   updatedAt              DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+  universityRef University? @relation(fields: [universityId], references: [id])
+  campusRef     Campus?     @relation(fields: [campusId], references: [id])
 }
 
 enum DayOfWeek {
@@ -98,6 +102,8 @@ model Trip {
   destination    String
   destinationLat Float?
   destinationLng Float?
+  campusId       String?
+  routeDirection RouteDirection?
   departureTime  DateTime
   arrivalTime    DateTime
   capacity       Int
@@ -107,6 +113,7 @@ model Trip {
 
   driver     User            @relation(fields: [driverId], references: [id])
   passengers TripPassenger[]
+  campus     Campus?         @relation(fields: [campusId], references: [id])
 }
 
 model TripPassenger {
@@ -143,6 +150,8 @@ model TravelIntent {
   destination    String
   destinationLat Float
   destinationLng Float
+  campusId       String?
+  routeDirection RouteDirection?
   departureTime  DateTime
   arrivalTime    DateTime
   status         TravelIntentStatus @default(ACTIVE)
@@ -151,6 +160,7 @@ model TravelIntent {
   travelMatches  TravelMatch[]
 
   user User @relation(fields: [userId], references: [id])
+  campus Campus? @relation(fields: [campusId], references: [id])
 
   @@index([userId, status])
   @@index([status, departureTime])
@@ -201,4 +211,32 @@ model KpiEvent {
 
   @@unique([type, refId, userId])
   @@index([type, occurredAt])
+}
+
+model University {
+  id       String   @id
+  name     String   @unique
+  campuses Campus[]
+  studentProfiles StudentProfile[]
+}
+
+model Campus {
+  id           String @id
+  universityId String
+  name         String
+  address      String
+  latitude     Float
+  longitude    Float
+  studentProfiles StudentProfile[]
+  trips           Trip[]
+  travelIntents   TravelIntent[]
+
+  university University @relation(fields: [universityId], references: [id])
+
+  @@unique([universityId, name])
+}
+
+enum RouteDirection {
+  TO_CAMPUS
+  FROM_CAMPUS
 }
