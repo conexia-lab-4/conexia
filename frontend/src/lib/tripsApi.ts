@@ -19,6 +19,17 @@ export interface TripUser {
   photoUrl: string | null;
 }
 
+export interface TripDriverProfile {
+  carModel: string | null;
+  carColor: string | null;
+  phone: string | null;
+}
+
+// El backend solo manda el perfil del conductor a quienes participan del viaje
+export interface TripDriver extends TripUser {
+  studentProfile?: TripDriverProfile | null;
+}
+
 export interface TripPassenger {
   id: string;
   tripId: string;
@@ -34,7 +45,7 @@ export interface TripPassenger {
 }
 
 export interface TripDetail extends Trip {
-  driver: TripUser;
+  driver: TripDriver;
   passengers: TripPassenger[];
   availableSeats: number;
   isDriver: boolean;

@@ -641,6 +641,67 @@ describe('TripsService', () => {
       expect(result.passengers[0].user.photoUrl).toBeNull();
       expect(result.passengers[1].user.photoUrl).toBeNull();
     });
+
+    describe('datos del conductor', () => {
+      const driverProfile = {
+        carModel: 'Toyota Corolla',
+        carColor: 'Blanco',
+        phone: '+5491122334455',
+      };
+
+      beforeEach(() => {
+        prismaMock.trip.findUnique.mockResolvedValue({
+          ...baseTrip,
+          driver: { ...baseTrip.driver, studentProfile: driverProfile },
+          passengers: [
+            {
+              userId: 'user-123',
+              user: { id: 'user-123', email: 'yo@test.com' },
+            },
+          ],
+        });
+      });
+
+      it('pide el teléfono y los datos del auto del conductor', async () => {
+        await service.findOneOrThrow('trip-1', driverId);
+
+        expect(prismaMock.trip.findUnique).toHaveBeenCalledWith({
+          where: { id: 'trip-1' },
+          include: {
+            driver: {
+              select: {
+                id: true,
+                email: true,
+                studentProfile: {
+                  select: { carModel: true, carColor: true, phone: true },
+                },
+              },
+            },
+            passengers: {
+              include: { user: { select: { id: true, email: true } } },
+            },
+          },
+        });
+      });
+
+      it('el conductor ve el teléfono y los datos del auto', async () => {
+        const result = await service.findOneOrThrow('trip-1', driverId);
+
+        expect(result.driver.studentProfile).toEqual(driverProfile);
+      });
+
+      it('un pasajero del viaje ve el teléfono y los datos del auto del conductor', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'user-123');
+
+        expect(result.driver.studentProfile).toEqual(driverProfile);
+      });
+
+      it('quien no participa del viaje no ve el teléfono ni los datos del auto', async () => {
+        const result = await service.findOneOrThrow('trip-1', 'user-ajeno');
+
+        expect(result.driver.studentProfile).toBeNull();
+      });
+    });
   });
 
   describe('update', () => {

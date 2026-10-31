@@ -86,37 +86,6 @@
   cursor: pointer;
 }
 
-.trips__publish-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--color-primary-200);
-  border-radius: 20px;
-  background: var(--color-info-card-bg);
-}
-
-.trips__publish-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.trips__publish-description {
-  font-size: var(--fs-body-2);
-  color: var(--color-grey-400);
-}
-
-.trips__publish-image {
-  width: 130px;
-  height: 90px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
 .trips__list-section {
   display: flex;
   flex-direction: column;
@@ -145,10 +114,4 @@
   color: var(--color-success-700);
   font-size: var(--fs-body-3);
   font-weight: var(--fw-semibold);
-}
-
-.trips__publish-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }

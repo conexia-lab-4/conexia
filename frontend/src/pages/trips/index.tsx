@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
-import { Button } from '../../components/button';
 import { EmptyTripsState } from '../../components/emptytripsstate';
 import { TripListCard } from '../../components/triplistcard';
 import ConexiaLoader from '../../components/ConexiaLoader';
+import { PublishTripCard } from '../../components/publishtripcard';
 import { getProfile } from '../../lib/profileApi';
 import {
   getMyTrips,
@@ -13,9 +13,9 @@ import {
   type TripScope,
 } from '../../lib/tripsApi';
 import tripsHeader from '../../assets/images/trips-header.png';
-import publishTripCar from '../../assets/images/publish-trip-car.png';
 import './index.css';
 import { TravelIntentCard } from '../../components/travelintentcard';
+import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import {
   getMyTravelIntents,
   type TravelIntent,
@@ -38,6 +38,7 @@ export function Trips() {
   const [trips, setTrips] = useState<TripDetail[]>([]);
   const [intents, setIntents] = useState<TravelIntent[]>([]);
   const [hasCar, setHasCar] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [intentCreated] = useState(
     () => (location.state as { intentCreated?: boolean } | null)?.intentCreated,
   );
@@ -149,37 +150,10 @@ export function Trips() {
 
       {status === 'ready' && (
         <>
-          <section className="trips__publish-card">
-            <div className="trips__publish-text">
-              <h2 className="text-body-1-bold">¿Vas a la facultad?</h2>
-              <p className="trips__publish-description">
-                {hasCar
-                  ? 'Publicá un viaje y compartí asientos, o avisá que necesitás uno'
-                  : 'Avisá cuándo necesitás viajar y encontrá quién te lleve'}
-              </p>
-              <div className="trips__publish-actions">
-                {hasCar && (
-                  <Button
-                    type="button"
-                    variant="fulfilled"
-                    size="medium"
-                    onClick={() => navigate('/trips/new')}
-                  >
-                    Publicar viaje
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant={hasCar ? 'outlined' : 'fulfilled'}
-                  size="medium"
-                  onClick={() => navigate('/trips/intents/new')}
-                >
-                  Necesito un viaje
-                </Button>
-              </div>
-            </div>
-            <img src={publishTripCar} alt="" className="trips__publish-image" />
-          </section>
+          <PublishTripCard
+            hasCar={hasCar}
+            onPublish={() => setIsDrawerOpen(true)}
+          />
 
           {!isHistory && intents.length > 0 && (
             <section className="trips__list-section">
@@ -222,6 +196,13 @@ export function Trips() {
             )}
           </section>
         </>
+      )}
+
+      {isDrawerOpen && (
+        <QuickActionsDrawer
+          hasCar={hasCar}
+          onClose={() => setIsDrawerOpen(false)}
+        />
       )}
 
       <NavBar activeItem="viajes" />
