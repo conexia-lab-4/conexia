@@ -162,4 +162,58 @@ describe('TravelMatchesService.findMine', () => {
     expect(result[0].trip.driver.displayName).toBe('Ana Pérez');
     expect(result[0].trip.driver.photoUrl).toBe('https://foto/d1');
   });
+
+  it('incluye el teléfono del conductor cuando está cargado', async () => {
+    prismaMock.travelMatch.findMany.mockResolvedValue([
+      {
+        id: 'match-1',
+        status: 'SUGGESTED',
+        score: 80,
+        detourKm: 1,
+        departureDeltaMinutes: 0,
+        arrivalDeltaMinutes: 0,
+        trip: {
+          id: 'trip-1',
+          origin: 'Pilar',
+          destination: 'Palermo',
+          departureTime: new Date('2026-10-20T11:00:00.000Z'),
+          arrivalTime: new Date('2026-10-20T12:30:00.000Z'),
+          capacity: 3,
+          _count: { passengers: 0 },
+          driver: {
+            id: 'driver-1',
+            email: 'conductor@test.com',
+            studentProfile: {
+              career: null,
+              year: null,
+              campus: null,
+              carModel: null,
+              carColor: null,
+              phone: '+5491122334455',
+            },
+          },
+        },
+      },
+    ]);
+
+    const result = await service.findMine(userId);
+
+    expect(result[0].trip.driver.profile?.phone).toBe('+5491122334455');
+    const [query] = prismaMock.travelMatch.findMany.mock.calls[0] as [
+      {
+        select: {
+          trip: {
+            select: {
+              driver: {
+                select: { studentProfile: { select: { phone: boolean } } };
+              };
+            };
+          };
+        };
+      },
+    ];
+    expect(
+      query.select.trip.select.driver.select.studentProfile.select.phone,
+    ).toBe(true);
+  });
 });

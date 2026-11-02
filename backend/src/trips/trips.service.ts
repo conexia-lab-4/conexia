@@ -177,7 +177,15 @@ export class TripsService {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
       include: {
-        driver: { select: { id: true, email: true } },
+        driver: {
+          select: {
+            id: true,
+            email: true,
+            studentProfile: {
+              select: { carModel: true, carColor: true, phone: true },
+            },
+          },
+        },
         passengers: {
           include: { user: { select: { id: true, email: true } } },
         },
@@ -188,7 +196,18 @@ export class TripsService {
       throw new NotFoundException('El viaje no existe');
     }
 
-    return this.presentTrip(trip, userId);
+    const presented = await this.presentTrip(trip, userId);
+
+    // El teléfono y los datos del auto del conductor los ven solo quienes
+    // participan del viaje; para el resto van en null
+    if (presented.isParticipant) {
+      return presented;
+    }
+
+    return {
+      ...presented,
+      driver: { ...presented.driver, studentProfile: null },
+    };
   }
 
   async update(id: string, userId: string, dto: UpdateTripDto) {

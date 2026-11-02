@@ -77,6 +77,7 @@ export class TravelMatchesService {
                     campus: true,
                     carModel: true,
                     carColor: true,
+                    phone: true,
                   },
                 },
               },

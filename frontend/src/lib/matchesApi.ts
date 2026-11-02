@@ -27,6 +27,7 @@ export interface TravelMatch {
         campus: string | null;
         carModel: string | null;
         carColor: string | null;
+        phone: string | null;
       } | null;
       displayName: string | null;
       photoUrl: string | null;

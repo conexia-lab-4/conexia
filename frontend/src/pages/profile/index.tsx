@@ -14,9 +14,11 @@ import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { IconUser } from '../../assets/icons/IconUser';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
+import { IconSignOut } from '../../assets/icons/IconSignOut.tsx';
 import { IconPencil } from '../../assets/icons/IconPencil';
 import { NumberStepper } from '../../components/numberstepper';
 import { UNIVERSITIES } from '../questionnaire/universities';
+import { CAREERS } from '../questionnaire/careers';
 import {
   getProfile,
   upsertProfile,
@@ -31,6 +33,7 @@ import {
   type CatalogUniversity,
 } from '../../lib/universitiesApi';
 import { getProfileCompletion } from '../../lib/profileCompletion';
+import { applyMinimum, parseNumericInput } from '../../lib/numberInput';
 import { resizeImage } from '../../lib/resizeImage';
 import './index.css';
 
@@ -174,6 +177,7 @@ export function Profile() {
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [isUniversityOpen, setIsUniversityOpen] = useState(false);
   const [isCampusOpen, setIsCampusOpen] = useState(false);
+  const [isCareerOpen, setIsCareerOpen] = useState(false);
   const [universities, setUniversities] = useState<CatalogUniversity[]>([]);
   const [loadedCampuses, setLoadedCampuses] = useState<{
     universityId: string;
@@ -405,6 +409,20 @@ export function Profile() {
     !campusesFailed &&
     loadedCampuses?.universityId !== form.universityId;
 
+  const careerOptions =
+    form.career && !CAREERS.includes(form.career)
+      ? [form.career, ...CAREERS]
+      : CAREERS;
+
+  // "Guardar cambios" solo aparece si hay datos distintos de lo guardado o una
+  // foto elegida que todavía no se subió
+  const savedForm = profileToForm(profile);
+  const hasChanges =
+    pendingPhoto !== null ||
+    (Object.keys(form) as (keyof FormState)[]).some(
+      (key) => form[key] !== savedForm[key],
+    );
+
   const colorOptions =
     form.carColor && !CAR_COLORS.includes(form.carColor)
       ? [form.carColor, ...CAR_COLORS]
@@ -423,6 +441,15 @@ export function Profile() {
         <p className="profile__subtitle text-body-2">
           Completá tu información para mejorar tus matches
         </p>
+        <button
+          type="button"
+          className="profile__logout-icon"
+          onClick={logout}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <IconSignOut size={24} color="var(--color-grey-400)" />
+        </button>
       </header>
 
       {status === 'loading' && (
@@ -609,13 +636,43 @@ export function Profile() {
                   </ul>
                 )}
               </div>
-              <TextField
-                variant="filled"
-                label="Carrera"
-                placeholder="Ej. Ingeniería en Informática"
-                value={form.career}
-                onChange={(e) => setField('career', e.target.value)}
-              />
+              <div className="profile__combobox">
+                <TextField
+                  variant="filled"
+                  label="Carrera"
+                  placeholder="Elegí una carrera"
+                  value={form.career}
+                  readOnly
+                  role="combobox"
+                  aria-expanded={isCareerOpen}
+                  onClick={() => setIsCareerOpen((open) => !open)}
+                  onBlur={() => setTimeout(() => setIsCareerOpen(false), 150)}
+                  rightIcon={
+                    <IconChevronDown size={20} color="var(--color-grey-400)" />
+                  }
+                />
+                {isCareerOpen && (
+                  <ul className="profile__combobox-list" role="listbox">
+                    {careerOptions.map((career) => (
+                      <li key={career}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={form.career === career}
+                          className="profile__combobox-option text-body-2"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setField('career', career);
+                            setIsCareerOpen(false);
+                          }}
+                        >
+                          {career}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="profile__combobox">
                 <TextField
                   variant={campusesFailed ? 'error' : 'filled'}
@@ -669,7 +726,13 @@ export function Profile() {
                 label="Año de cursada"
                 placeholder="Ej. 3"
                 value={form.year}
-                onChange={(e) => setField('year', e.target.value)}
+                inputMode="numeric"
+                onChange={(e) =>
+                  setField(
+                    'year',
+                    applyMinimum(parseNumericInput(e.target.value, 6), 1),
+                  )
+                }
               />
               <div className="profile__full">
                 <TextField
@@ -781,11 +844,16 @@ export function Profile() {
                   <TextField
                     variant="filled"
                     label="Asientos disponibles"
+                    inputMode="numeric"
                     value={
                       form.availableSeats ? String(form.availableSeats) : ''
                     }
-                    onChange={() => {}}
-                    readOnly
+                    onChange={(e) =>
+                      setField(
+                        'availableSeats',
+                        Number(parseNumericInput(e.target.value)),
+                      )
+                    }
                     placeholder="Ej. 2"
                     rightIcon={
                       <NumberStepper
@@ -799,9 +867,14 @@ export function Profile() {
                   <TextField
                     variant="filled"
                     label="Desvío máximo (km)"
+                    inputMode="numeric"
                     value={form.detourToleranceKm}
-                    onChange={() => {}}
-                    readOnly
+                    onChange={(e) =>
+                      setField(
+                        'detourToleranceKm',
+                        parseNumericInput(e.target.value),
+                      )
+                    }
                     placeholder="Ej. 2"
                     rightIcon={
                       <NumberStepper
@@ -825,21 +898,19 @@ export function Profile() {
             </p>
           )}
 
-          <Button
-            type="button"
-            variant="fulfilled"
-            size="large-wide"
-            disabled={isSaving}
-            onClick={handleSave}
-          >
-            {isSaving ? 'Guardando...' : 'Guardar cambios'}
-          </Button>
+          {hasChanges && (
+            <Button
+              type="button"
+              variant="fulfilled"
+              size="large-wide"
+              disabled={isSaving}
+              onClick={handleSave}
+            >
+              {isSaving ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          )}
         </>
       )}
-
-      <button type="button" className="profile__logout" onClick={logout}>
-        Cerrar sesión
-      </button>
 
       {isCameraOpen && (
         <CameraCapture
