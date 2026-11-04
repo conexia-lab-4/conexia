@@ -10,6 +10,7 @@ import { IconBack } from '../../assets/icons/IconBack';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconClock } from '../../assets/icons/IconClock';
+import { IconPhone } from '../../assets/icons/IconPhone';
 import {
   acceptMatch,
   getTravelMatches,
@@ -98,6 +99,7 @@ export function MatchDetailPage() {
   const car = [profile?.carModel, profile?.carColor]
     .filter(Boolean)
     .join(' · ');
+  const driverPhone = profile?.phone;
 
   return (
     <div className="trip-detail">
@@ -200,6 +202,15 @@ export function MatchDetailPage() {
                     Auto
                   </dt>
                   <dd>{car}</dd>
+                </div>
+              )}
+              {driverPhone && (
+                <div className="trip-detail__info-row">
+                  <dt>
+                    <IconPhone size={18} color="var(--color-grey-400)" />
+                    Teléfono
+                  </dt>
+                  <dd>{driverPhone}</dd>
                 </div>
               )}
               <div className="trip-detail__info-row">

@@ -2,9 +2,11 @@ import { authFetch } from './api';
 
 export interface ProfileResponse {
   university: string | null;
+  universityId: string | null;
   career: string | null;
   year: number | null;
   campus: string | null;
+  campusId: string | null;
   hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
@@ -20,9 +22,11 @@ export interface ProfileResponse {
 
 export interface UpsertProfilePayload {
   university?: string;
+  universityId?: string;
   career?: string;
   year?: number;
   campus?: string;
+  campusId?: string;
   hasCar?: boolean;
   availableSeats?: number;
   questionnaireCompleted?: boolean;

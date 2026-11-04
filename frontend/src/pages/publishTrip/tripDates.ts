@@ -31,6 +31,7 @@ export interface ScheduleOption {
   classroom: string | null;
   dayOfWeek: DayOfWeek;
   startTime: string;
+  endTime: string;
   label: string;
 }
 
@@ -81,6 +82,11 @@ export function suggestDepartureTime(classStart: string): string {
   return subtractMinutes(classStart, SUGGESTED_TRAVEL_MINUTES);
 }
 
+// Al regreso se sugiere llegar a casa con el mismo margen que a la ida
+export function suggestReturnArrivalTime(classEnd: string): string {
+  return subtractMinutes(classEnd, -SUGGESTED_TRAVEL_MINUTES);
+}
+
 // Próxima fecha en la que cae ese día de cursada, contando hoy si la clase
 // todavía no empezó
 export function nextOccurrence(
@@ -109,6 +115,7 @@ export function getScheduleOptions(
         classroom: schedule.classroom,
         dayOfWeek: schedule.dayOfWeek,
         startTime: schedule.startTime,
+        endTime: schedule.endTime,
         label: `${DAY_SHORT_LABEL[schedule.dayOfWeek]} ${schedule.startTime} · ${subject.name}`,
       })),
     )

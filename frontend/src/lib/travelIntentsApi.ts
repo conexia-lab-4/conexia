@@ -1,5 +1,5 @@
 import { authFetch } from './api';
-import { getErrorMessage } from './tripsApi';
+import { getErrorMessage, type RouteDirection } from './tripsApi';
 
 export type TravelIntentStatus =
   'ACTIVE' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
@@ -19,6 +19,8 @@ export interface TravelIntent {
 export interface CreateTravelIntentPayload {
   origin: string;
   destination: string;
+  campusId: string;
+  routeDirection: RouteDirection;
   departureTime: string;
   arrivalTime: string;
 }

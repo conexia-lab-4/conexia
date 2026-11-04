@@ -9,6 +9,7 @@ import { NumberStepper } from '../../components/numberstepper';
 import { IconCar } from '../../assets/icons/IconCar.tsx';
 import { IconBackpack } from '../../assets/icons/IconBackpack.tsx';
 import { UNIVERSITIES } from './universities';
+import { CAREERS } from './careers';
 import './index.css';
 import { IconCheck } from '../../assets/icons/IconCheck.tsx';
 import { useNavigate } from 'react-router-dom';
@@ -18,34 +19,24 @@ import {
   type ProfileResponse,
   type UpsertProfilePayload,
 } from '../../lib/profileApi';
+import { getUniversityCampuses, type Campus } from '../../lib/universitiesApi';
+import { applyMinimum, parseNumericInput } from '../../lib/numberInput';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import ConexiaLoader from '../../components/ConexiaLoader/index.tsx';
 
 const TOTAL_STEPS = 3;
 
-const CAREERS = [
-  'Ingeniería en Informática',
-  'Administración de Empresas',
-  'Derecho',
-  'Medicina',
-  'Arquitectura',
-  'Comunicación',
-  'Psicología',
-  'Contador Público',
-  'Diseño Industrial',
-  'Economía',
-];
-
 function mapProfileToFormState(profile: ProfileResponse) {
-  const matchedUniversity = profile.university
+  // Perfiles anteriores al catálogo: se reconoce la universidad por su nombre
+  const legacyUniversity = profile.university
     ? UNIVERSITIES.find((u) => u.name === profile.university)
     : undefined;
   return {
-    universityId: matchedUniversity?.id ?? null,
+    universityId: profile.universityId ?? legacyUniversity?.id ?? null,
     career: profile.career ?? '',
     year: profile.year != null ? String(profile.year) : '',
-    campus: profile.campus ?? '',
+    campusId: profile.campusId,
     hasCar: profile.hasCar,
     availableSeats:
       profile.availableSeats != null ? String(profile.availableSeats) : '',
@@ -58,7 +49,15 @@ export function Questionnaire() {
   const [universityId, setUniversityId] = useState<string | null>(null);
   const [career, setCareer] = useState('');
   const [year, setYear] = useState('');
-  const [campus, setCampus] = useState('');
+  const [campusId, setCampusId] = useState<string | null>(null);
+  const [isCampusOpen, setIsCampusOpen] = useState(false);
+  const [loadedCampuses, setLoadedCampuses] = useState<{
+    universityId: string;
+    items: Campus[];
+  } | null>(null);
+  const [failedCampusesFor, setFailedCampusesFor] = useState<string | null>(
+    null,
+  );
   const [hasCar, setHasCar] = useState<boolean | null>(null);
   const [availableSeats, setAvailableSeats] = useState('');
   const navigate = useNavigate();
@@ -72,6 +71,15 @@ export function Questionnaire() {
   const filteredCareers = CAREERS.filter((c) =>
     c.toLowerCase().includes(career.toLowerCase()),
   );
+
+  // Solo se muestran las sedes de la universidad elegida en el paso 1
+  const campuses =
+    loadedCampuses?.universityId === universityId ? loadedCampuses.items : [];
+  const campusesFailed = failedCampusesFor === universityId;
+  const isLoadingCampuses =
+    Boolean(universityId) &&
+    !campusesFailed &&
+    loadedCampuses?.universityId !== universityId;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -89,7 +97,7 @@ export function Questionnaire() {
           setUniversityId(formState.universityId);
           setCareer(formState.career);
           setYear(formState.year);
-          setCampus(formState.campus);
+          setCampusId(formState.campusId);
           setHasCar(formState.hasCar);
           setAvailableSeats(formState.availableSeats);
         })
@@ -107,14 +115,29 @@ export function Questionnaire() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!universityId) return;
+    let cancelled = false;
+    getUniversityCampuses(universityId)
+      .then((items) => {
+        if (cancelled) return;
+        setLoadedCampuses({ universityId, items });
+        // Si antes había fallado y ahora funcionó, se borra el error
+        setFailedCampusesFor((prev) => (prev === universityId ? null : prev));
+      })
+      .catch(() => {
+        if (!cancelled) setFailedCampusesFor(universityId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [universityId]);
+
   const buildPartialPayload = (): UpsertProfilePayload => {
     const payload: UpsertProfilePayload = {};
 
-    const universityName = UNIVERSITIES.find(
-      (u) => u.id === universityId,
-    )?.name;
-    if (universityName) {
-      payload.university = universityName;
+    if (universityId) {
+      payload.universityId = universityId;
     }
     if (career.trim()) {
       payload.career = career;
@@ -122,8 +145,8 @@ export function Questionnaire() {
     if (year.trim()) {
       payload.year = Number(year);
     }
-    if (campus.trim()) {
-      payload.campus = campus;
+    if (campusId) {
+      payload.campusId = campusId;
     }
 
     if (hasCar === true && availableSeats.trim()) {
@@ -140,6 +163,12 @@ export function Questionnaire() {
 
   const handleBack = () => {
     setCurrentStep((step) => Math.max(1, step - 1));
+  };
+
+  const handleSelectUniversity = (id: string) => {
+    // Si cambia la universidad, la sede anterior ya no corresponde
+    if (id !== universityId) setCampusId(null);
+    setUniversityId(id);
   };
 
   const handleContinue = async () => {
@@ -203,7 +232,7 @@ export function Questionnaire() {
     }
 
     const payload = buildPartialPayload();
-    if (!payload.university || hasCar === null) {
+    if (!payload.universityId || hasCar === null) {
       return;
     }
 
@@ -221,7 +250,7 @@ export function Questionnaire() {
   };
 
   const isStep1Valid = Boolean(universityId);
-  const isStep2Valid = Boolean(career.trim() && year.trim() && campus.trim());
+  const isStep2Valid = Boolean(career.trim() && year.trim() && campusId);
   const isStep3Valid =
     hasCar === false || (hasCar === true && availableSeats.trim() !== '');
 
@@ -377,7 +406,7 @@ export function Questionnaire() {
                   title={university.name}
                   subtitle={university.campus}
                   selected={universityId === university.id}
-                  onClick={() => setUniversityId(university.id)}
+                  onClick={() => handleSelectUniversity(university.id)}
                 />
               ))}
             </div>
@@ -431,10 +460,12 @@ export function Questionnaire() {
               </div>
               <TextField
                 type="text"
+                inputMode="numeric"
                 label="Año de cursada"
                 value={year}
-                onChange={() => {}}
-                readOnly
+                onChange={(e) =>
+                  setYear(applyMinimum(parseNumericInput(e.target.value, 6), 1))
+                }
                 placeholder="Seleccioná una opción"
                 rightIcon={
                   <NumberStepper
@@ -445,12 +476,48 @@ export function Questionnaire() {
                   />
                 }
               />
-              <TextField
-                label="Sede/Campus"
-                value={campus}
-                onChange={(e) => setCampus(e.target.value)}
-                placeholder="Ej. Pilar, Ciudad Universitaria..."
-              />
+              <div className="questionnaire__combobox">
+                <TextField
+                  label="Sede/Campus"
+                  value={campuses.find((c) => c.id === campusId)?.name ?? ''}
+                  onChange={() => {}}
+                  readOnly
+                  placeholder={
+                    isLoadingCampuses
+                      ? 'Cargando sedes...'
+                      : 'Seleccioná una opción'
+                  }
+                  variant={campusesFailed ? 'error' : 'default'}
+                  helperText={
+                    campusesFailed ? 'No pudimos cargar las sedes.' : undefined
+                  }
+                  onClick={() => setIsCampusOpen(true)}
+                  onFocus={() => setIsCampusOpen(true)}
+                  onBlur={() => setTimeout(() => setIsCampusOpen(false), 150)}
+                  rightIcon={
+                    <IconChevronDown size={20} color="var(--color-grey-400)" />
+                  }
+                />
+                {isCampusOpen && campuses.length > 0 && (
+                  <ul className="questionnaire__combobox-list">
+                    {campuses.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className="questionnaire__combobox-option text-body-2"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCampusId(c.id);
+                            setIsCampusOpen(false);
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -490,10 +557,14 @@ export function Questionnaire() {
               <div className="questionnaire__seats">
                 <TextField
                   type="text"
+                  inputMode="numeric"
                   label="¿Cuántos lugares podrías ofrecer?"
                   value={availableSeats}
-                  onChange={() => {}}
-                  readOnly
+                  onChange={(e) =>
+                    setAvailableSeats(
+                      applyMinimum(parseNumericInput(e.target.value), 1),
+                    )
+                  }
                   placeholder="Ej. 2"
                   rightIcon={
                     <NumberStepper

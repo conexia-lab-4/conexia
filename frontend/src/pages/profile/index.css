@@ -9,12 +9,29 @@
 }
 
 .profile__header {
+  position: relative;
   padding: 48px 10px 0;
 }
 
 .profile__subtitle {
   margin-top: 8px;
   color: var(--color-grey-400);
+}
+
+.profile__logout-icon {
+  position: absolute;
+  top: 48px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
 }
 
 .profile__status {
@@ -325,18 +342,6 @@
 
 .profile__message--error {
   color: var(--color-error-500);
-}
-
-.profile__logout {
-  align-self: center;
-  padding: 10px 20px;
-  border: none;
-  background: none;
-  color: var(--color-grey-400);
-  font-family: var(--font-primary);
-  font-size: var(--fs-body-2);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
 }
 
 @media (max-width: 480px) {

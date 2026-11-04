@@ -20,6 +20,7 @@ describe('TravelIntentsService', () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
+    campus: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
   let geoMock: { geocode: jest.Mock; getRouteDistanceKm: jest.Mock };
@@ -31,11 +32,21 @@ describe('TravelIntentsService', () => {
   const validDto: CreateTravelIntentDto = {
     origin: 'Los Cardales',
     destination: 'Universidad Austral, Pilar',
+    campusId: 'ua-pilar',
+    routeDirection: 'TO_CAMPUS',
     departureTime: '2026-10-05T08:00:00.000Z',
     arrivalTime: '2026-10-05T09:00:00.000Z',
   };
   const originCoords = { lat: -34.3255, lng: -59.0003 };
-  const destinationCoords = { lat: -34.4545, lng: -58.8686 };
+  const campus = {
+    id: 'ua-pilar',
+    name: 'Sede Pilar',
+    latitude: -34.4515,
+    longitude: -58.8621,
+    university: { id: 'ua', name: 'Universidad Austral' },
+  };
+  const campusLabel = 'Universidad Austral - Sede Pilar';
+  const campusCoords = { lat: campus.latitude, lng: campus.longitude };
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(now);
@@ -48,17 +59,14 @@ describe('TravelIntentsService', () => {
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      campus: { findUnique: jest.fn().mockResolvedValue(campus) },
       $transaction: jest.fn(),
     };
     prismaMock.$transaction.mockImplementation(
       (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
     );
     geoMock = {
-      geocode: jest.fn((address: string) =>
-        Promise.resolve(
-          address === validDto.origin ? originCoords : destinationCoords,
-        ),
-      ),
+      geocode: jest.fn().mockResolvedValue(originCoords),
       getRouteDistanceKm: jest.fn(),
     };
     matchingMock = { matchIntent: jest.fn().mockResolvedValue(undefined) };
@@ -79,26 +87,67 @@ describe('TravelIntentsService', () => {
   });
 
   describe('create', () => {
-    it('crea la intención con las coordenadas resueltas por GeoService', async () => {
+    it('crea la intención con la casa geocodificada y la sede del catálogo', async () => {
       const created = { id: 'intent-1', status: 'ACTIVE' };
       prismaMock.travelIntent.create.mockResolvedValue(created);
 
       const result = await service.create(userId, validDto);
 
       expect(result).toEqual(created);
+      expect(geoMock.geocode).toHaveBeenCalledTimes(1);
+      expect(geoMock.geocode).toHaveBeenCalledWith(validDto.origin);
       expect(prismaMock.travelIntent.create).toHaveBeenCalledWith({
         data: {
           userId,
           origin: validDto.origin,
           originLat: originCoords.lat,
           originLng: originCoords.lng,
-          destination: validDto.destination,
-          destinationLat: destinationCoords.lat,
-          destinationLng: destinationCoords.lng,
+          destination: campusLabel,
+          destinationLat: campusCoords.lat,
+          destinationLng: campusCoords.lng,
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
           departureTime: new Date(validDto.departureTime),
           arrivalTime: new Date(validDto.arrivalTime),
         },
       });
+    });
+
+    it('en la vuelta la sede es el origen y la casa es el destino', async () => {
+      prismaMock.travelIntent.create.mockResolvedValue({ id: 'intent-1' });
+
+      await service.create(userId, {
+        ...validDto,
+        origin: 'Otro lado',
+        destination: 'Los Cardales',
+        routeDirection: 'FROM_CAMPUS',
+      });
+
+      expect(geoMock.geocode).toHaveBeenCalledWith('Los Cardales');
+      expect(prismaMock.travelIntent.create).toHaveBeenCalledWith({
+        data: {
+          userId,
+          origin: campusLabel,
+          originLat: campusCoords.lat,
+          originLng: campusCoords.lng,
+          destination: 'Los Cardales',
+          destinationLat: originCoords.lat,
+          destinationLng: originCoords.lng,
+          campusId: 'ua-pilar',
+          routeDirection: 'FROM_CAMPUS',
+          departureTime: new Date(validDto.departureTime),
+          arrivalTime: new Date(validDto.arrivalTime),
+        },
+      });
+    });
+
+    it('responde 400 y no persiste si la casa no se resuelve', async () => {
+      geoMock.geocode.mockResolvedValue(null);
+
+      await expect(service.create(userId, validDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prismaMock.travelIntent.create).not.toHaveBeenCalled();
     });
 
     it('registra la publicación de la intención en las métricas', async () => {
@@ -115,28 +164,6 @@ describe('TravelIntentsService', () => {
         [{ type: 'INTENT_PUBLISHED', refId: 'intent-1', userId }],
         prismaMock,
       );
-    });
-
-    it('responde 400 y no persiste si el origen no se resuelve', async () => {
-      geoMock.geocode.mockImplementation((address: string) =>
-        Promise.resolve(address === validDto.origin ? null : destinationCoords),
-      );
-
-      await expect(service.create(userId, validDto)).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(prismaMock.travelIntent.create).not.toHaveBeenCalled();
-    });
-
-    it('responde 400 y no persiste si el destino no se resuelve', async () => {
-      geoMock.geocode.mockImplementation((address: string) =>
-        Promise.resolve(address === validDto.origin ? originCoords : null),
-      );
-
-      await expect(service.create(userId, validDto)).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(prismaMock.travelIntent.create).not.toHaveBeenCalled();
     });
 
     it('rechaza una intención que se superpone con otra activa sin geocodificar', async () => {

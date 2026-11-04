@@ -13,7 +13,7 @@ export const UNIVERSITIES: University[] = [
     id: 'ua',
     abbreviation: 'UA',
     name: 'Universidad Austral',
-    campus: 'Pilar',
+    campus: 'Varias sedes',
     colorVariant: 'blue',
   },
   {
@@ -41,7 +41,7 @@ export const UNIVERSITIES: University[] = [
     id: 'itba',
     abbreviation: 'ITBA',
     name: 'Instituto Tecnológico de Buenos Aires',
-    campus: 'Parque Patricios',
+    campus: 'Varias sedes',
     colorVariant: 'blue',
   },
   {
@@ -59,10 +59,10 @@ export const UNIVERSITIES: University[] = [
     colorVariant: 'blue',
   },
   {
-    id: 'other',
-    abbreviation: '+',
-    name: 'Otra Universidad',
-    campus: 'Buscar manualmente',
+    id: 'ucema',
+    abbreviation: 'UCEMA',
+    name: 'Universidad del CEMA',
+    campus: 'Varias sedes',
     colorVariant: 'green',
   },
 ];
