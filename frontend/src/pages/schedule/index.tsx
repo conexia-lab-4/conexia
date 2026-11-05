@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import {
@@ -24,6 +23,7 @@ import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
 import { EditScheduleDialog } from '../../components/editscheduledialog';
 import type { DayValue } from '../../components/dayselector';
 import { NavBar } from '../../components/navbar';
+import { AddSubjectDrawer } from '../../components/addsubjectdrawer';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
 import './index.css';
@@ -42,7 +42,6 @@ function buildSubjectColorMap(
 }
 
 export function Schedule() {
-  const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [openMenuScheduleId, setOpenMenuScheduleId] = useState<string | null>(
@@ -57,6 +56,7 @@ export function Schedule() {
   const [editTarget, setEditTarget] = useState<ScheduleEntry | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
 
   const loadSubjects = useCallback(async () => {
     setStatus('loading');
@@ -232,7 +232,7 @@ export function Schedule() {
         <button
           type="button"
           className="schedule-page__add-btn"
-          onClick={() => navigate('/assignments/new')}
+          onClick={() => setIsAddDrawerOpen(true)}
         >
           + Agregar Materia
         </button>
@@ -357,6 +357,10 @@ export function Schedule() {
           onSave={handleSaveEdit}
           onCancel={() => setEditTarget(null)}
         />
+      )}
+
+      {isAddDrawerOpen && (
+        <AddSubjectDrawer onClose={() => setIsAddDrawerOpen(false)} />
       )}
 
       <NavBar activeItem="horarios" />

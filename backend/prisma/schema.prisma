@@ -17,6 +17,9 @@ model User {
   trips          Trip[]
   tripPassengers TripPassenger[]
   travelIntents  TravelIntent[]
+  fcmToken          String?  @unique
+  fcmTokenUpdatedAt DateTime?
+  notifications     Notification[]
 }
 
 model StudentProfile {
@@ -246,4 +249,27 @@ model Campus {
 enum RouteDirection {
   TO_CAMPUS
   FROM_CAMPUS
+}
+
+enum NotificationType {
+  TRIP
+  CHAT
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  title       String
+  message     String
+  type        NotificationType
+  // Id del viaje (TRIP) o del chat (CHAT) al que apunta la notificación
+  referenceId String?
+  // null = no leída
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
