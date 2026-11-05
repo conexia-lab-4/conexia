@@ -10,12 +10,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { type TripScope } from './dto/list-my-trips.dto';
-import { Prisma } from '../../generated/prisma/client';
+import {
+  Prisma,
+  RouteDirection,
+  type Trip,
+} from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
 import { addPassenger, isSerializationConflict } from './trip-participation';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
-import { DisplayNamesService } from '../firebase/display-names.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
+import {
+  loadCampusEnd,
+  placeRouteEnds,
+  type RouteEnd,
+} from '../universities/campus-route';
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -64,23 +76,37 @@ export class TripsService {
       );
     }
 
-    // Se geocodifica antes de persistir: si alguna dirección no se resuelve,
-    // no se crea el viaje
-    const [originCoords, destinationCoords] = await Promise.all([
-      this.geocodeOrThrow(dto.origin),
-      this.geocodeOrThrow(dto.destination),
-    ]);
+    const campusEnd = await loadCampusEnd(this.prisma, dto.campusId);
+
+    // Solo se geocodifica la dirección de la casa; el extremo de la
+    // universidad usa las coordenadas de la sede. Si la dirección no se
+    // resuelve, no se crea el viaje
+    const homeAddress =
+      dto.routeDirection === RouteDirection.TO_CAMPUS
+        ? dto.origin
+        : dto.destination;
+    const homeEnd: RouteEnd = {
+      label: homeAddress,
+      coords: await this.geocodeOrThrow(homeAddress),
+    };
+    const { origin, destination } = placeRouteEnds(
+      dto.routeDirection,
+      campusEnd,
+      homeEnd,
+    );
 
     const trip = await this.prisma.$transaction(async (tx) => {
       const created = await tx.trip.create({
         data: {
           driverId: userId,
-          origin: dto.origin,
-          originLat: originCoords.lat,
-          originLng: originCoords.lng,
-          destination: dto.destination,
-          destinationLat: destinationCoords.lat,
-          destinationLng: destinationCoords.lng,
+          origin: origin.label,
+          originLat: origin.coords.lat,
+          originLng: origin.coords.lng,
+          destination: destination.label,
+          destinationLat: destination.coords.lat,
+          destinationLng: destination.coords.lng,
+          campusId: dto.campusId,
+          routeDirection: dto.routeDirection,
           departureTime: new Date(dto.departureTime),
           arrivalTime: new Date(dto.arrivalTime),
           capacity: profile.availableSeats ?? 0,
@@ -151,7 +177,15 @@ export class TripsService {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
       include: {
-        driver: { select: { id: true, email: true } },
+        driver: {
+          select: {
+            id: true,
+            email: true,
+            studentProfile: {
+              select: { carModel: true, carColor: true, phone: true },
+            },
+          },
+        },
         passengers: {
           include: { user: { select: { id: true, email: true } } },
         },
@@ -162,7 +196,18 @@ export class TripsService {
       throw new NotFoundException('El viaje no existe');
     }
 
-    return this.presentTrip(trip, userId);
+    const presented = await this.presentTrip(trip, userId);
+
+    // El teléfono y los datos del auto del conductor los ven solo quienes
+    // participan del viaje; para el resto van en null
+    if (presented.isParticipant) {
+      return presented;
+    }
+
+    return {
+      ...presented,
+      driver: { ...presented.driver, studentProfile: null },
+    };
   }
 
   async update(id: string, userId: string, dto: UpdateTripDto) {
@@ -194,36 +239,11 @@ export class TripsService {
         'arrivalTime debe ser posterior a departureTime',
       );
     }
-
-    const [originCoords, destinationCoords] = await Promise.all([
-      this.resolveCoordinates(
-        trip.origin,
-        { lat: trip.originLat, lng: trip.originLng },
-        dto.origin,
-      ),
-      this.resolveCoordinates(
-        trip.destination,
-        { lat: trip.destinationLat, lng: trip.destinationLng },
-        dto.destination,
-      ),
-    ]);
+    const route = await this.resolveRouteUpdate(trip, dto);
 
     const updated = await this.prisma.trip.update({
       where: { id },
-      data: {
-        origin: dto.origin,
-        destination: dto.destination,
-        departureTime,
-        arrivalTime,
-        ...(originCoords && {
-          originLat: originCoords.lat,
-          originLng: originCoords.lng,
-        }),
-        ...(destinationCoords && {
-          destinationLat: destinationCoords.lat,
-          destinationLng: destinationCoords.lng,
-        }),
-      },
+      data: { ...route, departureTime, arrivalTime },
       include: {
         driver: { select: { id: true, email: true } },
         passengers: {
@@ -281,6 +301,107 @@ export class TripsService {
     await this.matching.matchTrip(tripId);
   }
 
+  // Origen y destino a guardar al editar. Si el viaje tiene sede, el extremo
+  // de la universidad sale siempre de ella; los viajes anteriores al catálogo
+  // se siguen editando por dirección
+  private async resolveRouteUpdate(trip: Trip, dto: UpdateTripDto) {
+    const campusId = dto.campusId ?? trip.campusId;
+    const routeDirection = dto.routeDirection ?? trip.routeDirection;
+
+    if (campusId === null && routeDirection === null) {
+      const [originCoords, destinationCoords] = await Promise.all([
+        this.resolveCoordinates(
+          trip.origin,
+          { lat: trip.originLat, lng: trip.originLng },
+          dto.origin,
+        ),
+        this.resolveCoordinates(
+          trip.destination,
+          { lat: trip.destinationLat, lng: trip.destinationLng },
+          dto.destination,
+        ),
+      ]);
+
+      return {
+        origin: dto.origin,
+        destination: dto.destination,
+        ...(originCoords && {
+          originLat: originCoords.lat,
+          originLng: originCoords.lng,
+        }),
+        ...(destinationCoords && {
+          destinationLat: destinationCoords.lat,
+          destinationLng: destinationCoords.lng,
+        }),
+      };
+    }
+
+    if (campusId === null || routeDirection === null) {
+      throw new BadRequestException(
+        'campusId y routeDirection se envían juntos',
+      );
+    }
+
+    const campusEnd = await loadCampusEnd(this.prisma, campusId);
+    const sentHomeAddress =
+      routeDirection === RouteDirection.TO_CAMPUS
+        ? dto.origin
+        : dto.destination;
+    const homeEnd = await this.resolveHomeEnd(
+      trip,
+      routeDirection,
+      sentHomeAddress,
+    );
+    const { origin, destination } = placeRouteEnds(
+      routeDirection,
+      campusEnd,
+      homeEnd,
+    );
+
+    return {
+      campusId,
+      routeDirection,
+      origin: origin.label,
+      originLat: origin.coords.lat,
+      originLng: origin.coords.lng,
+      destination: destination.label,
+      destinationLat: destination.coords.lat,
+      destinationLng: destination.coords.lng,
+    };
+  }
+
+  // La casa conserva su dirección y sus coordenadas aunque el recorrido se
+  // invierta: solo se vuelve a geocodificar si la dirección cambió
+  private async resolveHomeEnd(
+    trip: Trip,
+    direction: RouteDirection,
+    sentAddress: string | undefined,
+  ): Promise<RouteEnd> {
+    const wasToCampus =
+      (trip.routeDirection ?? direction) === RouteDirection.TO_CAMPUS;
+    const current = wasToCampus
+      ? { address: trip.origin, lat: trip.originLat, lng: trip.originLng }
+      : {
+          address: trip.destination,
+          lat: trip.destinationLat,
+          lng: trip.destinationLng,
+        };
+
+    const changed =
+      sentAddress !== undefined &&
+      sentAddress.trim() !== current.address.trim();
+
+    if (!changed && current.lat !== null && current.lng !== null) {
+      return {
+        label: current.address,
+        coords: { lat: current.lat, lng: current.lng },
+      };
+    }
+
+    const address = sentAddress ?? current.address;
+    return { label: address, coords: await this.geocodeOrThrow(address) };
+  }
+
   private async geocodeOrThrow(address: string): Promise<Coordinates> {
     const coords = await this.geo.geocode(address);
     if (!coords) {
@@ -313,43 +434,45 @@ export class TripsService {
     ];
   }
 
-  private attachNames<T extends TripWithPeople>(
+  private attachPublicUsers<T extends TripWithPeople>(
     trip: T,
-    names: Map<string, string | null>,
+    users: Map<string, PublicUser>,
   ) {
     return {
       ...trip,
       driver: {
         ...trip.driver,
-        displayName: names.get(trip.driver.id) ?? null,
+        displayName: users.get(trip.driver.id)?.displayName ?? null,
+        photoUrl: users.get(trip.driver.id)?.photoUrl ?? null,
       },
       passengers: trip.passengers.map((passenger) => ({
         ...passenger,
         user: {
           ...passenger.user,
-          displayName: names.get(passenger.user.id) ?? null,
+          displayName: users.get(passenger.user.id)?.displayName ?? null,
+          photoUrl: users.get(passenger.user.id)?.photoUrl ?? null,
         },
       })),
     };
   }
 
   private async presentTrip<T extends TripWithPeople>(trip: T, userId: string) {
-    const names = await this.displayNames.getDisplayNames(this.personIds(trip));
+    const users = await this.displayNames.getPublicUsers(this.personIds(trip));
 
-    return this.withDerivedFields(this.attachNames(trip, names), userId);
+    return this.withDerivedFields(this.attachPublicUsers(trip, users), userId);
   }
 
-  // Los nombres de todos los viajes se piden en una sola consulta
+  // Los nombres y fotos de todos los viajes se piden en una sola consulta
   private async presentTrips<T extends TripWithPeople>(
     trips: T[],
     userId: string,
   ) {
-    const names = await this.displayNames.getDisplayNames(
+    const users = await this.displayNames.getPublicUsers(
       trips.flatMap((trip) => this.personIds(trip)),
     );
 
     return trips.map((trip) =>
-      this.withDerivedFields(this.attachNames(trip, names), userId),
+      this.withDerivedFields(this.attachPublicUsers(trip, users), userId),
     );
   }
 

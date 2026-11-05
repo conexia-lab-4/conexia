@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
 import { RouteTimeline } from '../routetimeline';
+import { Avatar } from '../avatar';
 import type { TripDetail } from '../../lib/tripsApi';
 import {
   formatDayNumber,
   formatSeats,
   formatTime,
   formatWeekdayShort,
-  getInitials,
 } from '../../lib/tripFormat';
 import './index.css';
 
@@ -41,9 +41,11 @@ export function TripListCard({ trip }: TripListCardProps) {
       </div>
 
       <div className="trip-list-card__driver">
-        <span className="trip-list-card__avatar">
-          {getInitials(trip.driver.displayName)}
-        </span>
+        <Avatar
+          className="trip-list-card__avatar"
+          photoUrl={trip.driver.photoUrl}
+          name={trip.driver.displayName}
+        />
         {trip.isDriver ? (
           <span className="trip-list-card__badge">
             <IconCheck size={12} color="var(--color-success-500)" />

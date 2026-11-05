@@ -31,6 +31,16 @@ export class UpsertProfileDto {
   campus?: string;
 
   @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  universityId?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  campusId?: string;
+
+  @IsOptional()
   @IsBoolean()
   hasCar?: boolean;
 

@@ -2,14 +2,17 @@ import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
-import { DisplayNamesService } from '../firebase/display-names.service';
+import {
+  DisplayNamesService,
+  type PublicUser,
+} from '../firebase/display-names.service';
 
 describe('TravelMatchesService.findMine', () => {
   let service: TravelMatchesService;
   let prismaMock: {
     travelMatch: { updateMany: jest.Mock; findMany: jest.Mock };
   };
-  let displayNamesMock: { getDisplayNames: jest.Mock };
+  let displayNamesMock: { getPublicUsers: jest.Mock };
   const userId = 'pasajero-1';
   const now = new Date('2026-10-14T12:00:00.000Z');
 
@@ -22,9 +25,9 @@ describe('TravelMatchesService.findMine', () => {
       },
     };
     displayNamesMock = {
-      getDisplayNames: jest
+      getPublicUsers: jest
         .fn()
-        .mockResolvedValue(new Map<string, string | null>()),
+        .mockResolvedValue(new Map<string, PublicUser>()),
     };
     service = new TravelMatchesService(
       prismaMock as unknown as PrismaService,
@@ -112,6 +115,7 @@ describe('TravelMatchesService.findMine', () => {
       id: 'driver-1',
       email: 'conductor@test.com',
       displayName: null,
+      photoUrl: null,
       profile: {
         career: 'Medicina',
         year: 2,
@@ -122,9 +126,11 @@ describe('TravelMatchesService.findMine', () => {
     });
   });
 
-  it('agrega el displayName del conductor', async () => {
-    displayNamesMock.getDisplayNames.mockResolvedValue(
-      new Map([['driver-1', 'Ana Pérez']]),
+  it('agrega el displayName y la foto del conductor', async () => {
+    displayNamesMock.getPublicUsers.mockResolvedValue(
+      new Map([
+        ['driver-1', { displayName: 'Ana Pérez', photoUrl: 'https://foto/d1' }],
+      ]),
     );
     prismaMock.travelMatch.findMany.mockResolvedValue([
       {
@@ -154,5 +160,60 @@ describe('TravelMatchesService.findMine', () => {
     const result = await service.findMine(userId);
 
     expect(result[0].trip.driver.displayName).toBe('Ana Pérez');
+    expect(result[0].trip.driver.photoUrl).toBe('https://foto/d1');
+  });
+
+  it('incluye el teléfono del conductor cuando está cargado', async () => {
+    prismaMock.travelMatch.findMany.mockResolvedValue([
+      {
+        id: 'match-1',
+        status: 'SUGGESTED',
+        score: 80,
+        detourKm: 1,
+        departureDeltaMinutes: 0,
+        arrivalDeltaMinutes: 0,
+        trip: {
+          id: 'trip-1',
+          origin: 'Pilar',
+          destination: 'Palermo',
+          departureTime: new Date('2026-10-20T11:00:00.000Z'),
+          arrivalTime: new Date('2026-10-20T12:30:00.000Z'),
+          capacity: 3,
+          _count: { passengers: 0 },
+          driver: {
+            id: 'driver-1',
+            email: 'conductor@test.com',
+            studentProfile: {
+              career: null,
+              year: null,
+              campus: null,
+              carModel: null,
+              carColor: null,
+              phone: '+5491122334455',
+            },
+          },
+        },
+      },
+    ]);
+
+    const result = await service.findMine(userId);
+
+    expect(result[0].trip.driver.profile?.phone).toBe('+5491122334455');
+    const [query] = prismaMock.travelMatch.findMany.mock.calls[0] as [
+      {
+        select: {
+          trip: {
+            select: {
+              driver: {
+                select: { studentProfile: { select: { phone: boolean } } };
+              };
+            };
+          };
+        };
+      },
+    ];
+    expect(
+      query.select.trip.select.driver.select.studentProfile.select.phone,
+    ).toBe(true);
   });
 });

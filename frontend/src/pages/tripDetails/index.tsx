@@ -4,10 +4,13 @@ import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { Button } from '../../components/button';
 import { RouteTimeline } from '../../components/routetimeline';
+import { Avatar } from '../../components/avatar';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconClock } from '../../assets/icons/IconClock';
+import { IconCar } from '../../assets/icons/IconCar';
+import { IconPhone } from '../../assets/icons/IconPhone';
 import {
   getTrip,
   joinTrip,
@@ -20,7 +23,6 @@ import {
   formatTime,
   formatTripDateTime,
   getPersonName,
-  getInitials,
 } from '../../lib/tripFormat';
 import './index.css';
 
@@ -105,6 +107,12 @@ export function TripDetailPage() {
   const isDriver = trip?.isDriver ?? false;
   const isFull = trip !== null && trip.availableSeats <= 0;
 
+  const driverProfile = trip?.driver.studentProfile;
+  const car = [driverProfile?.carModel, driverProfile?.carColor]
+    .filter(Boolean)
+    .join(' · ');
+  const driverPhone = driverProfile?.phone;
+
   return (
     <div className="trip-detail">
       <header className="trip-detail__header">
@@ -153,9 +161,11 @@ export function TripDetailPage() {
             </div>
 
             <div className="trip-detail__driver">
-              <span className="trip-detail__driver-avatar">
-                {getInitials(trip.driver.displayName)}
-              </span>
+              <Avatar
+                className="trip-detail__driver-avatar"
+                photoUrl={trip.driver.photoUrl}
+                name={trip.driver.displayName}
+              />
               <span className="trip-detail__driver-name">
                 {getPersonName(trip.driver.displayName)}
               </span>
@@ -183,6 +193,24 @@ export function TripDetailPage() {
                 </dt>
                 <dd>{formatTime(trip.arrivalTime)}</dd>
               </div>
+              {car && (
+                <div className="trip-detail__info-row">
+                  <dt>
+                    <IconCar size={18} color="var(--color-grey-400)" />
+                    Auto
+                  </dt>
+                  <dd>{car}</dd>
+                </div>
+              )}
+              {driverPhone && (
+                <div className="trip-detail__info-row">
+                  <dt>
+                    <IconPhone size={18} color="var(--color-grey-400)" />
+                    Teléfono
+                  </dt>
+                  <dd>{driverPhone}</dd>
+                </div>
+              )}
             </dl>
           </section>
 
@@ -202,9 +230,11 @@ export function TripDetailPage() {
 
                   return (
                     <li key={passenger.id} className="trip-detail__passenger">
-                      <span className="trip-detail__passenger-avatar">
-                        {getInitials(passenger.user.displayName)}
-                      </span>
+                      <Avatar
+                        className="trip-detail__passenger-avatar"
+                        photoUrl={passenger.user.photoUrl}
+                        name={passenger.user.displayName}
+                      />
                       <div className="trip-detail__passenger-info">
                         <span className="trip-detail__passenger-name">
                           {getPersonName(passenger.user.displayName)}

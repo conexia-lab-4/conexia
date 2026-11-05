@@ -65,3 +65,6 @@ skills-lock.json
 
 # Evidencia local del reporte de KPIs (en CI se sube como artifact)
 kpi-reports/
+
+# Firebase CLI
+.firebase/

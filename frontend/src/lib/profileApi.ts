@@ -2,9 +2,11 @@ import { authFetch } from './api';
 
 export interface ProfileResponse {
   university: string | null;
+  universityId: string | null;
   career: string | null;
   year: number | null;
   campus: string | null;
+  campusId: string | null;
   hasCar: boolean | null;
   availableSeats: number | null;
   questionnaireCompleted: boolean;
@@ -15,13 +17,16 @@ export interface ProfileResponse {
   birthDate: string | null;
   bio: string | null;
   detourToleranceKm: number | null;
+  photoUrl: string | null;
 }
 
 export interface UpsertProfilePayload {
   university?: string;
+  universityId?: string;
   career?: string;
   year?: number;
   campus?: string;
+  campusId?: string;
   hasCar?: boolean;
   availableSeats?: number;
   questionnaireCompleted?: boolean;
@@ -58,6 +63,21 @@ export async function upsertProfile(
 
   if (!response.ok) {
     throw new Error('No pudimos guardar tu perfil');
+  }
+
+  return response.json();
+}
+
+export async function uploadProfilePhoto(
+  photo: Blob,
+): Promise<{ photoUrl: string }> {
+  const body = new FormData();
+  body.append('photo', photo, 'avatar.jpg');
+
+  const response = await authFetch('/profile/photo', { method: 'PUT', body });
+
+  if (!response.ok) {
+    throw new Error('No pudimos subir tu foto');
   }
 
   return response.json();

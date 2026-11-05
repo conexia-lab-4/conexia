@@ -6,11 +6,19 @@ import {
 } from '@nestjs/common';
 import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { TravelIntentStatus } from '../../generated/prisma/client';
+import {
+  TravelIntentStatus,
+  RouteDirection,
+} from '../../generated/prisma/client';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
 import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
+import {
+  loadCampusEnd,
+  placeRouteEnds,
+  type RouteEnd,
+} from '../universities/campus-route';
 
 @Injectable()
 export class TravelIntentsService {
@@ -49,22 +57,37 @@ export class TravelIntentsService {
       );
     }
 
-    // Si alguna dirección no se resuelve, no se persiste la intención
-    const [originCoords, destinationCoords] = await Promise.all([
-      this.geocodeOrThrow(dto.origin),
-      this.geocodeOrThrow(dto.destination),
-    ]);
+    const campusEnd = await loadCampusEnd(this.prisma, dto.campusId);
+
+    // Solo se geocodifica la dirección de la casa; el extremo de la
+    // universidad usa las coordenadas de la sede. Si no se resuelve, no se
+    // persiste la intención
+    const homeAddress =
+      dto.routeDirection === RouteDirection.TO_CAMPUS
+        ? dto.origin
+        : dto.destination;
+    const homeEnd: RouteEnd = {
+      label: homeAddress,
+      coords: await this.geocodeOrThrow(homeAddress),
+    };
+    const { origin, destination } = placeRouteEnds(
+      dto.routeDirection,
+      campusEnd,
+      homeEnd,
+    );
 
     const intent = await this.prisma.$transaction(async (tx) => {
       const created = await tx.travelIntent.create({
         data: {
           userId,
-          origin: dto.origin,
-          originLat: originCoords.lat,
-          originLng: originCoords.lng,
-          destination: dto.destination,
-          destinationLat: destinationCoords.lat,
-          destinationLng: destinationCoords.lng,
+          origin: origin.label,
+          originLat: origin.coords.lat,
+          originLng: origin.coords.lng,
+          destination: destination.label,
+          destinationLat: destination.coords.lat,
+          destinationLng: destination.coords.lng,
+          campusId: dto.campusId,
+          routeDirection: dto.routeDirection,
           departureTime,
           arrivalTime,
         },

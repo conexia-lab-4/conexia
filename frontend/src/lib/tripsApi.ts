@@ -16,6 +16,18 @@ export interface TripUser {
   id: string;
   email: string;
   displayName: string | null;
+  photoUrl: string | null;
+}
+
+export interface TripDriverProfile {
+  carModel: string | null;
+  carColor: string | null;
+  phone: string | null;
+}
+
+// El backend solo manda el perfil del conductor a quienes participan del viaje
+export interface TripDriver extends TripUser {
+  studentProfile?: TripDriverProfile | null;
 }
 
 export interface TripPassenger {
@@ -33,7 +45,7 @@ export interface TripPassenger {
 }
 
 export interface TripDetail extends Trip {
-  driver: TripUser;
+  driver: TripDriver;
   passengers: TripPassenger[];
   availableSeats: number;
   isDriver: boolean;
@@ -41,9 +53,13 @@ export interface TripDetail extends Trip {
   isHistorical: boolean;
 }
 
+export type RouteDirection = 'TO_CAMPUS' | 'FROM_CAMPUS';
+
 export interface CreateTripPayload {
   origin: string;
   destination: string;
+  campusId: string;
+  routeDirection: RouteDirection;
   departureTime: string;
   arrivalTime: string;
 }

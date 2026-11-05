@@ -1,5 +1,6 @@
 import type { Match } from '../../lib/matchesApi';
 import { CompatibilityRing } from '../compatibilityRing';
+import { Avatar } from '../avatar';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconSeat } from '../../assets/icons/IconSeat';
@@ -30,7 +31,11 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
   return (
     <button type="button" className="match-card" onClick={onClick}>
       <div className="match-card__avatar-wrapper">
-        <span className="match-card__avatar">{match.initials}</span>
+        <Avatar
+          className="match-card__avatar"
+          photoUrl={match.photoUrl}
+          name={match.name}
+        />
       </div>
 
       <div className="match-card__info">

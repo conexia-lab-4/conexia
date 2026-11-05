@@ -6,12 +6,17 @@ import { AuthenticatedUser } from '../auth/current-user.decorator';
 
 describe('ProfileController', () => {
   let controller: ProfileController;
-  let serviceMock: { getProfile: jest.Mock; upsertProfile: jest.Mock };
+  let serviceMock: {
+    getProfile: jest.Mock;
+    upsertProfile: jest.Mock;
+    updatePhoto: jest.Mock;
+  };
 
   beforeEach(async () => {
     serviceMock = {
       getProfile: jest.fn(),
       upsertProfile: jest.fn(),
+      updatePhoto: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProfileController],
@@ -55,5 +60,19 @@ describe('ProfileController', () => {
       'user-autenticado',
       dto,
     );
+  });
+
+  it('updatePhoto sube la foto del usuario autenticado', async () => {
+    const user: AuthenticatedUser = { id: 'user-autenticado' };
+    const photo = { buffer: Buffer.from('img') } as Express.Multer.File;
+    serviceMock.updatePhoto.mockResolvedValue({ photoUrl: 'https://foto' });
+
+    const result = await controller.updatePhoto(user, photo);
+
+    expect(serviceMock.updatePhoto).toHaveBeenCalledWith(
+      'user-autenticado',
+      photo,
+    );
+    expect(result).toEqual({ photoUrl: 'https://foto' });
   });
 });

@@ -150,6 +150,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
 }
 
 .publish-trip__route-row {
@@ -161,6 +162,29 @@
 
 .publish-trip__route-row .publish-trip__dot {
   margin-top: 3px;
+}
+
+.publish-trip__route-row .publish-trip__combobox {
+  flex: 1;
+  min-width: 0;
+}
+
+.publish-trip__swap {
+  position: absolute;
+  top: 58%;
+  right: 5px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid var(--color-grey-200);
+  border-radius: 50%;
+  background: var(--color-white);
+  cursor: pointer;
 }
 
 /* Línea punteada entre origen y destino */
