@@ -1,12 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Injectable()
 export class TestUtilsService {
   constructor(
     @Inject('FIREBASE_ADMIN') private readonly firebaseAdmin: typeof admin,
     private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async verifyEmail(email: string): Promise<void> {
@@ -35,5 +38,19 @@ export class TestUtilsService {
     await this.prisma.subject.deleteMany({ where: { userId: uid } });
     await this.prisma.user.deleteMany({ where: { id: uid } });
     await this.firebaseAdmin.auth().deleteUser(uid);
+  }
+
+  // El usuario tiene que haber hecho al menos una petición autenticada
+  // (ahí se crea su fila en la base)
+  async createNotification(dto: CreateNotificationDto) {
+    const { uid } = await this.firebaseAdmin.auth().getUserByEmail(dto.email);
+
+    return this.notifications.create({
+      userId: uid,
+      title: dto.title,
+      message: dto.message,
+      type: dto.type,
+      referenceId: dto.referenceId,
+    });
   }
 }
