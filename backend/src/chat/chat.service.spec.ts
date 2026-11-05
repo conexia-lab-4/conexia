@@ -11,6 +11,7 @@ describe('ChatService', () => {
   let ref: { get: jest.Mock; update: jest.Mock };
   let tx: { get: jest.Mock; set: jest.Mock; update: jest.Mock };
   let doc: jest.Mock;
+  let recursiveDelete: jest.Mock;
 
   const tripId = 'trip-1';
   const departureTime = new Date('2026-11-02T08:00:00.000Z');
@@ -43,9 +44,11 @@ describe('ChatService', () => {
       update: jest.fn(),
     };
     doc = jest.fn(() => ref);
+    recursiveDelete = jest.fn().mockResolvedValue(undefined);
     const firebaseAdminMock = {
       firestore: () => ({
         collection: () => ({ doc }),
+        recursiveDelete,
         runTransaction: (callback: (transaction: typeof tx) => unknown) =>
           callback(tx),
       }),
@@ -136,6 +139,21 @@ describe('ChatService', () => {
       ref.get.mockRejectedValue(new Error('sin conexión'));
 
       await expect(service.syncParticipants(tripId)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('deleteConversation', () => {
+    it('borra la conversación del viaje con sus mensajes', async () => {
+      await service.deleteConversation(tripId);
+
+      expect(doc).toHaveBeenCalledWith(tripId);
+      expect(recursiveDelete).toHaveBeenCalledWith(ref);
+    });
+
+    it('no lanza si Firestore falla', async () => {
+      recursiveDelete.mockRejectedValue(new Error('sin conexión'));
+
+      await expect(service.deleteConversation(tripId)).resolves.toBeUndefined();
     });
   });
 });

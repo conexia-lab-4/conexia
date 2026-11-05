@@ -75,6 +75,12 @@ export class TripsController {
     return this.tripsService.leave(id, user.id);
   }
 
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tripsService.remove(id, user.id);
+  }
+
   // Crea o recupera el chat del viaje. Los mensajes se leen y escriben directo
   // en Firestore desde el cliente: el backend solo asegura los participantes
   @Post(':id/conversation')

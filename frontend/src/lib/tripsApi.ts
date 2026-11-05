@@ -155,3 +155,16 @@ export async function leaveTrip(id: string): Promise<void> {
     );
   }
 }
+
+// Responde 204 sin body: no se parsea la respuesta
+export async function deleteTrip(id: string): Promise<void> {
+  const response = await authFetch(`/trips/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, 'No pudimos eliminar el viaje'),
+    );
+  }
+}

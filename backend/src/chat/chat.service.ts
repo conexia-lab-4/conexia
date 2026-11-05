@@ -66,6 +66,22 @@ export class ChatService {
     }
   }
 
+  // Al eliminar el viaje se borran la conversación y sus mensajes. Si Firestore
+  // falla no rompe la operación: el viaje ya se eliminó
+  async deleteConversation(tripId: string) {
+    try {
+      await this.firebaseAdmin
+        .firestore()
+        .recursiveDelete(this.conversationRef(tripId));
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo borrar la conversación del viaje ${tripId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   private conversationRef(tripId: string) {
     return this.firebaseAdmin.firestore().collection(CONVERSATIONS).doc(tripId);
   }
