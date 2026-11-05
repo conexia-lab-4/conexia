@@ -107,6 +107,8 @@ model Trip {
   departureTime  DateTime
   arrivalTime    DateTime
   capacity       Int
+  // Lo comparten la ida y la vuelta publicadas juntas como paquete
+  roundTripId    String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   travelMatches  TravelMatch[]
@@ -114,6 +116,8 @@ model Trip {
   driver     User            @relation(fields: [driverId], references: [id])
   passengers TripPassenger[]
   campus     Campus?         @relation(fields: [campusId], references: [id])
+
+  @@index([roundTripId])
 }
 
 model TripPassenger {
@@ -155,6 +159,8 @@ model TravelIntent {
   departureTime  DateTime
   arrivalTime    DateTime
   status         TravelIntentStatus @default(ACTIVE)
+  // Lo comparten la ida y la vuelta publicadas juntas como paquete
+  roundTripId    String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   travelMatches  TravelMatch[]
@@ -163,6 +169,7 @@ model TravelIntent {
   campus Campus? @relation(fields: [campusId], references: [id])
 
   @@index([userId, status])
+  @@index([roundTripId])
   @@index([status, departureTime])
 }
 

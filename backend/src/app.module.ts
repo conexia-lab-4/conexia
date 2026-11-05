@@ -12,6 +12,7 @@ import { TravelIntentsModule } from './travel-intents/travel-intents.module';
 import { TripsModule } from './trips/trips.module';
 import { TravelMatchesModule } from './travel-matches/travel-matches.module';
 import { UniversitiesModule } from './universities/universities.module';
+import { RoundTripsModule } from './round-trips/round-trips.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UniversitiesModule } from './universities/universities.module';
     TestUtilsModule,
     TravelMatchesModule,
     UniversitiesModule,
+    RoundTripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

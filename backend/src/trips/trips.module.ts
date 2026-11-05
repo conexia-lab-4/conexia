@@ -9,5 +9,7 @@ import { TripsController } from './trips.controller';
   imports: [PrismaModule, GeoModule, MatchingModule],
   controllers: [TripsController],
   providers: [TripsService],
+  // Lo usan los paquetes de ida y vuelta para crear sus tramos
+  exports: [TripsService],
 })
 export class TripsModule {}
