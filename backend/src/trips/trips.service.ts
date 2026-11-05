@@ -255,6 +255,8 @@ export class TripsService {
     });
 
     await this.matching.matchTrip(updated.id);
+    // El listado de chats muestra destino y horario del viaje
+    await this.chat.syncParticipants(updated.id);
 
     return this.presentTrip(updated, userId);
   }

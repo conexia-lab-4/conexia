@@ -743,6 +743,14 @@ describe('TripsService', () => {
     const updateData = () =>
       (prismaMock.trip.update.mock.calls[0] as [{ data: object }])[0].data;
 
+    it('actualiza los datos del viaje en su conversación', async () => {
+      await service.update(tripId, userId, {
+        departureTime: '2026-10-05T07:30:00.000Z',
+      });
+
+      expect(chatMock.syncParticipants).toHaveBeenCalledWith(tripId);
+    });
+
     it('no vuelve a geocodificar si las direcciones no cambian', async () => {
       await service.update(tripId, userId, {
         origin: 'Pilar',
