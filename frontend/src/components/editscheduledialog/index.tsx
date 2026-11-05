@@ -8,13 +8,17 @@ import './index.css';
 
 interface EditScheduleDialogProps {
   subjectName: string;
-  initialDay: DayValue;
+  // Si se pasa, el popup también permite editar el nombre de la materia
+  initialName?: string;
+  // '' cuando todavía no hay día (borrador leído de una imagen)
+  initialDay: DayValue | '';
   initialStartTime: string;
   initialEndTime: string;
   initialClassroom: string;
   isSaving?: boolean;
   error?: string | null;
   onSave: (data: {
+    name: string;
     dayOfWeek: DayValue;
     startTime: string;
     endTime: string;
@@ -37,6 +41,7 @@ function validateTimes(startTime: string, endTime: string): string | null {
 
 export function EditScheduleDialog({
   subjectName,
+  initialName,
   initialDay,
   initialStartTime,
   initialEndTime,
@@ -46,7 +51,9 @@ export function EditScheduleDialog({
   onSave,
   onCancel,
 }: EditScheduleDialogProps) {
-  const [day, setDay] = useState<DayValue>(initialDay);
+  const isNameEditable = initialName !== undefined;
+  const [name, setName] = useState(initialName ?? subjectName);
+  const [day, setDay] = useState<DayValue | ''>(initialDay);
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);
   const [classroom, setClassroom] = useState(initialClassroom);
@@ -56,6 +63,15 @@ export function EditScheduleDialog({
     event.preventDefault();
     if (isSaving) return;
 
+    if (isNameEditable && !name.trim()) {
+      setLocalError('El nombre de la materia es obligatorio.');
+      return;
+    }
+    if (!day) {
+      setLocalError('Elegí el día de la semana.');
+      return;
+    }
+
     const validationMessage = validateTimes(startTime, endTime);
     if (validationMessage) {
       setLocalError(validationMessage);
@@ -63,7 +79,7 @@ export function EditScheduleDialog({
     }
 
     setLocalError(null);
-    onSave({ dayOfWeek: day, startTime, endTime, classroom });
+    onSave({ name, dayOfWeek: day, startTime, endTime, classroom });
   }
 
   const displayedError = localError ?? error;
@@ -78,14 +94,36 @@ export function EditScheduleDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="edit-schedule-dialog__title">Editar horario</h2>
-        <p className="edit-schedule-dialog__subtitle">{subjectName}</p>
+        {!isNameEditable && (
+          <p className="edit-schedule-dialog__subtitle">{subjectName}</p>
+        )}
 
         <form className="edit-schedule-dialog__form" onSubmit={handleSubmit}>
+          {isNameEditable && (
+            <TextField
+              label="Nombre de la materia"
+              variant="filled"
+              leftIcon={<IconBook size={20} color="var(--color-grey-400)" />}
+              value={name}
+              onChange={(e) => {
+                setLocalError(null);
+                setName(e.target.value);
+              }}
+              placeholder="Ej. Análisis Matemático"
+            />
+          )}
+
           <div className="edit-schedule-dialog__field-group">
             <span className="edit-schedule-dialog__label">
               Día de la semana
             </span>
-            <DaySelector selected={[day]} onToggle={setDay} />
+            <DaySelector
+              selected={day ? [day] : []}
+              onToggle={(value) => {
+                setLocalError(null);
+                setDay(value);
+              }}
+            />
           </div>
 
           <div className="edit-schedule-dialog__times">
