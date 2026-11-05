@@ -163,6 +163,22 @@ describe('TravelMatchesService', () => {
     );
   });
 
+  it('aceptar un tramo no toca la otra intención de su paquete', async () => {
+    await service.accept('match-1', userId);
+
+    // Solo se cumple esta intención y solo se invalidan sus propias
+    // sugerencias: la del otro tramo sigue activa y buscando
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'intent-1' } }),
+    );
+    expect(prismaMock.travelMatch.updateMany).toHaveBeenCalledTimes(1);
+    const [invalidation] = prismaMock.travelMatch.updateMany.mock.calls[0] as [
+      { where: { travelIntentId: string } },
+    ];
+    expect(invalidation.where.travelIntentId).toBe('intent-1');
+  });
+
   it('recalcula las sugerencias del viaje después de aceptar', async () => {
     await service.accept('match-1', userId);
 
