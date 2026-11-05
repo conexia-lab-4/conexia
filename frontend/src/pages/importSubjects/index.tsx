@@ -7,13 +7,19 @@ import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { Button } from '../../components/button';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
-import { extractSubjects, type DayOfWeek } from '../../lib/subjectsApi';
+import {
+  createSubject,
+  extractSubjects,
+  type DayOfWeek,
+} from '../../lib/subjectsApi';
+import { getProfile, type ProfileResponse } from '../../lib/profileApi';
 import { EditScheduleDialog } from '../../components/editscheduledialog';
 import type { DayValue } from '../../components/dayselector';
 import { DAY_OPTIONS } from '../../components/dayselector/constants';
 import {
   buildDraftBlocks,
   isBlockComplete,
+  toSubjectInputs,
   type DraftBlock,
 } from '../../lib/subjectDraft';
 import { DAY_LABELS } from '../../lib/scheduleGrouping';
@@ -77,12 +83,22 @@ export function ImportSubjects() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<DraftBlock | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
 
   // Libera la vista previa anterior al cambiar de foto o al salir de la pantalla
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  // Carrera y sede del perfil: solo se muestran como referencia
+  useEffect(() => {
+    getProfile()
+      .then(setProfile)
+      .catch((error) => console.error('Error al cargar el perfil:', error));
+  }, []);
 
   const openPicker = () => inputRef.current?.click();
 
@@ -193,6 +209,49 @@ export function ImportSubjects() {
     setDeleteTarget(null);
   };
 
+  const handleSave = async () => {
+    if (!blocks || isSaving) return;
+
+    setIsSaving(true);
+    setSaveError('');
+
+    // Una alta por materia. Las que se guardan salen del borrador, así un
+    // reintento solo envía las pendientes y no duplica las ya guardadas
+    const savedKeys = new Set<number>();
+    for (const { subjectKey, input } of toSubjectInputs(blocks)) {
+      try {
+        await createSubject(input);
+        savedKeys.add(subjectKey);
+      } catch (error) {
+        console.error('Error al guardar la materia:', error);
+      }
+    }
+
+    const totalSubjects = new Set(blocks.map((block) => block.subjectKey)).size;
+    if (savedKeys.size === totalSubjects) {
+      navigate('/schedule');
+      return;
+    }
+
+    setBlocks(
+      (current) =>
+        current?.filter((block) => !savedKeys.has(block.subjectKey)) ?? null,
+    );
+    setSaveError(
+      savedKeys.size > 0
+        ? `Guardamos ${savedKeys.size} materia${savedKeys.size === 1 ? '' : 's'}, pero no pudimos guardar el resto. Intentá de nuevo.`
+        : 'No pudimos guardar las materias. Intentá de nuevo.',
+    );
+    setIsSaving(false);
+  };
+
+  const profileInfo = [
+    profile?.career && `Carrera: ${profile.career}`,
+    profile?.campus && `Sede: ${profile.campus}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   if (blocks) {
     const subjectCount = new Set(blocks.map((block) => block.subjectKey)).size;
     const hasIncomplete = blocks.some((block) => !isBlockComplete(block));
@@ -221,6 +280,11 @@ export function ImportSubjects() {
             <p className="import-subjects__subtitle text-body-3">
               Podés editar la información antes de guardar.
             </p>
+            {profileInfo && (
+              <p className="import-subjects__subtitle text-body-3">
+                {profileInfo}
+              </p>
+            )}
           </div>
 
           <div className="import-subjects__list">
@@ -252,6 +316,11 @@ export function ImportSubjects() {
               />
             ))}
           </div>
+          {saveError && (
+            <p className="import-subjects__error text-body-3" role="alert">
+              {saveError}
+            </p>
+          )}
         </main>
 
         <div className="import-subjects__footer">
@@ -259,9 +328,12 @@ export function ImportSubjects() {
             type="button"
             variant="fulfilled"
             size="large-wide"
-            disabled={hasIncomplete}
+            disabled={hasIncomplete || isSaving}
+            onClick={handleSave}
           >
-            Guardar {subjectCount} materia{subjectCount === 1 ? '' : 's'}
+            {isSaving
+              ? 'Guardando...'
+              : `Guardar ${subjectCount} materia${subjectCount === 1 ? '' : 's'}`}
           </Button>
         </div>
 

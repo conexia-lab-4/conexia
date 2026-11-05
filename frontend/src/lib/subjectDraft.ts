@@ -1,5 +1,6 @@
 import { SUBJECT_COLORS } from '../components/colorpicker/constants';
 import type {
+  CreateSubjectInput,
   DayOfWeek,
   DraftSchedule,
   DraftSubject,
@@ -80,4 +81,33 @@ export function buildDraftBlocks(drafts: DraftSubject[]): DraftBlock[] {
       color: colors[subjectKey],
     }));
   });
+}
+
+// El alta actual recibe una materia con todos sus horarios: los bloques que
+// comparten subjectKey se juntan en un solo pedido
+export function toSubjectInputs(
+  blocks: DraftBlock[],
+): { subjectKey: number; input: CreateSubjectInput }[] {
+  const bySubject = new Map<number, DraftBlock[]>();
+  for (const block of blocks) {
+    bySubject.set(block.subjectKey, [
+      ...(bySubject.get(block.subjectKey) ?? []),
+      block,
+    ]);
+  }
+
+  return [...bySubject.entries()].map(([subjectKey, group]) => ({
+    subjectKey,
+    input: {
+      name: group[0].name.trim(),
+      color: group[0].color,
+      schedules: group.map((block) => ({
+        // Solo se guarda con todos los bloques completos, así que hay día
+        dayOfWeek: block.dayOfWeek as DayOfWeek,
+        startTime: block.startTime,
+        endTime: block.endTime,
+        classroom: block.classroom.trim() || undefined,
+      })),
+    },
+  }));
 }
