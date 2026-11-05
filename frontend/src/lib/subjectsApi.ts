@@ -116,3 +116,53 @@ export async function createSubject(
 
   return response.json();
 }
+
+// Borrador leído de una imagen: todo campo puede venir vacío ('') para que el
+// usuario lo complete antes de guardar
+export interface DraftSchedule {
+  dayOfWeek: DayOfWeek | '';
+  startTime: string;
+  endTime: string;
+  classroom: string;
+}
+
+export interface DraftSubject {
+  name: string;
+  career: string;
+  campus: string;
+  color: SubjectColor | '';
+  schedules: DraftSchedule[];
+}
+
+const EXTRACT_ERROR = 'No pudimos procesar la imagen. Intentá de nuevo';
+
+// No guarda nada: devuelve un borrador para revisar antes del alta
+export async function extractSubjects(image: File): Promise<DraftSubject[]> {
+  const body = new FormData();
+  body.append('image', image);
+
+  let response: Response;
+  try {
+    response = await authFetch('/subjects/extract', { method: 'POST', body });
+  } catch {
+    throw new Error(EXTRACT_ERROR);
+  }
+
+  if (response.status === 413) {
+    throw new Error('La imagen supera los 10 MB');
+  }
+  if (response.status === 400) {
+    throw new Error('Elegí una imagen JPG, PNG, WEBP o HEIC');
+  }
+  if (!response.ok) {
+    // El backend ya responde en español (502 al fallar el procesado, 503 si
+    // la importación no está configurada)
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      typeof data?.message === 'string' ? data.message : EXTRACT_ERROR,
+    );
+  }
+
+  const data: { subjects: DraftSubject[] } = await response.json();
+  return data.subjects;
+}

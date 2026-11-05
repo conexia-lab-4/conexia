@@ -8,6 +8,7 @@ import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
+import { ImportSubjects } from './pages/importSubjects';
 import { Profile } from './pages/profile';
 import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
@@ -39,6 +40,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/assignments/new" element={<AddSubject />} />
+        <Route path="/assignments/import" element={<ImportSubjects />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trips/new" element={<PublishTrip />} />
