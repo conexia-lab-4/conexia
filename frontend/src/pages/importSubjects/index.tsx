@@ -6,7 +6,11 @@ import { IconClose } from '../../assets/icons/IconClose';
 import { IconSparkles } from '../../assets/icons/IconSparkles';
 import { Button } from '../../components/button';
 import ConexiaLoader from '../../components/ConexiaLoader';
-import { extractSubjects } from '../../lib/subjectsApi';
+import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
+import { extractSubjects, type DayOfWeek } from '../../lib/subjectsApi';
+import { EditScheduleDialog } from '../../components/editscheduledialog';
+import type { DayValue } from '../../components/dayselector';
+import { DAY_OPTIONS } from '../../components/dayselector/constants';
 import {
   buildDraftBlocks,
   isBlockComplete,
@@ -28,6 +32,39 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 type ExtractStatus = 'idle' | 'processing' | 'empty' | 'error';
 
+// El selector de días solo llega hasta el viernes: un sábado o domingo
+// detectado se muestra, pero hay que elegir de nuevo el día al editarlo
+function toDayValue(day: DayOfWeek | ''): DayValue | '' {
+  return DAY_OPTIONS.some((option) => option.value === day)
+    ? (day as DayValue)
+    : '';
+}
+
+interface DeleteTarget {
+  block: DraftBlock;
+  mode: 'schedule' | 'subject';
+}
+
+function getDeleteMessage(target: DeleteTarget, blocks: DraftBlock[]): string {
+  const { block, mode } = target;
+  const name = block.name || 'esta materia';
+
+  if (mode === 'subject') {
+    return `${name} se eliminará del borrador, junto con todos sus horarios.`;
+  }
+
+  const isLastSchedule =
+    blocks.filter((item) => item.subjectKey === block.subjectKey).length <= 1;
+  const detail =
+    block.dayOfWeek && block.startTime && block.endTime
+      ? ` del ${DAY_LABELS[block.dayOfWeek].toLowerCase()} (${block.startTime} - ${block.endTime})`
+      : '';
+
+  return isLastSchedule
+    ? `Se eliminará la clase de ${name}${detail}. Como era el único horario, la materia también se eliminará del borrador`
+    : `Se eliminará la clase de ${name}${detail}. La materia seguirá en el borrador`;
+}
+
 export function ImportSubjects() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +75,8 @@ export function ImportSubjects() {
   const [extractError, setExtractError] = useState('');
   const [blocks, setBlocks] = useState<DraftBlock[] | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<DraftBlock | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   // Libera la vista previa anterior al cambiar de foto o al salir de la pantalla
   useEffect(() => {
@@ -99,6 +138,61 @@ export function ImportSubjects() {
     }
   };
 
+  const handleEditClick = (block: DraftBlock) => {
+    setOpenMenuId(null);
+    setEditTarget(block);
+  };
+
+  const handleSaveEdit = (data: {
+    name: string;
+    dayOfWeek: DayValue;
+    startTime: string;
+    endTime: string;
+    classroom: string;
+  }) => {
+    if (!editTarget) return;
+
+    // El nombre es de la materia: se actualiza en todos sus bloques. Día,
+    // horas y aula son solo del bloque editado
+    setBlocks(
+      (current) =>
+        current?.map((block) => {
+          if (block.subjectKey !== editTarget.subjectKey) return block;
+          const renamed = { ...block, name: data.name.trim() };
+          if (block.id !== editTarget.id) return renamed;
+          return {
+            ...renamed,
+            dayOfWeek: data.dayOfWeek,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            classroom: data.classroom.trim(),
+          };
+        }) ?? null,
+    );
+    setEditTarget(null);
+  };
+
+  const handleDeleteClick = (block: DraftBlock, mode: DeleteTarget['mode']) => {
+    setOpenMenuId(null);
+    setDeleteTarget({ block, mode });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    const { block, mode } = deleteTarget;
+
+    setBlocks((current) => {
+      const remaining = (current ?? []).filter((item) =>
+        mode === 'subject'
+          ? item.subjectKey !== block.subjectKey
+          : item.id !== block.id,
+      );
+      // Sin nada que revisar se vuelve a la selección de la foto
+      return remaining.length > 0 ? remaining : null;
+    });
+    setDeleteTarget(null);
+  };
+
   if (blocks) {
     const subjectCount = new Set(blocks.map((block) => block.subjectKey)).size;
     const hasIncomplete = blocks.some((block) => !isBlockComplete(block));
@@ -150,6 +244,11 @@ export function ImportSubjects() {
                     current === block.id ? null : block.id,
                   )
                 }
+                onEdit={() => handleEditClick(block)}
+                onDeleteScheduleClick={() =>
+                  handleDeleteClick(block, 'schedule')
+                }
+                onDeleteSubjectClick={() => handleDeleteClick(block, 'subject')}
               />
             ))}
           </div>
@@ -165,6 +264,32 @@ export function ImportSubjects() {
             Guardar {subjectCount} materia{subjectCount === 1 ? '' : 's'}
           </Button>
         </div>
+
+        {editTarget && (
+          <EditScheduleDialog
+            subjectName={editTarget.name}
+            initialName={editTarget.name}
+            initialDay={toDayValue(editTarget.dayOfWeek)}
+            initialStartTime={editTarget.startTime}
+            initialEndTime={editTarget.endTime}
+            initialClassroom={editTarget.classroom}
+            onSave={handleSaveEdit}
+            onCancel={() => setEditTarget(null)}
+          />
+        )}
+
+        {deleteTarget && (
+          <DeleteScheduleDialog
+            title={
+              deleteTarget.mode === 'subject'
+                ? '¿Eliminar materia?'
+                : '¿Eliminar solo este horario?'
+            }
+            message={getDeleteMessage(deleteTarget, blocks)}
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        )}
       </div>
     );
   }
