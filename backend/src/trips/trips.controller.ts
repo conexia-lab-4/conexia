@@ -15,6 +15,7 @@ import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
 import { TripsService } from './trips.service';
+import { ChatService } from '../chat/chat.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { ListMyTripsDto } from './dto/list-my-trips.dto';
@@ -22,7 +23,10 @@ import { ListMyTripsDto } from './dto/list-my-trips.dto';
 @Controller('trips')
 @UseGuards(FirebaseAuthGuard)
 export class TripsController {
-  constructor(private readonly tripsService: TripsService) {}
+  constructor(
+    private readonly tripsService: TripsService,
+    private readonly chatService: ChatService,
+  ) {}
 
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTripDto) {
@@ -69,5 +73,16 @@ export class TripsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   leave(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.tripsService.leave(id, user.id);
+  }
+
+  // Crea o recupera el chat del viaje. Los mensajes se leen y escriben directo
+  // en Firestore desde el cliente: el backend solo asegura los participantes
+  @Post(':id/conversation')
+  @HttpCode(HttpStatus.OK)
+  openConversation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.chatService.openConversation(id, user.id);
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { EmptyTripsState } from '../../components/emptytripsstate';
@@ -12,6 +12,7 @@ import {
   type TripDetail,
   type TripScope,
 } from '../../lib/tripsApi';
+import { IconChat } from '../../assets/icons/IconChat';
 import tripsHeader from '../../assets/images/trips-header.png';
 import './index.css';
 import { TravelIntentCard } from '../../components/travelintentcard';
@@ -106,6 +107,9 @@ export function Trips() {
           </p>
         </div>
         <img src={tripsHeader} alt="" className="trips__header-image" />
+        <Link to="/chats" className="trips__chats-link" aria-label="Ver chats">
+          <IconChat size={22} color="var(--color-primary-700)" />
+        </Link>
       </header>
 
       {intentCreated && (

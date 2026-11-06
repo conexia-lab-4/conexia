@@ -16,6 +16,8 @@ import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
 import { Matches } from './pages/matches';
 import { MatchDetailPage } from './pages/matchDetail';
+import { Chats } from './pages/chats';
+import { ChatPage } from './pages/chat';
 
 function App() {
   return (
@@ -48,6 +50,8 @@ function App() {
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:id" element={<MatchDetailPage />} />
+        <Route path="/chats" element={<Chats />} />
+        <Route path="/chats/:tripId" element={<ChatPage />} />
       </Route>
     </Routes>
   );
