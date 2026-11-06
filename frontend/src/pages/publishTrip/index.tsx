@@ -71,6 +71,8 @@ const INTENT_STEPS: { id: Step; label: string }[] = [
   { id: 3, label: 'Revisar' },
 ];
 
+const NO_UNIVERSITY_MESSAGE = 'Completá tu universidad en Mi Perfil.';
+
 // Perfiles anteriores al catálogo: se reconoce la universidad por su nombre
 function getProfileUniversityId(profile: ProfileResponse | null) {
   return (
@@ -103,7 +105,7 @@ function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
 }
 
 function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
-  if (!hasUniversity) return 'Completá tu universidad en Mi Perfil.';
+  if (!hasUniversity) return NO_UNIVERSITY_MESSAGE;
   if (!form.home.trim()) {
     return form.direction === 'TO_CAMPUS'
       ? 'Ingresá desde dónde salís.'
@@ -319,6 +321,15 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     />
   );
 
+  // Sin sedes la lista no se abre: el campo explica por qué
+  const campusHelperText = !hasUniversity
+    ? NO_UNIVERSITY_MESSAGE
+    : campusesFailed
+      ? 'No pudimos cargar las sedes.'
+      : campuses.length === 0
+        ? 'Tu universidad todavía no tiene sedes disponibles.'
+        : undefined;
+
   // La universidad es la del perfil: solo se elige entre sus sedes
   const renderCampusField = (label: string) => (
     <div className="publish-trip__combobox">
@@ -326,11 +337,11 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         variant={campusesFailed ? 'error' : 'filled'}
         label={label}
         placeholder="Elegí una sede"
-        helperText={campusesFailed ? 'No pudimos cargar las sedes.' : undefined}
+        helperText={campusHelperText}
         value={campusLabel}
         readOnly
         role="combobox"
-        aria-expanded={isCampusOpen}
+        aria-expanded={isCampusOpen && campuses.length > 0}
         onClick={() => setIsCampusOpen((open) => !open)}
         onBlur={() => setTimeout(() => setIsCampusOpen(false), 150)}
         leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}

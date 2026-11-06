@@ -13,6 +13,8 @@ import { type TripScope } from './dto/list-my-trips.dto';
 import {
   Prisma,
   RouteDirection,
+  TravelIntentStatus,
+  TravelMatchStatus,
   type Trip,
 } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
@@ -23,6 +25,7 @@ import {
   DisplayNamesService,
   type PublicUser,
 } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 import {
   legRouteData,
   loadCampusEnd,
@@ -32,6 +35,9 @@ import {
   type RouteEnd,
   type RouteLeg,
 } from '../universities/campus-route';
+
+// Con pasajeros, un viaje solo se puede eliminar con esta anticipación
+const DELETE_NOTICE_MS = 24 * 60 * 60 * 1000;
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -72,6 +78,7 @@ export class TripsService {
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
     private readonly displayNames: DisplayNamesService,
+    private readonly chat: ChatService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
@@ -273,6 +280,8 @@ export class TripsService {
     });
 
     await this.matching.matchTrip(updated.id);
+    // El listado de chats muestra destino y horario del viaje
+    await this.chat.syncParticipants(updated.id);
 
     return this.presentTrip(updated, userId);
   }
@@ -286,6 +295,7 @@ export class TripsService {
 
       // El viaje pudo quedar lleno: se recalculan sus sugerencias pendientes
       await this.matching.matchTrip(tripId);
+      await this.chat.syncParticipants(tripId);
 
       return passenger;
     } catch (error) {
@@ -319,6 +329,85 @@ export class TripsService {
     }
 
     await this.matching.matchTrip(tripId);
+    // Quien sale pierde acceso al chat del viaje
+    await this.chat.syncParticipants(tripId);
+  }
+
+  async remove(tripId: string, userId: string) {
+    try {
+      const reactivatedIntentIds = await this.prisma.$transaction(
+        async (tx) => {
+          const trip = await tx.trip.findUnique({
+            where: { id: tripId },
+            include: { passengers: { select: { userId: true } } },
+          });
+
+          if (!trip) {
+            throw new NotFoundException('El viaje no existe');
+          }
+
+          if (trip.driverId !== userId) {
+            throw new ForbiddenException(
+              'Solo el conductor puede eliminar el viaje',
+            );
+          }
+
+          const now = new Date();
+          const hasPassengers = trip.passengers.length > 0;
+          if (
+            hasPassengers &&
+            trip.departureTime.getTime() - now.getTime() < DELETE_NOTICE_MS
+          ) {
+            throw new ConflictException(
+              'Con pasajeros, el viaje solo se puede eliminar hasta 24 horas antes de la salida',
+            );
+          }
+
+          const acceptedMatches = await tx.travelMatch.findMany({
+            where: {
+              tripId,
+              status: TravelMatchStatus.ACCEPTED,
+              travelIntent: {
+                userId: {
+                  in: trip.passengers.map((passenger) => passenger.userId),
+                },
+                status: TravelIntentStatus.FULFILLED,
+                arrivalTime: { gt: now },
+              },
+            },
+            select: { travelIntentId: true },
+          });
+          const intentIds = acceptedMatches.map(
+            (match) => match.travelIntentId,
+          );
+
+          // Pasajeros y matches del viaje se borran en cascada
+          await tx.trip.delete({ where: { id: tripId } });
+
+          // Quien aceptó un match se queda sin viaje: vuelve a estar buscando
+          await tx.travelIntent.updateMany({
+            where: { id: { in: intentIds } },
+            data: { status: TravelIntentStatus.ACTIVE },
+          });
+
+          return intentIds;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+
+      for (const intentId of reactivatedIntentIds) {
+        await this.matching.matchIntent(intentId);
+      }
+      await this.chat.deleteConversation(tripId);
+    } catch (error) {
+      if (isSerializationConflict(error)) {
+        throw new ConflictException(
+          'No pudimos eliminar el viaje, intentá de nuevo',
+        );
+      }
+
+      throw error;
+    }
   }
 
   // Origen y destino a guardar al editar. Si el viaje tiene sede, el extremo

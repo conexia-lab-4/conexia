@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { IconChevronDown } from '../../assets/icons/IconChevronDown';
 import { RouteTimeline } from '../routetimeline';
 import type { TravelIntent } from '../../lib/travelIntentsApi';
 import {
@@ -14,7 +16,7 @@ interface TravelIntentCardProps {
 
 export function TravelIntentCard({ intent }: TravelIntentCardProps) {
   return (
-    <div className="trip-list-card">
+    <Link to={`/trips/intents/${intent.id}`} className="trip-list-card">
       <div className="trip-list-card__date">
         <span className="text-body-3">
           {formatWeekdayShort(intent.departureTime)}
@@ -33,6 +35,10 @@ export function TravelIntentCard({ intent }: TravelIntentCardProps) {
       </div>
 
       <span className="travel-intent-card__badge">Buscando viaje</span>
-    </div>
+
+      <span className="trip-list-card__chevron">
+        <IconChevronDown size={16} color="var(--color-grey-300)" />
+      </span>
+    </Link>
   );
 }
