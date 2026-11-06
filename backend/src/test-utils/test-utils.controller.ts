@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { E2eTestingGuard } from './e2e-testing.guard';
 import { TestUtilsService } from './test-utils.service';
 import { EmailDto } from './dto/email.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('test-utils')
 @UseGuards(E2eTestingGuard)
@@ -24,5 +25,10 @@ export class TestUtilsController {
   @HttpCode(204)
   deleteUser(@Body() dto: EmailDto) {
     return this.testUtilsService.deleteUser(dto.email);
+  }
+
+  @Post('notifications')
+  createNotification(@Body() dto: CreateNotificationDto) {
+    return this.testUtilsService.createNotification(dto);
   }
 }
