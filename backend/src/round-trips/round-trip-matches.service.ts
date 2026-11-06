@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
 import { RoundTripKind } from './dto/create-round-trip.dto';
+import { isSameCampusRoute, type CampusRouteFields } from '../matching/scoring';
 
 // CONFIRMED: hay un match aceptado. PROPOSED: hay sugerencias. PENDING: todavía
 // no hay coincidencias. CLOSED: el tramo ya no busca (vencido, cancelado o
@@ -124,7 +125,14 @@ export class RoundTripMatchesService {
               status: true,
               tripId: true,
               travelIntentId: true,
-              travelIntent: { select: { userId: true, departureTime: true } },
+              travelIntent: {
+                select: {
+                  userId: true,
+                  departureTime: true,
+                  campusId: true,
+                  routeDirection: true,
+                },
+              },
             },
           },
         },
@@ -145,6 +153,8 @@ export class RoundTripMatchesService {
                 select: {
                   driverId: true,
                   departureTime: true,
+                  campusId: true,
+                  routeDirection: true,
                   driver: {
                     select: {
                       studentProfile: {
@@ -163,15 +173,19 @@ export class RoundTripMatchesService {
     const tripLegs = trips.map((trip): LegDraft => {
       // Quien publica viajes ve a los pasajeros de las intenciones
       const match = pickMatch(
-        trip.travelMatches.map((candidate) => ({
-          id: candidate.id,
-          score: candidate.score,
-          status: candidate.status,
-          tripId: candidate.tripId,
-          travelIntentId: candidate.travelIntentId,
-          departureTime: candidate.travelIntent.departureTime,
-          personId: candidate.travelIntent.userId,
-        })),
+        trip.travelMatches
+          .filter((candidate) =>
+            isOfferable(candidate.status, trip, candidate.travelIntent),
+          )
+          .map((candidate) => ({
+            id: candidate.id,
+            score: candidate.score,
+            status: candidate.status,
+            tripId: candidate.tripId,
+            travelIntentId: candidate.travelIntentId,
+            departureTime: candidate.travelIntent.departureTime,
+            personId: candidate.travelIntent.userId,
+          })),
       );
       const confirmed = match?.status === TravelMatchStatus.ACCEPTED;
       const closed = !confirmed && trip.departureTime <= now;
@@ -200,7 +214,8 @@ export class RoundTripMatchesService {
           .filter(
             (candidate) =>
               candidate.status === TravelMatchStatus.ACCEPTED ||
-              candidate.trip.departureTime > now,
+              (candidate.trip.departureTime > now &&
+                isOfferable(candidate.status, candidate.trip, intent)),
           )
           .map((candidate) => ({
             id: candidate.id,
@@ -292,6 +307,18 @@ export class RoundTripMatchesService {
       };
     });
   }
+}
+
+// Una sugerencia guardada antes del filtro de sede y sentido puede cruzar
+// sedes: no se propone. Un match ya aceptado se muestra siempre
+function isOfferable(
+  status: TravelMatchStatus,
+  trip: CampusRouteFields,
+  intent: CampusRouteFields,
+): boolean {
+  return (
+    status === TravelMatchStatus.ACCEPTED || isSameCampusRoute(trip, intent)
+  );
 }
 
 function legStatus(

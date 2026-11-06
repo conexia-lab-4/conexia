@@ -293,6 +293,81 @@ describe('RoundTripMatchesService', () => {
       expect(result.jointScore).toBeNull();
     });
 
+    it('no propone sugerencias viejas de otra sede o sentido', async () => {
+      const crossed = (
+        id: string,
+        tripRoute: { campusId: string; routeDirection: string },
+      ) => {
+        const candidate = intentMatch(id, 95, 'SUGGESTED', 'conductor-1');
+        return { ...candidate, trip: { ...candidate.trip, ...tripRoute } };
+      };
+      prismaMock.travelIntent.findMany.mockResolvedValue([
+        intentLeg({
+          campusId: 'ua-pilar',
+          travelMatches: [
+            crossed('otra-sede', {
+              campusId: 'ua-caba',
+              routeDirection: 'TO_CAMPUS',
+            }),
+          ],
+        }),
+        intentLeg({
+          id: 'intent-vuelta',
+          campusId: 'ua-pilar',
+          routeDirection: 'FROM_CAMPUS',
+          travelMatches: [
+            crossed('sentido', {
+              campusId: 'ua-pilar',
+              routeDirection: 'TO_CAMPUS',
+            }),
+          ],
+        }),
+      ]);
+
+      const result = await service.findForPackage('paquete-1', userId);
+
+      expect(result.legs.map((leg) => [leg.status, leg.match])).toEqual([
+        ['PENDING', null],
+        ['PENDING', null],
+      ]);
+      expect(result.jointScore).toBeNull();
+    });
+
+    it('para quien publica viajes tampoco propone intenciones de otro sentido', async () => {
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: 'trip-ida',
+          roundTripId: 'paquete-1',
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+          origin: 'Los Cardales',
+          destination: 'Universidad Austral - Sede Pilar',
+          departureTime: future(8),
+          arrivalTime: future(9),
+          _count: { passengers: 0 },
+          travelMatches: [
+            {
+              id: 'm1',
+              score: 90,
+              status: 'SUGGESTED',
+              tripId: 'trip-ida',
+              travelIntentId: 'intent-x',
+              travelIntent: {
+                userId: 'pasajero-1',
+                departureTime: future(8),
+                campusId: 'ua-pilar',
+                routeDirection: 'FROM_CAMPUS',
+              },
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.findForPackage('paquete-1', userId);
+
+      expect(result.legs[0]).toMatchObject({ status: 'PENDING', match: null });
+    });
+
     it('responde 404 si el paquete no existe o es de otro usuario', async () => {
       await expect(service.findForPackage('paquete-1', userId)).rejects.toThrow(
         NotFoundException,
