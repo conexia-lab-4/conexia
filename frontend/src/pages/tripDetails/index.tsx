@@ -260,17 +260,23 @@ export function TripDetailPage() {
               </p>
             )}
 
+            {(isDriver || trip.isParticipant) && (
+              <Button
+                type="button"
+                variant="fulfilled"
+                size="large-wide"
+                onClick={() => navigate(`/chats/${trip.id}`)}
+              >
+                Abrir chat del viaje
+              </Button>
+            )}
+
             {isDriver ? (
               <p className="trip-detail__muted trip-detail__driver-note">
                 Sos el conductor de este viaje
               </p>
             ) : (
               <>
-                {/* Sin funcionalidad por ahora: el chat queda para otro ticket */}
-                <Button type="button" variant="fulfilled" size="large-wide">
-                  Enviar mensaje al conductor
-                </Button>
-
                 {trip.isHistorical && (
                   <p className="trip-detail__muted trip-detail__driver-note">
                     Este viaje ya salió

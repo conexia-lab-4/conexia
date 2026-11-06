@@ -4,6 +4,7 @@ import { IconDotsThree } from '../../assets/icons/IconDotsThree';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
 import { IconPencil } from '../../assets/icons/IconPencil';
 import { IconTrash } from '../../assets/icons/IconTrash';
+import { IconCalendar } from '../../assets/icons/IconCalendar';
 import type { SubjectColor } from '../../lib/subjectsApi';
 import './index.css';
 
@@ -15,6 +16,7 @@ interface ScheduleCardProps {
   startTime: string;
   endTime: string;
   classroom?: string;
+  dayLabel?: string;
   matches?: number;
   isMenuOpen?: boolean;
   onToggleMenu?: () => void;
@@ -75,6 +77,7 @@ export function ScheduleCard({
   startTime,
   endTime,
   classroom,
+  dayLabel,
   matches,
   isMenuOpen,
   onToggleMenu,
@@ -145,6 +148,15 @@ export function ScheduleCard({
         <IconClockOutline size={14} color={config.badgeText} />
         {startTime} - {endTime}
       </span>
+
+      {dayLabel && (
+        <div className="schedule-card__footer">
+          <span className="schedule-card__footer-item">
+            <IconCalendar size={14} color="var(--color-grey-400)" />
+            {dayLabel}
+          </span>
+        </div>
+      )}
 
       {(classroom || matches !== undefined) && (
         <div className="schedule-card__footer">

@@ -9,11 +9,26 @@
 }
 
 .trips__header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   padding-top: 48px;
+}
+
+.trips__chats-link {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-white);
+  border: 1px solid #eeeeee;
 }
 
 .trips__header-text {

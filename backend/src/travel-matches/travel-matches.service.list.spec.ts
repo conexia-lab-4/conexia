@@ -6,6 +6,7 @@ import {
   DisplayNamesService,
   type PublicUser,
 } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 
 describe('TravelMatchesService.findMine', () => {
   let service: TravelMatchesService;
@@ -34,6 +35,7 @@ describe('TravelMatchesService.findMine', () => {
       {} as unknown as MatchingService,
       {} as unknown as MetricsService,
       displayNamesMock as unknown as DisplayNamesService,
+      {} as unknown as ChatService,
     );
   });
 

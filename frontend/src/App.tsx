@@ -8,6 +8,7 @@ import { Questionnaire } from './pages/questionnaire';
 import { Home } from './pages/home';
 import { Schedule } from './pages/schedule';
 import { AddSubject } from './pages/addSubject';
+import { ImportSubjects } from './pages/importSubjects';
 import { Profile } from './pages/profile';
 import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
@@ -15,6 +16,8 @@ import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
 import { Matches } from './pages/matches';
 import { MatchDetailPage } from './pages/matchDetail';
+import { Chats } from './pages/chats';
+import { ChatPage } from './pages/chat';
 
 function App() {
   return (
@@ -36,6 +39,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/assignments/new" element={<AddSubject />} />
+        <Route path="/assignments/import" element={<ImportSubjects />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trips/new" element={<PublishTrip />} />
@@ -46,6 +50,8 @@ function App() {
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:id" element={<MatchDetailPage />} />
+        <Route path="/chats" element={<Chats />} />
+        <Route path="/chats/:tripId" element={<ChatPage />} />
       </Route>
     </Routes>
   );
