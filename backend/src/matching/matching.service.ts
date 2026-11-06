@@ -13,7 +13,9 @@ import {
   ALGORITHM_VERSION,
   computeScore,
   isDetourWithinTolerance,
+  isSameCampusRoute,
   isTimeDeltaAllowed,
+  type CampusRouteFields,
   meetsMinimumScore,
   minutesBetween,
   normalizeDetourKm,
@@ -24,7 +26,7 @@ interface Commitment {
   arrivalTime: Date;
 }
 
-interface MatchableTrip {
+interface MatchableTrip extends CampusRouteFields {
   id: string;
   driverId: string;
   origin: string;
@@ -40,7 +42,7 @@ interface MatchableTrip {
   driver: { studentProfile: { detourToleranceKm: number | null } | null };
 }
 
-interface MatchableIntent {
+interface MatchableIntent extends CampusRouteFields {
   id: string;
   userId: string;
   originLat: number;
@@ -206,6 +208,7 @@ export class MatchingService {
   ): Promise<Evaluation> {
     // Filtros baratos primero, para no gastar requests al proveedor
     if (trip.driverId === intent.userId) return NO_MATCH;
+    if (!isSameCampusRoute(trip, intent)) return NO_MATCH;
     if (trip.arrivalTime <= now) return NO_MATCH;
     if (trip.passengers.length >= trip.capacity) return NO_MATCH;
 

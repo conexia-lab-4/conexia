@@ -9,6 +9,7 @@ import {
   TravelMatchStatus,
 } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
+import { isSameCampusRoute } from '../matching/scoring';
 import { KpiEventType } from '../metrics/metric-names';
 import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -59,6 +60,7 @@ export class TravelMatchesService {
         detourKm: true,
         departureDeltaMinutes: true,
         arrivalDeltaMinutes: true,
+        travelIntent: { select: { campusId: true, routeDirection: true } },
         trip: {
           select: {
             id: true,
@@ -67,6 +69,8 @@ export class TravelMatchesService {
             departureTime: true,
             arrivalTime: true,
             capacity: true,
+            campusId: true,
+            routeDirection: true,
             _count: { select: { passengers: true } },
             driver: {
               select: {
@@ -89,18 +93,44 @@ export class TravelMatchesService {
       },
     });
 
+    // Una sugerencia guardada antes del filtro de sede y sentido puede cruzar
+    // sedes: no se muestra y queda invalidada, como las de viajes salidos
+    const stale = matches.filter(
+      (match) => !isSameCampusRoute(match.trip, match.travelIntent),
+    );
+    if (stale.length > 0) {
+      await this.prisma.travelMatch.updateMany({
+        where: {
+          id: { in: stale.map((match) => match.id) },
+          status: TravelMatchStatus.SUGGESTED,
+        },
+        data: { status: TravelMatchStatus.INVALIDATED },
+      });
+    }
+    const valid = matches.filter((match) => !stale.includes(match));
+
     const users = await this.displayNames.getPublicUsers(
-      matches.map((match) => match.trip.driver.id),
+      valid.map((match) => match.trip.driver.id),
     );
 
-    return matches.map((match) => {
-      const { _count, driver, ...trip } = match.trip;
+    return valid.map((match) => {
+      const { _count, driver } = match.trip;
 
       return {
-        ...match,
+        id: match.id,
+        status: match.status,
+        score: match.score,
+        detourKm: match.detourKm,
+        departureDeltaMinutes: match.departureDeltaMinutes,
+        arrivalDeltaMinutes: match.arrivalDeltaMinutes,
         trip: {
-          ...trip,
-          availableSeats: trip.capacity - _count.passengers,
+          id: match.trip.id,
+          origin: match.trip.origin,
+          destination: match.trip.destination,
+          departureTime: match.trip.departureTime,
+          arrivalTime: match.trip.arrivalTime,
+          capacity: match.trip.capacity,
+          availableSeats: match.trip.capacity - _count.passengers,
           driver: {
             id: driver.id,
             email: driver.email,
@@ -154,6 +184,17 @@ export class TravelMatchesService {
             throw new ConflictException('El viaje ya finalizó');
           }
 
+          // Una sugerencia guardada antes del filtro de sede y sentido puede
+          // cruzar sedes. Se invalida sin sumar al pasajero; el error se lanza
+          // fuera de la transacción para que la invalidación quede guardada
+          if (!isSameCampusRoute(match.trip, match.travelIntent)) {
+            await tx.travelMatch.update({
+              where: { id: match.id },
+              data: { status: TravelMatchStatus.INVALIDATED },
+            });
+            return null;
+          }
+
           const passenger = await addPassenger(tx, match.tripId, userId);
 
           // La ubicación se copia: si la intención se cancela o vence después,
@@ -197,6 +238,12 @@ export class TravelMatchesService {
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+
+      if (!accepted) {
+        throw new ConflictException(
+          'La coincidencia ya no es válida: el viaje es de otra sede o de otro sentido',
+        );
+      }
 
       // El viaje pudo quedar lleno: se recalculan las demás sugerencias
       await this.matching.matchTrip(accepted.tripId);

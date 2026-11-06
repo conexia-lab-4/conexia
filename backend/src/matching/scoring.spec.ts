@@ -4,6 +4,7 @@ import {
   computeScore,
   computeTimeScore,
   isDetourWithinTolerance,
+  isSameCampusRoute,
   isTimeDeltaAllowed,
   meetsMinimumScore,
   minutesBetween,
@@ -40,6 +41,33 @@ describe('scoring v1', () => {
     it('acepta una diferencia horaria de hasta 30 minutos', () => {
       expect(isTimeDeltaAllowed(30)).toBe(true);
       expect(isTimeDeltaAllowed(30.5)).toBe(false);
+    });
+
+    it('solo acepta la misma sede y el mismo sentido', () => {
+      const ida = { campusId: 'ua-pilar', routeDirection: 'TO_CAMPUS' };
+
+      expect(isSameCampusRoute(ida, { ...ida })).toBe(true);
+      expect(
+        isSameCampusRoute(ida, { ...ida, routeDirection: 'FROM_CAMPUS' }),
+      ).toBe(false);
+      expect(isSameCampusRoute(ida, { ...ida, campusId: 'ua-caba' })).toBe(
+        false,
+      );
+    });
+
+    it('no filtra por los campos que faltan en datos anteriores al catálogo', () => {
+      const ida = { campusId: 'ua-pilar', routeDirection: 'TO_CAMPUS' };
+
+      expect(isSameCampusRoute(ida, {})).toBe(true);
+      expect(
+        isSameCampusRoute({ campusId: null, routeDirection: null }, ida),
+      ).toBe(true);
+      expect(
+        isSameCampusRoute(
+          { campusId: null, routeDirection: 'TO_CAMPUS' },
+          { campusId: 'ua-caba', routeDirection: 'FROM_CAMPUS' },
+        ),
+      ).toBe(false);
     });
   });
 
