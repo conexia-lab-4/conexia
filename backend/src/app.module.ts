@@ -12,6 +12,7 @@ import { TravelIntentsModule } from './travel-intents/travel-intents.module';
 import { TripsModule } from './trips/trips.module';
 import { TravelMatchesModule } from './travel-matches/travel-matches.module';
 import { UniversitiesModule } from './universities/universities.module';
+import { RoundTripsModule } from './round-trips/round-trips.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TestUtilsModule,
     TravelMatchesModule,
     UniversitiesModule,
+    RoundTripsModule,
     NotificationsModule,
   ],
   controllers: [AppController],

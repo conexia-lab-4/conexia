@@ -27,9 +27,13 @@ import {
 } from '../firebase/display-names.service';
 import { ChatService } from '../chat/chat.service';
 import {
+  legRouteData,
   loadCampusEnd,
   placeRouteEnds,
+  resolveCampusRoute,
+  type CampusRoute,
   type RouteEnd,
+  type RouteLeg,
 } from '../universities/campus-route';
 
 // Con pasajeros, un viaje solo se puede eliminar con esta anticipación
@@ -53,6 +57,11 @@ const HIDDEN_LOCATION: PassengerLocation = {
   dropoffLng: null,
 };
 
+export interface TripDraft {
+  capacity: number;
+  route: CampusRoute;
+}
+
 type TripWithPeople = {
   driverId: string;
   capacity: number;
@@ -73,6 +82,26 @@ export class TripsService {
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
+    const draft = await this.prepareTrips(userId, dto);
+    const [trip] = await this.prisma.$transaction((tx) =>
+      this.createTrips(tx, userId, draft, [
+        {
+          routeDirection: dto.routeDirection,
+          departureTime: new Date(dto.departureTime),
+          arrivalTime: new Date(dto.arrivalTime),
+        },
+      ]),
+    );
+
+    await this.matching.matchTrip(trip.id);
+
+    return trip;
+  }
+
+  // Valida que el usuario pueda publicar y resuelve la ruta. Si la dirección
+  // no se resuelve, no se crea ningún viaje. Lo comparten los viajes simples
+  // y los paquetes de ida y vuelta
+  async prepareTrips(userId: string, dto: CreateTripDto): Promise<TripDraft> {
     const profile = await this.prisma.studentProfile.findUnique({
       where: { userId },
     });
@@ -83,40 +112,33 @@ export class TripsService {
       );
     }
 
-    const campusEnd = await loadCampusEnd(this.prisma, dto.campusId);
-
-    // Solo se geocodifica la dirección de la casa; el extremo de la
-    // universidad usa las coordenadas de la sede. Si la dirección no se
-    // resuelve, no se crea el viaje
-    const homeAddress =
-      dto.routeDirection === RouteDirection.TO_CAMPUS
-        ? dto.origin
-        : dto.destination;
-    const homeEnd: RouteEnd = {
-      label: homeAddress,
-      coords: await this.geocodeOrThrow(homeAddress),
+    return {
+      capacity: profile.availableSeats ?? 0,
+      route: await resolveCampusRoute(this.prisma, dto, (address) =>
+        this.geocodeOrThrow(address),
+      ),
     };
-    const { origin, destination } = placeRouteEnds(
-      dto.routeDirection,
-      campusEnd,
-      homeEnd,
-    );
+  }
 
-    const trip = await this.prisma.$transaction(async (tx) => {
+  // Crea los tramos dentro de una transacción, en orden. El matching se corre
+  // después, cuando la transacción ya se confirmó
+  async createTrips(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    draft: TripDraft,
+    legs: RouteLeg[],
+    roundTripId?: string,
+  ) {
+    const trips: Prisma.TripGetPayload<{ include: { passengers: true } }>[] =
+      [];
+
+    for (const leg of legs) {
       const created = await tx.trip.create({
         data: {
           driverId: userId,
-          origin: origin.label,
-          originLat: origin.coords.lat,
-          originLng: origin.coords.lng,
-          destination: destination.label,
-          destinationLat: destination.coords.lat,
-          destinationLng: destination.coords.lng,
-          campusId: dto.campusId,
-          routeDirection: dto.routeDirection,
-          departureTime: new Date(dto.departureTime),
-          arrivalTime: new Date(dto.arrivalTime),
-          capacity: profile.availableSeats ?? 0,
+          ...legRouteData(draft.route, leg),
+          capacity: draft.capacity,
+          ...(roundTripId && { roundTripId }),
         },
         include: { passengers: true },
       });
@@ -127,12 +149,10 @@ export class TripsService {
         tx,
       );
 
-      return created;
-    });
+      trips.push(created);
+    }
 
-    await this.matching.matchTrip(trip.id);
-
-    return trip;
+    return trips;
   }
 
   async findUpcoming(userId: string) {
