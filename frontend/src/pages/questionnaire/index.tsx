@@ -75,7 +75,8 @@ export function Questionnaire() {
   // Solo se muestran las sedes de la universidad elegida en el paso 1
   const campuses =
     loadedCampuses?.universityId === universityId ? loadedCampuses.items : [];
-  const campusesFailed = failedCampusesFor === universityId;
+  const campusesFailed =
+    universityId !== null && failedCampusesFor === universityId;
   const isLoadingCampuses =
     Boolean(universityId) &&
     !campusesFailed &&
@@ -483,9 +484,11 @@ export function Questionnaire() {
                   onChange={() => {}}
                   readOnly
                   placeholder={
-                    isLoadingCampuses
-                      ? 'Cargando sedes...'
-                      : 'Seleccioná una opción'
+                    !universityId
+                      ? 'Elegí primero tu universidad'
+                      : isLoadingCampuses
+                        ? 'Cargando sedes...'
+                        : 'Seleccioná una opción'
                   }
                   variant={campusesFailed ? 'error' : 'default'}
                   helperText={
