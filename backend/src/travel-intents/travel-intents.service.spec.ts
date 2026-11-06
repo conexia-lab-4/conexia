@@ -234,13 +234,57 @@ describe('TravelIntentsService', () => {
       expect(result).toEqual(intents);
       expect(prismaMock.travelIntent.updateMany).toHaveBeenCalled();
       expect(prismaMock.travelIntent.findMany).toHaveBeenCalledWith({
-        where: { userId },
+        where: { userId, status: { not: 'FULFILLED' } },
         orderBy: { departureTime: 'asc' },
       });
     });
   });
 
+  describe('findOneOrThrow', () => {
+    it('devuelve una intención propia y vence las pasadas', async () => {
+      const intent = { id: 'intent-1', userId, status: 'ACTIVE' };
+      prismaMock.travelIntent.findUnique.mockResolvedValue(intent);
+
+      await expect(service.findOneOrThrow('intent-1', userId)).resolves.toEqual(
+        intent,
+      );
+      expect(prismaMock.travelIntent.updateMany).toHaveBeenCalled();
+    });
+
+    it('lanza NotFoundException si no existe', async () => {
+      prismaMock.travelIntent.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOneOrThrow('intent-1', userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('lanza NotFoundException si la intención es de otro usuario', async () => {
+      prismaMock.travelIntent.findUnique.mockResolvedValue({
+        id: 'intent-1',
+        userId: 'otro-user',
+        status: 'ACTIVE',
+      });
+
+      await expect(service.findOneOrThrow('intent-1', userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('cancel', () => {
+    it('explica por qué no se puede eliminar una intención ya cumplida', async () => {
+      prismaMock.travelIntent.findUnique.mockResolvedValue({
+        id: 'intent-1',
+        userId,
+        status: 'FULFILLED',
+      });
+
+      await expect(service.cancel('intent-1', userId)).rejects.toThrow(
+        'Ya te sumaste a un viaje',
+      );
+    });
+
     it('cancela una intención activa propia', async () => {
       prismaMock.travelIntent.findUnique.mockResolvedValue({
         id: 'intent-1',

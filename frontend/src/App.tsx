@@ -14,8 +14,11 @@ import { PublishTrip } from './pages/publishTrip';
 import { RequireAuth } from './components/requireAuth';
 import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
+import { IntentDetailPage } from './pages/intentDetails';
 import { Matches } from './pages/matches';
 import { MatchDetailPage } from './pages/matchDetail';
+import { Chats } from './pages/chats';
+import { ChatPage } from './pages/chat';
 
 function App() {
   return (
@@ -45,9 +48,12 @@ function App() {
           path="/trips/intents/new"
           element={<PublishTrip mode="intent" />}
         />
+        <Route path="/trips/intents/:id" element={<IntentDetailPage />} />
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:id" element={<MatchDetailPage />} />
+        <Route path="/chats" element={<Chats />} />
+        <Route path="/chats/:tripId" element={<ChatPage />} />
       </Route>
     </Routes>
   );

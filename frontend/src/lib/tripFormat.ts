@@ -28,6 +28,19 @@ export function formatTripDateTime(iso: string): string {
   return `${capitalize(weekday)} ${pad(date.getDate())}/${pad(date.getMonth() + 1)} · ${formatTime(iso)}`;
 }
 
+// "2 d 5 h", "5 h 20 min" o "20 min". Redondea para arriba para no mostrar
+// "0 min" mientras todavía queda tiempo
+export function formatTimeLeft(ms: number): string {
+  const totalMinutes = Math.ceil(ms / 60_000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${minutes} min`;
+  return `${minutes} min`;
+}
+
 export function formatSeats(seats: number): string {
   return `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`;
 }
