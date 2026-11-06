@@ -243,3 +243,9 @@
 .trip-detail__driver-note {
   text-align: center;
 }
+
+.trip-detail__delete-note {
+  font-size: var(--fs-body-3);
+  color: var(--color-grey-400);
+  text-align: center;
+}

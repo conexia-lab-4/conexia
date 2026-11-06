@@ -110,13 +110,14 @@ export class TravelIntentsService {
   async findMine(userId: string) {
     await this.expireOverdue(userId);
 
+    // Una intención cumplida ya es un viaje: se ve en la lista de viajes
     return this.prisma.travelIntent.findMany({
-      where: { userId },
+      where: { userId, status: { not: TravelIntentStatus.FULFILLED } },
       orderBy: { departureTime: 'asc' },
     });
   }
 
-  async cancel(id: string, userId: string) {
+  async findOneOrThrow(id: string, userId: string) {
     await this.expireOverdue(userId);
 
     const intent = await this.prisma.travelIntent.findUnique({ where: { id } });
@@ -124,6 +125,18 @@ export class TravelIntentsService {
     // Una intención ajena se responde igual que una inexistente
     if (!intent || intent.userId !== userId) {
       throw new NotFoundException('La intención de viaje no existe');
+    }
+
+    return intent;
+  }
+
+  async cancel(id: string, userId: string) {
+    const intent = await this.findOneOrThrow(id, userId);
+
+    if (intent.status === TravelIntentStatus.FULFILLED) {
+      throw new ConflictException(
+        'Ya te sumaste a un viaje con esta intención, así que no se puede eliminar',
+      );
     }
 
     if (intent.status !== TravelIntentStatus.ACTIVE) {
