@@ -403,7 +403,8 @@ export function Profile() {
     loadedCampuses?.universityId === form.universityId
       ? loadedCampuses.items
       : [];
-  const campusesFailed = failedCampusesFor === form.universityId;
+  const campusesFailed =
+    form.universityId !== null && failedCampusesFor === form.universityId;
   const isLoadingCampuses =
     Boolean(form.universityId) &&
     !campusesFailed &&
@@ -678,7 +679,11 @@ export function Profile() {
                   variant={campusesFailed ? 'error' : 'filled'}
                   label="Sede / Campus"
                   placeholder={
-                    isLoadingCampuses ? 'Cargando sedes...' : 'Elegí una sede'
+                    !form.universityId
+                      ? 'Elegí primero tu universidad'
+                      : isLoadingCampuses
+                        ? 'Cargando sedes...'
+                        : 'Elegí una sede'
                   }
                   helperText={
                     campusesFailed ? 'No pudimos cargar las sedes.' : undefined
