@@ -5,6 +5,8 @@ import { MetricsService } from '../metrics/metrics.service';
 
 interface TripFixture {
   id: string;
+  campusId?: string | null;
+  routeDirection?: string | null;
   driverId: string;
   origin: string;
   destination: string;
@@ -21,6 +23,8 @@ interface TripFixture {
 
 interface IntentFixture {
   id: string;
+  campusId?: string | null;
+  routeDirection?: string | null;
   userId: string;
   status: string;
   originLat: number;
@@ -178,6 +182,44 @@ describe('MatchingService', () => {
 
       expect(geoMock.getRouteDistanceKm).not.toHaveBeenCalled();
       expect(prismaMock.travelMatch.upsert).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['otra sede', { campusId: 'ua-caba' }],
+      ['el sentido contrario', { routeDirection: 'FROM_CAMPUS' }],
+    ])(
+      'descarta sin consultar rutas una intención de %s',
+      async (_case, overrides) => {
+        prismaMock.trip.findUnique.mockResolvedValue(
+          buildTrip({ campusId: 'ua-pilar', routeDirection: 'TO_CAMPUS' }),
+        );
+        prismaMock.travelIntent.findMany.mockResolvedValue([
+          buildIntent({
+            campusId: 'ua-pilar',
+            routeDirection: 'TO_CAMPUS',
+            ...overrides,
+          }),
+        ]);
+
+        await service.matchTrip('trip-1');
+
+        expect(geoMock.getRouteDistanceKm).not.toHaveBeenCalled();
+        expect(prismaMock.travelMatch.upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it('evalúa la misma sede y sentido, y un viaje anterior al catálogo', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(
+        buildTrip({ campusId: null, routeDirection: null }),
+      );
+      prismaMock.travelIntent.findMany.mockResolvedValue([
+        buildIntent({ campusId: 'ua-pilar', routeDirection: 'TO_CAMPUS' }),
+      ]);
+      mockRoutes(10, 12);
+
+      await service.matchTrip('trip-1');
+
+      expect(prismaMock.travelMatch.upsert).toHaveBeenCalled();
     });
 
     it('descarta si no quedan lugares disponibles', async () => {

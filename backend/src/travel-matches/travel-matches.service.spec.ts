@@ -167,6 +167,22 @@ describe('TravelMatchesService', () => {
     );
   });
 
+  it('aceptar un tramo no toca la otra intención de su paquete', async () => {
+    await service.accept('match-1', userId);
+
+    // Solo se cumple esta intención y solo se invalidan sus propias
+    // sugerencias: la del otro tramo sigue activa y buscando
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'intent-1' } }),
+    );
+    expect(prismaMock.travelMatch.updateMany).toHaveBeenCalledTimes(1);
+    const [invalidation] = prismaMock.travelMatch.updateMany.mock.calls[0] as [
+      { where: { travelIntentId: string } },
+    ];
+    expect(invalidation.where.travelIntentId).toBe('intent-1');
+  });
+
   it('recalcula las sugerencias del viaje después de aceptar', async () => {
     await service.accept('match-1', userId);
 
@@ -177,6 +193,56 @@ describe('TravelMatchesService', () => {
     await service.accept('match-1', userId);
 
     expect(chatMock.syncParticipants).toHaveBeenCalledWith('trip-1');
+  });
+
+  it.each([
+    ['otra sede', { campusId: 'ua-caba', routeDirection: 'TO_CAMPUS' }],
+    [
+      'el sentido contrario',
+      { campusId: 'ua-pilar', routeDirection: 'FROM_CAMPUS' },
+    ],
+  ])(
+    'rechaza aceptar una sugerencia vieja de %s y la invalida',
+    async (_case, tripRoute) => {
+      const match = buildMatch();
+      prismaMock.travelMatch.findUnique.mockResolvedValue({
+        ...match,
+        trip: { ...match.trip, ...tripRoute },
+        travelIntent: {
+          ...match.travelIntent,
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+        },
+      });
+
+      await expect(service.accept('match-1', userId)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.travelMatch.update).toHaveBeenCalledWith({
+        where: { id: 'match-1' },
+        data: { status: 'INVALIDATED' },
+      });
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+      expect(prismaMock.travelIntent.update).not.toHaveBeenCalled();
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    },
+  );
+
+  it('acepta una sugerencia de un viaje anterior al catálogo', async () => {
+    const match = buildMatch();
+    prismaMock.travelMatch.findUnique.mockResolvedValue({
+      ...match,
+      trip: { ...match.trip, campusId: null, routeDirection: null },
+      travelIntent: {
+        ...match.travelIntent,
+        campusId: 'ua-pilar',
+        routeDirection: 'TO_CAMPUS',
+      },
+    });
+
+    await service.accept('match-1', userId);
+
+    expect(prismaMock.tripPassenger.create).toHaveBeenCalled();
   });
 
   it('responde 404 si el match no existe', async () => {
