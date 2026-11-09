@@ -1106,6 +1106,46 @@ describe('TripsService', () => {
         ConflictException,
       );
     });
+    it('avisa del ingreso con el id de su participación', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockResolvedValue({
+        id: 'passenger-1',
+        tripId,
+        userId: 'user-123',
+      });
+
+      await service.join(tripId, 'user-123');
+
+      expect(notificationEventsMock.tripJoined).toHaveBeenCalledWith(
+        tripId,
+        'user-123',
+        'passenger-1',
+      );
+    });
+
+    it('no avisa si no pudo sumarse', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip,
+        passengers: [],
+      });
+      prismaMock.trip.findFirst.mockResolvedValue(null);
+      prismaMock.tripPassenger.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('conflict', {
+          code: 'P2034',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(service.join(tripId, 'user-123')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(notificationEventsMock.tripJoined).not.toHaveBeenCalled();
+    });
+
     it('re-ejecuta el matching del viaje después de sumarse', async () => {
       prismaMock.trip.findUnique.mockResolvedValue({
         ...baseTrip,
@@ -1272,6 +1312,44 @@ describe('TripsService', () => {
       expect(chatMock.deleteConversation).toHaveBeenCalledWith(tripId);
     });
 
+    it('avisa la cancelación a los pasajeros con los datos guardados antes de eliminar el viaje', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        id: tripId,
+        driverId: userId,
+        origin: 'Pilar',
+        destination: 'Palermo',
+        departureTime: hoursFromNow(48),
+        passengers: [{ userId: 'pasajero-1' }, { userId: 'pasajero-2' }],
+      });
+
+      await service.remove(tripId, userId);
+
+      expect(notificationEventsMock.tripCancelled).toHaveBeenCalledWith({
+        tripId,
+        origin: 'Pilar',
+        destination: 'Palermo',
+        passengerIds: ['pasajero-1', 'pasajero-2'],
+      });
+    });
+
+    it('no avisa si el viaje no se puede eliminar por falta de anticipación', async () => {
+      mockTrip(1, passengers);
+
+      await expect(service.remove(tripId, userId)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(notificationEventsMock.tripCancelled).not.toHaveBeenCalled();
+    });
+
+    it('no avisa si quien intenta eliminar no es el conductor', async () => {
+      mockTrip(48, passengers);
+
+      await expect(service.remove(tripId, 'otro-user')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(notificationEventsMock.tripCancelled).not.toHaveBeenCalled();
+    });
+
     it('traduce un conflicto de serialización a 409', async () => {
       prismaMock.$transaction.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('conflicto', {
@@ -1322,6 +1400,28 @@ describe('TripsService', () => {
         NotFoundException,
       );
     });
+    it('avisa de la salida cuando se efectiviza', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00.000Z'));
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.leave('trip-1', 'user-123');
+
+      expect(notificationEventsMock.tripLeft).toHaveBeenCalledWith(
+        'trip-1',
+        'user-123',
+        new Date('2026-10-01T12:00:00.000Z'),
+      );
+    });
+
+    it('no avisa si no participaba', async () => {
+      prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.leave('trip-1', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(notificationEventsMock.tripLeft).not.toHaveBeenCalled();
+    });
+
     it('re-ejecuta el matching del viaje después de salir', async () => {
       prismaMock.tripPassenger.deleteMany.mockResolvedValue({ count: 1 });
 

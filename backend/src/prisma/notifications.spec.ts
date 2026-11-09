@@ -3,14 +3,24 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from './prisma.service';
+import type * as admin from 'firebase-admin';
 
 describe('Notifications persistence', () => {
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
   const prisma = new PrismaClient({ adapter });
-  const service = new NotificationsService(prisma as unknown as PrismaService);
+  const sendMock = jest.fn();
+  const service = new NotificationsService(
+    prisma as unknown as PrismaService,
+    { messaging: () => ({ send: sendMock }) } as unknown as typeof admin,
+  );
   const userA = 'test-user-notifications-a';
   const userB = 'test-user-notifications-b';
   const testUsers = [userA, userB];
+
+  beforeEach(() => {
+    sendMock.mockReset();
+    sendMock.mockResolvedValue('message-id');
+  });
 
   beforeAll(async () => {
     for (const id of testUsers) {
@@ -53,6 +63,56 @@ describe('Notifications persistence', () => {
     const user = await prisma.user.findUnique({ where: { id: userA } });
     expect(user?.fcmToken).toBeNull();
     expect(await service.findMine(userA)).toHaveLength(1);
+  });
+
+  it('registra una sola notificación por evento y destinatario aunque se repita', async () => {
+    const event = {
+      recipientIds: [userA, userB],
+      title: 'Nuevo pasajero',
+      message: 'Se sumó alguien',
+      type: 'TRIP' as const,
+      referenceId: 'trip-1',
+      eventKey: 'join:participacion-1',
+    };
+
+    await service.notify(event);
+    await service.notify(event);
+
+    expect(await service.findMine(userA)).toHaveLength(1);
+    expect(await service.findMine(userB)).toHaveLength(1);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('manda el push solo a quien tiene token y no lo repite si el evento se repite', async () => {
+    await prisma.user.update({
+      where: { id: userA },
+      data: { fcmToken: 'token-de-prueba-a' },
+    });
+    const event = {
+      recipientIds: [userA, userB],
+      title: 'Nuevo pasajero',
+      message: 'Se sumó alguien',
+      type: 'TRIP' as const,
+      referenceId: 'trip-1',
+      eventKey: 'join:participacion-2',
+    };
+
+    await service.notify(event);
+    await service.notify(event);
+
+    const stored = (await service.findMine(userA))[0];
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith({
+      token: 'token-de-prueba-a',
+      data: {
+        notificationId: stored.id,
+        type: 'TRIP',
+        referenceId: 'trip-1',
+        title: 'Nuevo pasajero',
+        body: 'Se sumó alguien',
+      },
+    });
+    expect(await service.findMine(userB)).toHaveLength(1);
   });
 
   it('lista solo las propias, de la más reciente a la más antigua', async () => {

@@ -189,6 +189,25 @@ describe('TravelMatchesService', () => {
     expect(invalidation.where.travelIntentId).toBe('intent-1');
   });
 
+  it('avisa el ingreso al aceptar el match, con el id de su participación', async () => {
+    await service.accept('match-1', userId);
+
+    expect(notificationEventsMock.tripJoined).toHaveBeenCalledWith(
+      'trip-1',
+      userId,
+      'p-1',
+    );
+  });
+
+  it('no avisa si el match no se puede aceptar', async () => {
+    prismaMock.trip.findFirst.mockResolvedValue({ id: 'otro-viaje' });
+
+    await expect(service.accept('match-1', userId)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(notificationEventsMock.tripJoined).not.toHaveBeenCalled();
+  });
+
   it('recalcula las sugerencias del viaje después de aceptar', async () => {
     await service.accept('match-1', userId);
 
