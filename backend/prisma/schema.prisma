@@ -254,6 +254,7 @@ enum RouteDirection {
 enum NotificationType {
   TRIP
   CHAT
+  MATCH
 }
 
 model Notification {
@@ -262,14 +263,17 @@ model Notification {
   title       String
   message     String
   type        NotificationType
-  // Id del viaje (TRIP) o del chat (CHAT) al que apunta la notificación
+  // Id del viaje (TRIP), del chat (CHAT, igual al del viaje) o del match (MATCH)
   referenceId String?
+  // null en las creadas a mano (test-utils)
+  eventKey    String?
   // null = no leída
   readAt      DateTime?
   createdAt   DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, eventKey])
   @@index([userId, createdAt])
   @@index([userId, readAt])
 }

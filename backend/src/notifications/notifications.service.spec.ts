@@ -32,7 +32,10 @@ describe('NotificationsService', () => {
     prismaMock.$transaction.mockImplementation(
       (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
     );
-    service = new NotificationsService(prismaMock as unknown as PrismaService);
+    service = new NotificationsService(
+      prismaMock as unknown as PrismaService,
+      {} as never,
+    );
   });
 
   afterEach(() => {

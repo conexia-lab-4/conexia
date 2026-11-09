@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchingService } from './matching.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 interface TripFixture {
   id: string;
@@ -70,6 +71,7 @@ function buildIntent(overrides: Partial<IntentFixture> = {}): IntentFixture {
 }
 
 describe('MatchingService', () => {
+  let notificationEventsMock: { matchesCreated: jest.Mock };
   let service: MatchingService;
   let prismaMock: {
     trip: { findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock };
@@ -109,7 +111,7 @@ describe('MatchingService', () => {
       },
       travelMatch: {
         findMany: jest.fn().mockResolvedValue([]),
-        upsert: jest.fn(),
+        upsert: jest.fn().mockResolvedValue({ id: 'match-1' }),
         updateMany: jest.fn(),
       },
       $transaction: jest.fn(),
@@ -122,10 +124,14 @@ describe('MatchingService', () => {
       recordEvents: jest.fn().mockResolvedValue(1),
     };
     geoMock = { geocode: jest.fn(), getRouteDistanceKm: jest.fn() };
+    notificationEventsMock = {
+      matchesCreated: jest.fn().mockResolvedValue(undefined),
+    };
     service = new MatchingService(
       prismaMock as unknown as PrismaService,
       geoMock,
       metricsMock as unknown as MetricsService,
+      notificationEventsMock as unknown as NotificationEventsService,
     );
   });
 
@@ -465,6 +471,42 @@ describe('MatchingService', () => {
         0,
         prismaMock,
       );
+    });
+
+    it('avisa del match nuevo al conductor y al pasajero involucrados', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(buildTrip());
+      prismaMock.travelIntent.findMany.mockResolvedValue([buildIntent()]);
+      mockRoutes(10, 12);
+
+      await service.matchTrip('trip-1');
+
+      expect(notificationEventsMock.matchesCreated).toHaveBeenCalledWith([
+        {
+          matchId: 'match-1',
+          tripId: 'trip-1',
+          driverId: 'driver-1',
+          passengerId: 'pasajero-1',
+        },
+      ]);
+    });
+
+    it('no vuelve a avisar un par que ya tenía un match', async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(buildTrip());
+      prismaMock.travelIntent.findMany.mockResolvedValue([buildIntent()]);
+      prismaMock.travelMatch.findMany.mockResolvedValue([
+        {
+          id: 'match-1',
+          tripId: 'trip-1',
+          travelIntentId: 'intent-1',
+          status: 'SUGGESTED',
+        },
+      ]);
+      mockRoutes(10, 12);
+
+      await service.matchTrip('trip-1');
+
+      expect(prismaMock.travelMatch.upsert).toHaveBeenCalledTimes(1);
+      expect(notificationEventsMock.matchesCreated).not.toHaveBeenCalled();
     });
 
     it('un error del proveedor de rutas no invalida un match existente', async () => {

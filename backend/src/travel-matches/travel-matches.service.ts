@@ -19,6 +19,7 @@ import {
 } from '../trips/trip-participation';
 import { DisplayNamesService } from '../firebase/display-names.service';
 import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 @Injectable()
 export class TravelMatchesService {
@@ -28,6 +29,7 @@ export class TravelMatchesService {
     private readonly metrics: MetricsService,
     private readonly displayNames: DisplayNamesService,
     private readonly chat: ChatService,
+    private readonly notificationEvents: NotificationEventsService,
   ) {}
 
   async findMine(userId: string) {
@@ -234,7 +236,7 @@ export class TravelMatchesService {
             tx,
           );
 
-          return updated;
+          return { match: updated, passengerId: passenger.id };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
@@ -245,11 +247,18 @@ export class TravelMatchesService {
         );
       }
 
-      // El viaje pudo quedar lleno: se recalculan las demás sugerencias
-      await this.matching.matchTrip(accepted.tripId);
-      await this.chat.syncParticipants(accepted.tripId);
+      // Ingreso confirmado: se avisa al conductor y a los demás pasajeros
+      await this.notificationEvents.tripJoined(
+        accepted.match.tripId,
+        userId,
+        accepted.passengerId,
+      );
 
-      return accepted;
+      // El viaje pudo quedar lleno: se recalculan las demás sugerencias
+      await this.matching.matchTrip(accepted.match.tripId);
+      await this.chat.syncParticipants(accepted.match.tripId);
+
+      return accepted.match;
     } catch (error) {
       if (isSerializationConflict(error)) {
         throw new ConflictException(
