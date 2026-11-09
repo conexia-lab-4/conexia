@@ -7,6 +7,7 @@ import {
   type AuthContextValue,
   type AuthStatus,
 } from './authContext';
+import { forgetPushToken } from '../lib/pushNotifications';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       status,
       logout: async () => {
+        // El dispositivo deja de recibir los avisos de esta cuenta
+        await forgetPushToken();
         await signOut(auth);
         navigate('/login', { replace: true });
       },

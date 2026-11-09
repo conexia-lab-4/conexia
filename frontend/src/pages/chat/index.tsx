@@ -12,6 +12,7 @@ import { useAuth } from '../../context/authContext';
 import { Avatar } from '../../components/avatar';
 import { RouteTimeline } from '../../components/routetimeline';
 import ConexiaLoader from '../../components/ConexiaLoader';
+import { Button } from '../../components/button';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconCar } from '../../assets/icons/IconCar';
@@ -33,11 +34,11 @@ import {
   getConversationHeading,
   isSameDay,
 } from '../../lib/chatFormat';
-import { getTrip, type TripDetail } from '../../lib/tripsApi';
+import { getTrip, UnavailableError, type TripDetail } from '../../lib/tripsApi';
 import { formatTime, getPersonName } from '../../lib/tripFormat';
 import './index.css';
 
-type LoadStatus = 'loading' | 'ready' | 'error';
+type LoadStatus = 'loading' | 'ready' | 'unavailable' | 'error';
 
 // Si el usuario está leyendo más arriba, un mensaje nuevo no lo mueve
 const NEAR_BOTTOM_PX = 80;
@@ -91,6 +92,10 @@ export function ChatPage() {
     const handleError = (error: Error) => {
       if (ignore) return;
       console.error('Error al cargar el chat:', error);
+      if (error instanceof UnavailableError) {
+        setStatus('unavailable');
+        return;
+      }
       // Los errores del backend vienen listos para mostrar; los de Firestore no
       setLoadError(error instanceof FirebaseError ? null : error.message);
       setStatus('error');
@@ -219,6 +224,20 @@ export function ChatPage() {
           >
             Reintentar
           </button>
+        </div>
+      )}
+
+      {status === 'unavailable' && (
+        <div className="chat__status">
+          <p>Este chat ya no está disponible.</p>
+          <Button
+            type="button"
+            variant="outlined"
+            size="medium"
+            onClick={() => navigate('/chats')}
+          >
+            Volver a Chats
+          </Button>
         </div>
       )}
 

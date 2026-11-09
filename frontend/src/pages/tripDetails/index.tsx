@@ -19,6 +19,7 @@ import {
   leaveTrip,
   type TripDetail,
   type TripPassenger,
+  UnavailableError,
 } from '../../lib/tripsApi';
 import {
   formatSeats,
@@ -29,7 +30,7 @@ import {
 } from '../../lib/tripFormat';
 import './index.css';
 
-type LoadStatus = 'loading' | 'ready' | 'error';
+type LoadStatus = 'loading' | 'ready' | 'unavailable' | 'error';
 type ParticipationAction = 'join' | 'leave';
 
 // El backend vuelve a validar este plazo al eliminar
@@ -80,6 +81,10 @@ export function TripDetailPage() {
       })
       .catch((error: Error) => {
         console.error('Error al cargar el viaje:', error);
+        if (error instanceof UnavailableError) {
+          setStatus('unavailable');
+          return;
+        }
         setLoadError(error.message);
         setStatus('error');
       });
@@ -191,6 +196,20 @@ export function TripDetailPage() {
           >
             Reintentar
           </button>
+        </div>
+      )}
+
+      {status === 'unavailable' && (
+        <div className="trip-detail__status">
+          <p>Este viaje ya no está disponible.</p>
+          <Button
+            type="button"
+            variant="outlined"
+            size="medium"
+            onClick={() => navigate('/trips')}
+          >
+            Volver a Viajes
+          </Button>
         </div>
       )}
 

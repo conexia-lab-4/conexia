@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { authFetch } from './api';
 import { db } from './firebase';
-import { getErrorMessage } from './tripsApi';
+import { getErrorMessage, UnavailableError } from './tripsApi';
 
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
@@ -62,6 +62,11 @@ export async function openConversation(tripId: string): Promise<void> {
     `/trips/${encodeURIComponent(tripId)}/conversation`,
     { method: 'POST' },
   );
+
+  // 404: el viaje ya no existe. 403: el usuario ya no participa
+  if (response.status === 404 || response.status === 403) {
+    throw new UnavailableError('El chat ya no está disponible');
+  }
 
   if (!response.ok) {
     throw new Error(

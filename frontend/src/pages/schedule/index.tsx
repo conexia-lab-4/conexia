@@ -23,6 +23,7 @@ import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
 import { EditScheduleDialog } from '../../components/editscheduledialog';
 import type { DayValue } from '../../components/dayselector';
 import { NavBar } from '../../components/navbar';
+import { NotificationBell } from '../../components/notificationbell';
 import { AddSubjectDrawer } from '../../components/addsubjectdrawer';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconUsersThreeOutline } from '../../assets/icons/IconUsersThreeOutline';
@@ -222,6 +223,7 @@ export function Schedule() {
 
   return (
     <div className="schedule-page">
+      <NotificationBell />
       <header className="schedule-page__header">
         <div>
           <h1 className="schedule-page__title">Mis Horarios</h1>

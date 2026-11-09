@@ -17,6 +17,7 @@ import { TripDetailPage } from './pages/tripDetails';
 import { IntentDetailPage } from './pages/intentDetails';
 import { Matches } from './pages/matches';
 import { MatchDetailPage } from './pages/matchDetail';
+import { Notifications } from './pages/notifications';
 import { Chats } from './pages/chats';
 import { ChatPage } from './pages/chat';
 
@@ -54,6 +55,7 @@ function App() {
         <Route path="/matches/:id" element={<MatchDetailPage />} />
         <Route path="/chats" element={<Chats />} />
         <Route path="/chats/:tripId" element={<ChatPage />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
     </Routes>
   );

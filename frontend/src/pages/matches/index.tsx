@@ -5,6 +5,7 @@ import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
 import { MatchCard } from '../../components/matchCard';
 import ConexiaLoader from '../../components/ConexiaLoader';
+import { NotificationBell } from '../../components/notificationbell';
 import { IconSearch } from '../../assets/icons/IconSearch';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
 import { getMatches, type Match } from '../../lib/matchesApi';
@@ -61,6 +62,7 @@ export function Matches() {
 
   return (
     <div className="matches">
+      <NotificationBell />
       <header className="matches__header">
         <div className="matches__heading">
           <h1 className="text-h4-bold">Matches</h1>
