@@ -156,4 +156,11 @@ export async function sendMessage(
   });
 
   await batch.commit();
+
+  // El mensaje ya está guardado: se avisa al backend para que notifique a los
+  // demás participantes. Si falla no se frena el chat ni se muestra error
+  void authFetch(
+    `/chat/${encodeURIComponent(tripId)}/messages/${encodeURIComponent(message.id)}/notify`,
+    { method: 'POST' },
+  ).catch(() => undefined);
 }
