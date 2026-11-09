@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
 import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 describe('TravelMatchesService', () => {
   let service: TravelMatchesService;
@@ -24,6 +25,7 @@ describe('TravelMatchesService', () => {
   let matchingMock: { matchTrip: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   let chatMock: { syncParticipants: jest.Mock };
+  let notificationEventsMock: { tripJoined: jest.Mock };
 
   const userId = 'pasajero-1';
   const future = new Date('2026-10-05T09:00:00.000Z');
@@ -105,12 +107,16 @@ describe('TravelMatchesService', () => {
       recordEvents: jest.fn().mockResolvedValue(1),
     };
     chatMock = { syncParticipants: jest.fn().mockResolvedValue(undefined) };
+    notificationEventsMock = {
+      tripJoined: jest.fn().mockResolvedValue(undefined),
+    };
     service = new TravelMatchesService(
       prismaMock as unknown as PrismaService,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
       {} as unknown as DisplayNamesService,
       chatMock as unknown as ChatService,
+      notificationEventsMock as unknown as NotificationEventsService,
     );
   });
 

@@ -13,6 +13,7 @@ import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
 import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 describe('RoundTripsService', () => {
   let service: RoundTripsService;
@@ -118,6 +119,7 @@ describe('RoundTripsService', () => {
         metrics,
         {} as DisplayNamesService,
         {} as ChatService,
+        {} as NotificationEventsService,
       ),
       new TravelIntentsService(prisma, geoMock, matching, metrics),
       matching,

@@ -20,6 +20,10 @@ import {
   minutesBetween,
   normalizeDetourKm,
 } from './scoring';
+import {
+  NotificationEventsService,
+  type NewMatch,
+} from '../notifications/notification-events.service';
 
 interface Commitment {
   departureTime: Date;
@@ -103,6 +107,7 @@ export class MatchingService {
     private readonly prisma: PrismaService,
     private readonly geo: GeoService,
     private readonly metrics: MetricsService,
+    private readonly notificationEvents: NotificationEventsService,
   ) {}
 
   // Nunca lanza: un fallo del matching no debe romper la publicación
@@ -398,6 +403,12 @@ export class MatchingService {
         .map((match) => pairKey(match.tripId, match.travelIntentId)),
     );
 
+    // Un par es nuevo solo si nunca tuvo un match, aunque haya quedado
+    // invalidado: así un recálculo no vuelve a avisar
+    const known = new Set(
+      existing.map((match) => pairKey(match.tripId, match.travelIntentId)),
+    );
+
     const matches: {
       tripId: string;
       travelIntentId: string;
@@ -444,9 +455,17 @@ export class MatchingService {
 
     if (pending.length === 0 && staleIds.length === 0) return;
 
+    const newMatches: NewMatch[] = [];
+
     await this.prisma.$transaction(async (tx) => {
-      for (const { tripId, travelIntentId, metrics } of pending) {
-        await tx.travelMatch.upsert({
+      for (const {
+        tripId,
+        travelIntentId,
+        driverId,
+        passengerId,
+        metrics,
+      } of pending) {
+        const saved = await tx.travelMatch.upsert({
           where: { tripId_travelIntentId: { tripId, travelIntentId } },
           create: {
             tripId,
@@ -461,6 +480,10 @@ export class MatchingService {
             status: TravelMatchStatus.SUGGESTED,
           },
         });
+
+        if (!known.has(pairKey(tripId, travelIntentId))) {
+          newMatches.push({ matchId: saved.id, tripId, driverId, passengerId });
+        }
       }
 
       await tx.travelMatch.updateMany({
@@ -490,6 +513,11 @@ export class MatchingService {
         tx,
       );
     });
+
+    // Con la transacción confirmada se avisa de los matches nuevos
+    if (newMatches.length > 0) {
+      await this.notificationEvents.matchesCreated(newMatches);
+    }
   }
 
   private logFailure(subject: string, error: unknown) {

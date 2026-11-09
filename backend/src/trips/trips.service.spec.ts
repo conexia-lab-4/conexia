@@ -15,6 +15,7 @@ import {
   type PublicUser,
 } from '../firebase/display-names.service';
 import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 describe('TripsService', () => {
   let service: TripsService;
@@ -38,6 +39,11 @@ describe('TripsService', () => {
   let matchingMock: { matchTrip: jest.Mock; matchIntent: jest.Mock };
   let displayNamesMock: { getPublicUsers: jest.Mock };
   let chatMock: { syncParticipants: jest.Mock; deleteConversation: jest.Mock };
+  let notificationEventsMock: {
+    tripJoined: jest.Mock;
+    tripLeft: jest.Mock;
+    tripCancelled: jest.Mock;
+  };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
   const userId = 'user-123';
 
@@ -108,6 +114,11 @@ describe('TripsService', () => {
       syncParticipants: jest.fn().mockResolvedValue(undefined),
       deleteConversation: jest.fn().mockResolvedValue(undefined),
     };
+    notificationEventsMock = {
+      tripJoined: jest.fn().mockResolvedValue(undefined),
+      tripLeft: jest.fn().mockResolvedValue(undefined),
+      tripCancelled: jest.fn().mockResolvedValue(undefined),
+    };
     service = new TripsService(
       prismaMock as unknown as PrismaService,
       geoMock,
@@ -115,6 +126,7 @@ describe('TripsService', () => {
       metricsMock as unknown as MetricsService,
       displayNamesMock as unknown as DisplayNamesService,
       chatMock as unknown as ChatService,
+      notificationEventsMock as unknown as NotificationEventsService,
     );
   });
 
