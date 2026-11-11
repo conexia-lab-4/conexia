@@ -5,6 +5,10 @@ import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
 import { TimeField } from '../../components/timefield';
 import { Button } from '../../components/button';
+import {
+  TripTypeSelector,
+  type TripType,
+} from '../../components/triptypeselector';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
@@ -141,6 +145,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<TripForm>(EMPTY_FORM);
+  const [tripType, setTripType] = useState<TripType>('ONE_WAY');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null,
   );
@@ -224,13 +229,13 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   };
 
   const handleSwapDirection = () => {
-    setForm((prev) => {
-      const direction: RouteDirection =
-        prev.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
-      const next = { ...prev, direction };
-      // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
-      return selectedSchedule ? formFromSchedule(next, selectedSchedule) : next;
-    });
+    const direction: RouteDirection =
+      form.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
+    const next = { ...form, direction };
+    // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
+    setForm(selectedSchedule ? formFromSchedule(next, selectedSchedule) : next);
+    // La vuelta solo se ofrece cuando la ida va hacia la sede
+    if (direction === 'FROM_CAMPUS') setTripType('ONE_WAY');
     setStepError(null);
   };
 
@@ -460,6 +465,13 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               modificarlos.
             </div>
           )}
+
+          <TripTypeSelector
+            value={tripType}
+            onChange={setTripType}
+            roundTripDisabled={!toCampus}
+            disabledNote="La vuelta solo se ofrece si tu viaje va hacia la sede."
+          />
 
           <section className="publish-trip__route">
             <div className="publish-trip__route-row">
