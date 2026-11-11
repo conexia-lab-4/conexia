@@ -6,6 +6,7 @@ import { getSubjects } from '../../lib/subjectsApi';
 import { getProfile, type ProfileResponse } from '../../lib/profileApi';
 import { getMyTrips, type TripDetail } from '../../lib/tripsApi';
 import { getTravelMatches } from '../../lib/matchesApi';
+import { usePush } from '../../context/pushContext';
 import { StatCard } from '../../components/statcard';
 import { NavBar } from '../../components/navbar';
 import { ProfilePendingCard } from '../../components/profilependingcard';
@@ -13,6 +14,7 @@ import { EmptyTripsState } from '../../components/emptytripsstate';
 import { TripListCard } from '../../components/triplistcard';
 import { PublishTripCard } from '../../components/publishtripcard';
 import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
+import { NotificationBell } from '../../components/notificationbell';
 import { IconBooks } from '../../assets/icons/IconBooks';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
 import { IconCarFront } from '../../assets/icons/IconCarFront';
@@ -32,6 +34,25 @@ function countCompletedSteps(profile: ProfileResponse | null): number {
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+// El pop-up de activar notificaciones aparece una vez por sesión si se cierra
+const PUSH_DIALOG_DISMISSED_KEY = 'conexia-push-dialog-dismissed';
+
+function wasPushDialogDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(PUSH_DIALOG_DISMISSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markPushDialogDismissed() {
+  try {
+    sessionStorage.setItem(PUSH_DIALOG_DISMISSED_KEY, 'true');
+  } catch {
+    // Sin almacenamiento disponible, el pop-up puede volver a aparecer
+  }
+}
+
 // Cantidad de viajes que se muestran en Home; el resto se ve en /trips
 const HOME_TRIPS_LIMIT = 3;
 
@@ -46,6 +67,19 @@ export function Home() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { status: pushStatus, needsRecovery, openEnableDialog } = usePush();
+
+  // Si las notificaciones nativas se pueden activar (o terminar de activar) y
+  // todavía no están, se ofrece
+  useEffect(() => {
+    if (
+      (pushStatus !== 'default' && !needsRecovery) ||
+      wasPushDialogDismissed()
+    ) {
+      return;
+    }
+    openEnableDialog({ onClose: markPushDialogDismissed });
+  }, [pushStatus, needsRecovery, openEnableDialog]);
   const [tripPublished] = useState(
     () => (location.state as { tripPublished?: boolean } | null)?.tripPublished,
   );
@@ -95,6 +129,7 @@ export function Home() {
 
   return (
     <div className="home">
+      <NotificationBell />
       <header className="home__header">
         <div className="home__greeting">
           <div className="home__greeting-title">

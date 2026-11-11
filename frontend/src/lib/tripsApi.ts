@@ -76,6 +76,10 @@ export async function getErrorMessage(
   return message ?? fallback;
 }
 
+// El viaje o el chat al que se quiere entrar ya no existe, o el usuario ya no
+// participa. No es un error para reintentar: la pantalla muestra un estado propio
+export class UnavailableError extends Error {}
+
 export async function createTrip(payload: CreateTripPayload): Promise<Trip> {
   const response = await authFetch('/trips', {
     method: 'POST',
@@ -119,6 +123,10 @@ export async function getMyTrips(scope: TripScope): Promise<TripDetail[]> {
 
 export async function getTrip(id: string): Promise<TripDetail> {
   const response = await authFetch(`/trips/${encodeURIComponent(id)}`);
+
+  if (response.status === 404) {
+    throw new UnavailableError('El viaje ya no está disponible');
+  }
 
   if (!response.ok) {
     throw new Error(

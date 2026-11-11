@@ -87,7 +87,7 @@ export function Chats() {
         </>
       )}
 
-      <NavBar activeItem="viajes" />
+      <NavBar activeItem={null} />
     </div>
   );
 }

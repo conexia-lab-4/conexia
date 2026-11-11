@@ -1,4 +1,5 @@
 .matches {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -13,7 +14,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 8px 0;
+  padding: 48px 8px 0;
   gap: 8px;
 }
 

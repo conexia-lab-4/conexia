@@ -9,7 +9,7 @@ import './index.css';
 export type NavItemId = 'home' | 'horarios' | 'matches' | 'viajes' | 'perfil';
 
 interface NavBarProps {
-  activeItem: NavItemId;
+  activeItem: NavItemId | null;
 }
 
 const NAV_ITEMS: {

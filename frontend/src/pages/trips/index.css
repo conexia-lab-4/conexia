@@ -1,4 +1,5 @@
 .trips {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -20,7 +21,7 @@
 .trips__chats-link {
   position: absolute;
   top: 8px;
-  right: 0;
+  right: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

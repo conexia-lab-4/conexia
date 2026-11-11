@@ -17,6 +17,7 @@ import tripsHeader from '../../assets/images/trips-header.png';
 import './index.css';
 import { TravelIntentCard } from '../../components/travelintentcard';
 import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
+import { NotificationBell } from '../../components/notificationbell';
 import {
   getMyTravelIntents,
   type TravelIntent,
@@ -98,6 +99,7 @@ export function Trips() {
 
   return (
     <div className="trips">
+      <NotificationBell />
       <header className="trips__header">
         <div className="trips__header-text">
           <h1 className="text-h4-bold">Viajes</h1>
