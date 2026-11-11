@@ -8,6 +8,8 @@ export interface PushContextValue {
   status: PushStatus;
   // Permiso concedido y token registrado en el backend
   isActive: boolean;
+  // Permiso concedido, pero falló registrar el token: se puede reintentar
+  needsRecovery: boolean;
   // Abre el pop-up para activar. onClose se llama al cerrarlo, sea cual sea el motivo
   openEnableDialog: (options?: { onClose?: () => void }) => void;
 }

@@ -67,14 +67,19 @@ export function Home() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { status: pushStatus, openEnableDialog } = usePush();
+  const { status: pushStatus, needsRecovery, openEnableDialog } = usePush();
 
-  // Si las notificaciones nativas se pueden activar y todavía no están, se
-  // ofrece activarlas
+  // Si las notificaciones nativas se pueden activar (o terminar de activar) y
+  // todavía no están, se ofrece
   useEffect(() => {
-    if (pushStatus !== 'default' || wasPushDialogDismissed()) return;
+    if (
+      (pushStatus !== 'default' && !needsRecovery) ||
+      wasPushDialogDismissed()
+    ) {
+      return;
+    }
     openEnableDialog({ onClose: markPushDialogDismissed });
-  }, [pushStatus, openEnableDialog]);
+  }, [pushStatus, needsRecovery, openEnableDialog]);
   const [tripPublished] = useState(
     () => (location.state as { tripPublished?: boolean } | null)?.tripPublished,
   );

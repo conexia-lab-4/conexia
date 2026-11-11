@@ -10,14 +10,14 @@ const MAX_BADGE = 9;
 export function NotificationBell() {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
-  const { status: pushStatus, openEnableDialog } = usePush();
+  const { status: pushStatus, needsRecovery, openEnableDialog } = usePush();
 
-  // Si las notificaciones nativas se pueden activar y todavía no están, se
-  // ofrece activarlas antes de ir al listado
+  // Si las notificaciones nativas se pueden activar (o terminar de activar) y
+  // todavía no están, se ofrece antes de ir al listado
   const handleClick = () => {
     const goToList = () => navigate('/notifications');
 
-    if (pushStatus === 'default') {
+    if (pushStatus === 'default' || needsRecovery) {
       openEnableDialog({ onClose: goToList });
       return;
     }
