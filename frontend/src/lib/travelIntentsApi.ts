@@ -12,6 +12,7 @@ export interface TravelIntent {
   departureTime: string;
   arrivalTime: string;
   status: TravelIntentStatus;
+  roundTripId: string | null;
   createdAt: string;
   updatedAt: string;
 }
