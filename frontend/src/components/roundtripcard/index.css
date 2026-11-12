@@ -1,0 +1,26 @@
+.round-trip-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-white);
+  border: 1px solid #eeeeee;
+  border-radius: 20px;
+  box-sizing: border-box;
+}
+
+.round-trip-group__header {
+  padding: 8px 12px;
+  background: var(--color-primary-200);
+  color: var(--color-primary-800);
+}
+
+/* Las tarjetas de los tramos pierden su borde: el borde es el del bloque */
+.round-trip-group .trip-list-card {
+  border: none;
+  border-radius: 0;
+}
+
+.round-trip-group .trip-list-card + .trip-list-card {
+  border-top: 1px solid #eeeeee;
+}

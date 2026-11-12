@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
@@ -18,6 +18,7 @@ import './index.css';
 import { TravelIntentCard } from '../../components/travelintentcard';
 import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import { NotificationBell } from '../../components/notificationbell';
+import { RoundTripGroup } from '../../components/roundtripcard';
 import {
   getMyTravelIntents,
   type TravelIntent,
@@ -29,6 +30,75 @@ const TABS: { scope: TripScope; label: string }[] = [
   { scope: 'upcoming', label: 'Próximos viajes' },
   { scope: 'history', label: 'Historial' },
 ];
+
+// Lo que comparten los viajes y las intenciones para agruparse
+interface LegItem {
+  id: string;
+  roundTripId: string | null;
+  departureTime: string;
+}
+
+interface ListItem {
+  key: string;
+  time: number;
+  node: ReactNode;
+}
+
+const timeOf = (item: LegItem) => new Date(item.departureTime).getTime();
+
+function toListItem<T extends LegItem>(
+  item: T,
+  render: (item: T) => ReactNode,
+): ListItem {
+  return { key: item.id, time: timeOf(item), node: render(item) };
+}
+
+// Los tramos de un mismo paquete van juntos en un bloque. Con un solo tramo
+// (el otro se eliminó o ya salió) se ve como una tarjeta suelta
+function groupLegs<T extends LegItem>(
+  items: T[],
+  render: (item: T) => ReactNode,
+): ListItem[] {
+  const groups = new Map<string, T[]>();
+  const result: ListItem[] = [];
+
+  for (const item of items) {
+    if (!item.roundTripId) {
+      result.push(toListItem(item, render));
+      continue;
+    }
+    groups.set(item.roundTripId, [
+      ...(groups.get(item.roundTripId) ?? []),
+      item,
+    ]);
+  }
+
+  groups.forEach((legs, roundTripId) => {
+    const sorted = [...legs].sort((a, b) => timeOf(a) - timeOf(b));
+    if (sorted.length === 1) {
+      result.push(toListItem(sorted[0], render));
+      return;
+    }
+    result.push({
+      key: roundTripId,
+      time: timeOf(sorted[0]),
+      node: (
+        <RoundTripGroup>
+          {sorted.map((leg) => (
+            <Fragment key={leg.id}>{render(leg)}</Fragment>
+          ))}
+        </RoundTripGroup>
+      ),
+    });
+  });
+
+  return result.sort((a, b) => a.time - b.time);
+}
+
+const renderTrip = (trip: TripDetail) => <TripListCard trip={trip} />;
+const renderIntent = (intent: TravelIntent) => (
+  <TravelIntentCard intent={intent} />
+);
 
 export function Trips() {
   const { user } = useAuth();
@@ -96,6 +166,11 @@ export function Trips() {
   };
 
   const isHistory = scope === 'history';
+  // El historial se muestra tramo por tramo; los próximos, agrupados
+  const tripItems = isHistory
+    ? trips.map((trip) => toListItem(trip, renderTrip))
+    : groupLegs(trips, renderTrip);
+  const intentItems = groupLegs(intents, renderIntent);
 
   return (
     <div className="trips">
@@ -161,14 +236,12 @@ export function Trips() {
             onPublish={() => setIsDrawerOpen(true)}
           />
 
-          {!isHistory && intents.length > 0 && (
+          {!isHistory && intentItems.length > 0 && (
             <section className="trips__list-section">
               <h2 className="trips__section-title">Mis intenciones de viaje</h2>
               <ul className="trips__list">
-                {intents.map((intent) => (
-                  <li key={intent.id}>
-                    <TravelIntentCard intent={intent} />
-                  </li>
+                {intentItems.map((item) => (
+                  <li key={item.key}>{item.node}</li>
                 ))}
               </ul>
             </section>
@@ -178,7 +251,7 @@ export function Trips() {
             <h2 className="trips__section-title">
               {isHistory ? 'Historial' : 'Próximos viajes'}
             </h2>
-            {trips.length === 0 ? (
+            {tripItems.length === 0 ? (
               <EmptyTripsState
                 title={
                   isHistory
@@ -193,10 +266,8 @@ export function Trips() {
               />
             ) : (
               <ul className="trips__list">
-                {trips.map((trip) => (
-                  <li key={trip.id}>
-                    <TripListCard trip={trip} />
-                  </li>
+                {tripItems.map((item) => (
+                  <li key={item.key}>{item.node}</li>
                 ))}
               </ul>
             )}
