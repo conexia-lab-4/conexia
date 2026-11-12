@@ -1,6 +1,6 @@
 import { IconCalendar } from '../../assets/icons/IconCalendar';
 import { IconClock } from '../../assets/icons/IconClock';
-import { CarIllustration } from './carIllustration';
+import publishTripCar from '../../assets/images/publish-trip-car.png';
 import { formatDateLabel } from './tripDates';
 
 export interface SummaryStop {
@@ -45,7 +45,7 @@ export function TripSummaryCard({
             ))}
           </div>
         </div>
-        <CarIllustration />
+        <img src={publishTripCar} alt="" className="trip-summary__car" />
       </div>
 
       <div className="trip-summary__divider" />
