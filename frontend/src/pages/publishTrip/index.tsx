@@ -1083,7 +1083,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
             {isPublishing
               ? 'Publicando...'
               : isIntent
-                ? 'Publicar intención'
+                ? 'Publicar búsqueda'
                 : 'Publicar viaje'}
           </Button>
           <button
