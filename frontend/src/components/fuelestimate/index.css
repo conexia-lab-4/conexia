@@ -1,0 +1,97 @@
+/* Mismo lenguaje visual que las cards del detalle de viaje */
+.fuel-estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 12px;
+  border: 1px solid #eeeeee;
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.fuel-estimate__title {
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-semibold);
+  color: var(--color-black);
+}
+
+.fuel-estimate__leg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fuel-estimate__leg + .fuel-estimate__leg {
+  padding-top: 12px;
+  border-top: 1px solid #eeeeee;
+}
+
+.fuel-estimate__leg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fuel-estimate__leg-title {
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-black);
+}
+
+.fuel-estimate__cost {
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-semibold);
+  color: var(--color-black);
+}
+
+.fuel-estimate__unavailable {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+}
+
+.fuel-estimate__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.fuel-estimate__details div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fuel-estimate__details dt {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+}
+
+.fuel-estimate__details dd {
+  margin: 0;
+  font-size: var(--fs-body-2);
+  color: var(--color-black);
+}
+
+.fuel-estimate__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #eeeeee;
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-semibold);
+  color: var(--color-black);
+}
+
+.fuel-estimate__muted {
+  font-size: var(--fs-body-2);
+  color: var(--color-grey-400);
+}
+
+.fuel-estimate__disclaimer {
+  font-size: var(--fs-caption, 12px);
+  color: var(--color-grey-400);
+}
