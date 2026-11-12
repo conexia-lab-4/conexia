@@ -83,7 +83,7 @@ function groupLegs<T extends LegItem>(
       key: roundTripId,
       time: timeOf(sorted[0]),
       node: (
-        <RoundTripGroup>
+        <RoundTripGroup roundTripId={roundTripId}>
           {sorted.map((leg) => (
             <Fragment key={leg.id}>{render(leg)}</Fragment>
           ))}

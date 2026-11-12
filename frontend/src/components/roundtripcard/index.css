@@ -10,9 +10,18 @@
 }
 
 .round-trip-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 12px;
   background: var(--color-primary-200);
   color: var(--color-primary-800);
+  text-decoration: none;
+}
+
+.round-trip-group__chevron {
+  display: inline-flex;
+  transform: rotate(-90deg);
 }
 
 /* Las tarjetas de los tramos pierden su borde: el borde es el del bloque */
