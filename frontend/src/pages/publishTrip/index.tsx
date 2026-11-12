@@ -39,6 +39,7 @@ import { ChoiceCards } from '../../components/choicecards';
 import { IconArrowsLeftRight } from '../../assets/icons/IconArrowsLeftRight';
 import { IconSliders } from '../../assets/icons/IconSliders';
 import { LegPreferences } from './legPreferences';
+import { describeTravelTime } from './travelTime';
 import {
   defaultLegPreferences,
   validateLegPreferences,
@@ -260,6 +261,25 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const toCampus = form.direction === 'TO_CAMPUS';
   const origin = toCampus ? form.home.trim() : campusLabel;
   const destination = toCampus ? campusLabel : form.home.trim();
+  const outboundTravel = describeTravelTime(
+    form.date,
+    form.departureTime,
+    form.arrivalTime,
+  );
+  const returnTravel =
+    tripType === 'ROUND_TRIP'
+      ? describeTravelTime(
+          returnLeg.date,
+          returnLeg.departureTime,
+          returnLeg.arrivalTime,
+        )
+      : undefined;
+  const toTravelLabel = (time?: string) =>
+    time ? `Tiempo de viaje: ${time}` : undefined;
+  const bothTravelLabel =
+    outboundTravel && returnTravel
+      ? `Ida: ${outboundTravel} · Vuelta: ${returnTravel}`
+      : toTravelLabel(outboundTravel);
 
   const setField = <K extends keyof TripForm>(key: K, value: TripForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -854,6 +874,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               </span>
               <LegPreferences
                 value={outboundPrefs}
+                travelLabel={toTravelLabel(outboundTravel)}
                 onChange={(next) => {
                   setOutboundPrefs(next);
                   setStepError(null);
@@ -864,6 +885,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               </span>
               <LegPreferences
                 value={returnPrefs}
+                travelLabel={toTravelLabel(returnTravel)}
                 onChange={(next) => {
                   setReturnPrefs(next);
                   setStepError(null);
@@ -873,6 +895,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
           ) : (
             <LegPreferences
               value={bothPrefs}
+              travelLabel={bothTravelLabel}
               onChange={(next) => {
                 setBothPrefs(next);
                 setStepError(null);

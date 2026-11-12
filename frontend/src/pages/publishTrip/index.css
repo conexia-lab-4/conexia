@@ -596,3 +596,38 @@
   background: var(--color-primary-200);
   color: var(--color-primary-700);
 }
+
+/* Resumen de la ruta */
+.route-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-primary-200);
+  border-radius: 12px;
+  background: var(--color-primary-100);
+}
+
+.route-info svg {
+  flex-shrink: 0;
+}
+
+.route-info__texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.route-info__title,
+.route-info__body {
+  margin: 0;
+}
+
+.route-info__title {
+  color: var(--color-primary-600);
+}
+
+.route-info__body {
+  color: var(--color-grey-400);
+}

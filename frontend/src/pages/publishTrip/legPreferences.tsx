@@ -5,6 +5,7 @@ import { IconArmchair } from '../../assets/icons/IconArmchair';
 import { IconClock } from '../../assets/icons/IconClock';
 import { IconRoute } from '../../assets/icons/IconRoute';
 import { parseNumericInput } from '../../lib/numberInput';
+import { RouteIllustration } from './routeIllustration';
 import type { LegPreferencesValue, WaitOption } from './legPreferencesModel';
 
 const WAIT_OPTIONS: { value: WaitOption; label: string }[] = [
@@ -46,9 +47,15 @@ function PreferenceCard({
 interface LegPreferencesProps {
   value: LegPreferencesValue;
   onChange: (value: LegPreferencesValue) => void;
+  // Tiempo de viaje del tramo; sin él no se muestra el recuadro de la ruta
+  travelLabel?: string;
 }
 
-export function LegPreferences({ value, onChange }: LegPreferencesProps) {
+export function LegPreferences({
+  value,
+  onChange,
+  travelLabel,
+}: LegPreferencesProps) {
   const update = (patch: Partial<LegPreferencesValue>) =>
     onChange({ ...value, ...patch });
 
@@ -124,6 +131,17 @@ export function LegPreferences({ value, onChange }: LegPreferencesProps) {
             />
           }
         />
+        {travelLabel && (
+          <div className="route-info">
+            <RouteIllustration />
+            <div className="route-info__texts">
+              <p className="route-info__title text-body-2-bold">
+                Tu ruta original
+              </p>
+              <p className="route-info__body text-body-3">{travelLabel}</p>
+            </div>
+          </div>
+        )}
       </PreferenceCard>
 
       <PreferenceCard
