@@ -4,10 +4,13 @@ import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
 import { MatchCard } from '../../components/matchCard';
+import { RoundTripMatchCard } from '../../components/roundTripMatchCard';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { NotificationBell } from '../../components/notificationbell';
 import { IconSearch } from '../../assets/icons/IconSearch';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
+import { useMyRoundTrips } from '../../hooks/useRoundTrips';
+import { isFullyConfirmed } from '../../lib/roundTripFilters';
 import { getMatches, type Match } from '../../lib/matchesApi';
 import matchesIllustration from '../../assets/images/matches-header.png';
 import './index.css';
@@ -21,6 +24,7 @@ export function Matches() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState('');
+  const { roundTrips, status: roundTripsStatus } = useMyRoundTrips();
 
   useEffect(() => {
     if (!user) return;
@@ -49,16 +53,66 @@ export function Matches() {
     setReloadKey((key) => key + 1);
   };
 
-  const filteredMatches = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (query === '') return allMatches;
+  // Matches lista conductores para quien busca viaje: solo paquetes de
+  // búsqueda con al menos una coincidencia. Si la consulta de paquetes falla,
+  // se ve la lista simple de siempre
+  const intentPackages = useMemo(
+    () =>
+      roundTripsStatus === 'ready'
+        ? roundTrips.filter(
+            (roundTrip) =>
+              roundTrip.kind === 'INTENT' &&
+              roundTrip.legs.some((leg) => leg.match),
+          )
+        : [],
+    [roundTrips, roundTripsStatus],
+  );
 
-    return allMatches.filter((match) =>
+  // Con los dos tramos confirmados la tarjeta del paquete se oculta
+  const matchPackages = useMemo(
+    () => intentPackages.filter((roundTrip) => !isFullyConfirmed(roundTrip)),
+    [intentPackages],
+  );
+
+  // Las coincidencias de un paquete no se repiten en la lista simple, ni
+  // siquiera cuando el paquete ya está confirmado y su tarjeta se ocultó
+  const groupedMatchIds = useMemo(
+    () =>
+      new Set(
+        intentPackages.flatMap((roundTrip) =>
+          roundTrip.legs.flatMap((leg) => (leg.match ? [leg.match.id] : [])),
+        ),
+      ),
+    [intentPackages],
+  );
+
+  const query = search.trim().toLowerCase();
+
+  const filteredMatches = useMemo(() => {
+    const ungrouped = allMatches.filter(
+      (match) => !groupedMatchIds.has(match.id),
+    );
+    if (query === '') return ungrouped;
+
+    return ungrouped.filter((match) =>
       [match.name, match.career, match.campus].some((value) =>
         value?.toLowerCase().includes(query),
       ),
     );
-  }, [allMatches, search]);
+  }, [allMatches, groupedMatchIds, query]);
+
+  const filteredPackages = useMemo(() => {
+    if (query === '') return matchPackages;
+
+    return matchPackages.filter((roundTrip) =>
+      roundTrip.legs.some((leg) =>
+        leg.match?.person.displayName?.toLowerCase().includes(query),
+      ),
+    );
+  }, [matchPackages, query]);
+
+  const isLoading = status === 'loading' || roundTripsStatus === 'loading';
+  const isEmpty = filteredMatches.length === 0 && filteredPackages.length === 0;
 
   return (
     <div className="matches">
@@ -84,7 +138,7 @@ export function Matches() {
         leftIcon={<IconSearch size={20} color="var(--color-grey-400)" />}
       />
 
-      {status === 'loading' && (
+      {isLoading && (
         <div className="matches__status-message loading-area">
           <ConexiaLoader />
         </div>
@@ -103,22 +157,27 @@ export function Matches() {
         </div>
       )}
 
-      {status === 'ready' && (
+      {status === 'ready' && !isLoading && (
         <div className="matches__list">
-          {filteredMatches.length === 0 ? (
+          {isEmpty ? (
             <p className="matches__empty">
-              {search.trim() === ''
+              {query === ''
                 ? 'Todavía no tenés matches.'
                 : 'No encontramos resultados para tu búsqueda.'}
             </p>
           ) : (
-            filteredMatches.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                onClick={() => navigate(`/matches/${match.id}`)}
-              />
-            ))
+            <>
+              {filteredPackages.map((roundTrip) => (
+                <RoundTripMatchCard key={roundTrip.id} roundTrip={roundTrip} />
+              ))}
+              {filteredMatches.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  onClick={() => navigate(`/matches/${match.id}`)}
+                />
+              ))}
+            </>
           )}
         </div>
       )}
