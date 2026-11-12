@@ -34,6 +34,7 @@ import {
   toLocalDate,
   type ScheduleOption,
 } from './tripDates';
+import { validateReturnLeg, type ReturnLegForm } from './roundTripPayload';
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
@@ -58,6 +59,12 @@ const EMPTY_FORM: TripForm = {
   home: '',
   direction: 'TO_CAMPUS',
   campusId: null,
+  date: '',
+  departureTime: '',
+  arrivalTime: '',
+};
+
+const EMPTY_RETURN: ReturnLegForm = {
   date: '',
   departureTime: '',
   arrivalTime: '',
@@ -108,6 +115,23 @@ function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
   };
 }
 
+// La vuelta sale el mismo día; con una clase elegida, sale al terminarla
+function returnLegFromSchedule(
+  date: string,
+  option: ScheduleOption | null,
+): ReturnLegForm {
+  if (!option) return { ...EMPTY_RETURN, date };
+  const leg = formFromSchedule(
+    { ...EMPTY_FORM, direction: 'FROM_CAMPUS' },
+    option,
+  );
+  return {
+    date,
+    departureTime: leg.departureTime,
+    arrivalTime: leg.arrivalTime,
+  };
+}
+
 function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
   if (!hasUniversity) return NO_UNIVERSITY_MESSAGE;
   if (!form.home.trim()) {
@@ -147,6 +171,8 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [form, setForm] = useState<TripForm>(EMPTY_FORM);
   const [tripType, setTripType] = useState<TripType>('ONE_WAY');
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [returnLeg, setReturnLeg] = useState<ReturnLegForm>(EMPTY_RETURN);
+  const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null,
   );
@@ -229,6 +255,22 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     setSelectedScheduleId(null);
   };
 
+  const setReturnField = (key: keyof ReturnLegForm, value: string) => {
+    setReturnLeg((prev) => ({ ...prev, [key]: value }));
+    setStepError(null);
+  };
+
+  const handleTripTypeChange = (type: TripType) => {
+    setTripType(type);
+    // Sin vuelta no queda ningún dato de la vuelta guardado
+    setReturnLeg(
+      type === 'ROUND_TRIP'
+        ? returnLegFromSchedule(form.date, selectedSchedule)
+        : EMPTY_RETURN,
+    );
+    setStepError(null);
+  };
+
   const handleSwapDirection = () => {
     const direction: RouteDirection =
       form.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
@@ -236,7 +278,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
     setForm(selectedSchedule ? formFromSchedule(next, selectedSchedule) : next);
     // La vuelta solo se ofrece cuando la ida va hacia la sede
-    if (direction === 'FROM_CAMPUS') setTripType('ONE_WAY');
+    if (direction === 'FROM_CAMPUS') handleTripTypeChange('ONE_WAY');
     setStepError(null);
   };
 
@@ -245,7 +287,11 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       setSelectedScheduleId(null);
       return;
     }
-    setForm((prev) => formFromSchedule(prev, option));
+    const next = formFromSchedule(form, option);
+    setForm(next);
+    if (tripType === 'ROUND_TRIP') {
+      setReturnLeg(returnLegFromSchedule(next.date, option));
+    }
     setSelectedScheduleId(option.id);
     setStepError(null);
   };
@@ -262,7 +308,11 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   };
 
   const handleNextFromRoute = () => {
-    const error = validateRoute(form, hasUniversity);
+    const error =
+      validateRoute(form, hasUniversity) ??
+      (tripType === 'ROUND_TRIP'
+        ? validateReturnLeg(form.direction, form, returnLeg)
+        : null);
     if (error) {
       setStepError(error);
       return;
@@ -377,6 +427,51 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     </div>
   );
 
+  const renderDateField = (
+    ariaLabel: string,
+    date: string,
+    isOpen: boolean,
+    setOpen: (open: boolean) => void,
+    onPick: (date: string) => void,
+  ) => (
+    <div className="publish-trip__combobox">
+      <TextField
+        variant="filled"
+        aria-label={ariaLabel}
+        placeholder="Elegí una fecha"
+        value={date ? formatDateLabel(date) : ''}
+        readOnly
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => setOpen(!isOpen)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        leftIcon={<IconCalendar size={20} color="var(--color-primary-800)" />}
+        rightIcon={<IconChevronDown size={20} color="var(--color-grey-400)" />}
+      />
+      {isOpen && (
+        <ul className="publish-trip__combobox-list" role="listbox">
+          {getDateOptions().map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={date === option}
+                className="publish-trip__combobox-option text-body-2"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onPick(option);
+                  setOpen(false);
+                }}
+              >
+                {formatDateLabel(option)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   const canPublish =
     status === 'ready' && (isIntent || Boolean(profile?.hasCar));
 
@@ -469,7 +564,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
           <TripTypeSelector
             value={tripType}
-            onChange={setTripType}
+            onChange={handleTripTypeChange}
             roundTripDisabled={!toCampus}
             disabledNote="La vuelta solo se ofrece si tu viaje va hacia la sede."
           />
@@ -502,46 +597,13 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               <IconCalendar size={20} color="var(--color-primary-700)" />
               {tripType === 'ROUND_TRIP' ? 'Fecha de ida' : 'Fecha'}
             </h2>
-            <div className="publish-trip__combobox">
-              <TextField
-                variant="filled"
-                aria-label="Fecha del viaje"
-                placeholder="Elegí una fecha"
-                value={form.date ? formatDateLabel(form.date) : ''}
-                readOnly
-                role="combobox"
-                aria-expanded={isDateOpen}
-                onClick={() => setIsDateOpen((open) => !open)}
-                onBlur={() => setTimeout(() => setIsDateOpen(false), 150)}
-                leftIcon={
-                  <IconCalendar size={20} color="var(--color-primary-800)" />
-                }
-                rightIcon={
-                  <IconChevronDown size={20} color="var(--color-grey-400)" />
-                }
-              />
-              {isDateOpen && (
-                <ul className="publish-trip__combobox-list" role="listbox">
-                  {getDateOptions().map((date) => (
-                    <li key={date}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={form.date === date}
-                        className="publish-trip__combobox-option text-body-2"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          setScheduleField('date', date);
-                          setIsDateOpen(false);
-                        }}
-                      >
-                        {formatDateLabel(date)}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {renderDateField(
+              'Fecha del viaje',
+              form.date,
+              isDateOpen,
+              setIsDateOpen,
+              (date) => setScheduleField('date', date),
+            )}
           </section>
 
           <section className="publish-trip__times">
@@ -616,6 +678,80 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
                 </p>
               ))}
           </section>
+
+          {tripType === 'ROUND_TRIP' && (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+
+              <section className="publish-trip__route">
+                <div className="publish-trip__route-row">
+                  <span className="publish-trip__dot publish-trip__dot--origin" />
+                  <TextField
+                    variant="filled"
+                    label="Desde"
+                    value={campusLabel}
+                    readOnly
+                    leftIcon={
+                      <IconMapPin size={20} color="var(--color-primary-500)" />
+                    }
+                  />
+                </div>
+                <div className="publish-trip__route-row">
+                  <span className="publish-trip__dot publish-trip__dot--destination" />
+                  <TextField
+                    variant="filled"
+                    label="Hasta"
+                    value={form.home}
+                    readOnly
+                    leftIcon={
+                      <IconMapPin size={20} color="var(--color-primary-500)" />
+                    }
+                  />
+                </div>
+              </section>
+
+              <section className="publish-trip__field">
+                <h2 className="publish-trip__field-title text-body-1-bold">
+                  <IconCalendar size={20} color="var(--color-primary-700)" />
+                  Fecha de vuelta
+                </h2>
+                {renderDateField(
+                  'Fecha de la vuelta',
+                  returnLeg.date,
+                  isReturnDateOpen,
+                  setIsReturnDateOpen,
+                  (date) => setReturnField('date', date),
+                )}
+              </section>
+
+              <section className="publish-trip__times">
+                <div className="publish-trip__field">
+                  <h2 className="publish-trip__field-title text-body-1-bold">
+                    <IconClock size={20} color="var(--color-primary-700)" />
+                    Salida
+                  </h2>
+                  <TimeField
+                    value={returnLeg.departureTime}
+                    onChange={(value) => setReturnField('departureTime', value)}
+                    ariaLabel="Horario de salida de la vuelta"
+                  />
+                </div>
+                <div className="publish-trip__field">
+                  <h2 className="publish-trip__field-title text-body-1-bold">
+                    <IconClock size={20} color="var(--color-primary-700)" />
+                    Llegada
+                  </h2>
+                  <TimeField
+                    value={returnLeg.arrivalTime}
+                    onChange={(value) => setReturnField('arrivalTime', value)}
+                    ariaLabel="Horario de llegada de la vuelta"
+                  />
+                </div>
+              </section>
+            </>
+          )}
 
           {stepError && (
             <p className="publish-trip__error text-body-3">{stepError}</p>
