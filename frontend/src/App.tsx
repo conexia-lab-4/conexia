@@ -15,7 +15,10 @@ import { RequireAuth } from './components/requireAuth';
 import { Trips } from './pages/trips';
 import { TripDetailPage } from './pages/tripDetails';
 import { IntentDetailPage } from './pages/intentDetails';
-import { RoundTripDetailPage } from './pages/roundTripDetails';
+import {
+  RoundTripDetailPage,
+  RoundTripMatchDetailPage,
+} from './pages/roundTripDetails';
 import { Matches } from './pages/matches';
 import { MatchDetailPage } from './pages/matchDetail';
 import { Notifications } from './pages/notifications';
@@ -58,6 +61,10 @@ function App() {
         <Route path="/trips/:id" element={<TripDetailPage />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:id" element={<MatchDetailPage />} />
+        <Route
+          path="/matches/round-trips/:id"
+          element={<RoundTripMatchDetailPage />}
+        />
         <Route path="/chats" element={<Chats />} />
         <Route path="/chats/:tripId" element={<ChatPage />} />
         <Route path="/notifications" element={<Notifications />} />

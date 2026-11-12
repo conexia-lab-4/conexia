@@ -47,6 +47,8 @@ function LegSection({
   const car = [person?.carModel, person?.carColor].filter(Boolean).join(' · ');
   const isTrip = Boolean(leg.tripId);
   const cancelCheck = checkCancelLeg(leg);
+  // Motivo por el que no se puede eliminar; null si se puede
+  const cancelReason = 'reason' in cancelCheck ? cancelCheck.reason : null;
   const detailPath = isTrip
     ? `/trips/${leg.tripId}`
     : `/trips/intents/${leg.travelIntentId}`;
@@ -115,13 +117,13 @@ function LegSection({
           type="button"
           variant="danger"
           size="large-wide"
-          disabled={isBusy || !cancelCheck.allowed}
+          disabled={isBusy || cancelReason !== null}
           onClick={onCancel}
         >
           {isTrip ? 'Eliminar viaje' : 'Eliminar intención'}
         </Button>
-        {!cancelCheck.allowed && (
-          <p className="trip-detail__delete-note">{cancelCheck.reason}</p>
+        {cancelReason && (
+          <p className="trip-detail__delete-note">{cancelReason}</p>
         )}
 
         <Link
@@ -135,7 +137,14 @@ function LegSection({
   );
 }
 
-export function RoundTripDetailPage() {
+interface RoundTripDetailPageProps {
+  // Desde dónde se abrió: define qué ítem de la navbar queda activo
+  activeItem?: 'viajes' | 'matches';
+}
+
+export function RoundTripDetailPage({
+  activeItem = 'viajes',
+}: RoundTripDetailPageProps) {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
@@ -292,7 +301,12 @@ export function RoundTripDetailPage() {
         />
       )}
 
-      <NavBar activeItem="viajes" />
+      <NavBar activeItem={activeItem} />
     </div>
   );
+}
+
+// El mismo detalle, abierto desde Matches
+export function RoundTripMatchDetailPage() {
+  return <RoundTripDetailPage activeItem="matches" />;
 }
