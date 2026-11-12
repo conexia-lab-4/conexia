@@ -6,6 +6,8 @@ import {
   DisplayNamesService,
   type PublicUser,
 } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 describe('TravelMatchesService.findMine', () => {
   let service: TravelMatchesService;
@@ -34,6 +36,8 @@ describe('TravelMatchesService.findMine', () => {
       {} as unknown as MatchingService,
       {} as unknown as MetricsService,
       displayNamesMock as unknown as DisplayNamesService,
+      {} as unknown as ChatService,
+      {} as NotificationEventsService,
     );
   });
 
@@ -84,6 +88,7 @@ describe('TravelMatchesService.findMine', () => {
         detourKm: 9.17,
         departureDeltaMinutes: 0,
         arrivalDeltaMinutes: 0,
+        travelIntent: { campusId: null, routeDirection: null },
         trip: {
           id: 'trip-1',
           origin: 'Pilar',
@@ -126,6 +131,57 @@ describe('TravelMatchesService.findMine', () => {
     });
   });
 
+  it('no devuelve e invalida las sugerencias viejas de otra sede o sentido', async () => {
+    const suggestion = (
+      id: string,
+      tripRoute: { campusId: string | null; routeDirection: string | null },
+    ) => ({
+      id,
+      status: 'SUGGESTED',
+      score: 80,
+      detourKm: 1,
+      departureDeltaMinutes: 0,
+      arrivalDeltaMinutes: 0,
+      travelIntent: { campusId: 'ua-pilar', routeDirection: 'TO_CAMPUS' },
+      trip: {
+        id: `trip-${id}`,
+        origin: 'Pilar',
+        destination: 'Palermo',
+        departureTime: new Date('2026-10-20T11:00:00.000Z'),
+        arrivalTime: new Date('2026-10-20T12:30:00.000Z'),
+        capacity: 3,
+        ...tripRoute,
+        _count: { passengers: 0 },
+        driver: { id: 'driver-1', email: 'c@test.com', studentProfile: null },
+      },
+    });
+    prismaMock.travelMatch.findMany.mockResolvedValue([
+      suggestion('valida', {
+        campusId: 'ua-pilar',
+        routeDirection: 'TO_CAMPUS',
+      }),
+      suggestion('otra-sede', {
+        campusId: 'ua-caba',
+        routeDirection: 'TO_CAMPUS',
+      }),
+      suggestion('vuelta', {
+        campusId: 'ua-pilar',
+        routeDirection: 'FROM_CAMPUS',
+      }),
+      suggestion('anterior', { campusId: null, routeDirection: null }),
+    ]);
+
+    const result = await service.findMine(userId);
+
+    expect(result.map((match) => match.id)).toEqual(['valida', 'anterior']);
+    expect(result[0]).not.toHaveProperty('travelIntent');
+    expect(result[0].trip).not.toHaveProperty('campusId');
+    expect(prismaMock.travelMatch.updateMany).toHaveBeenLastCalledWith({
+      where: { id: { in: ['otra-sede', 'vuelta'] }, status: 'SUGGESTED' },
+      data: { status: 'INVALIDATED' },
+    });
+  });
+
   it('agrega el displayName y la foto del conductor', async () => {
     displayNamesMock.getPublicUsers.mockResolvedValue(
       new Map([
@@ -140,6 +196,7 @@ describe('TravelMatchesService.findMine', () => {
         detourKm: 1,
         departureDeltaMinutes: 0,
         arrivalDeltaMinutes: 0,
+        travelIntent: { campusId: null, routeDirection: null },
         trip: {
           id: 'trip-1',
           origin: 'Pilar',
@@ -172,6 +229,7 @@ describe('TravelMatchesService.findMine', () => {
         detourKm: 1,
         departureDeltaMinutes: 0,
         arrivalDeltaMinutes: 0,
+        travelIntent: { campusId: null, routeDirection: null },
         trip: {
           id: 'trip-1',
           origin: 'Pilar',

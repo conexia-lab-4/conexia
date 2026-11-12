@@ -1,0 +1,107 @@
+.notifications {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100vh;
+  padding: 0 10px 110px;
+  background: var(--color-grey-100);
+  box-sizing: border-box;
+}
+
+.notifications__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0 0;
+}
+
+.notifications__back {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.notifications__filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.notifications__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.notifications__filter {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--color-grey-200);
+  color: var(--color-grey-400);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.notifications__filter--active {
+  background: var(--color-day-selected-bg);
+  color: var(--color-day-selected-text);
+}
+
+.notifications__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notifications__group-title {
+  margin: 0;
+  padding: 0 8px;
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-grey-400);
+}
+
+.notifications__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notifications__status {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-grey-400);
+}
+
+.notifications__status--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-error-500);
+}
+
+.notifications__retry-button {
+  padding: 8px 20px;
+  border: 1px solid var(--color-primary-500);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-primary-500);
+  font-family: var(--font-primary);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}

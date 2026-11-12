@@ -66,6 +66,27 @@ export function computeScore(input: ScoreInput): number {
   );
 }
 
+export interface CampusRouteFields {
+  campusId?: string | null;
+  routeDirection?: string | null;
+}
+
+// Solo se proponen viajes de la misma sede y el mismo sentido. Los datos
+// anteriores al catálogo no tienen sede o sentido: en ese caso no se filtra
+// por ese campo y decide el resto del algoritmo
+export function isSameCampusRoute(
+  trip: CampusRouteFields,
+  intent: CampusRouteFields,
+): boolean {
+  const differs = (a?: string | null, b?: string | null) =>
+    Boolean(a && b && a !== b);
+
+  return (
+    !differs(trip.campusId, intent.campusId) &&
+    !differs(trip.routeDirection, intent.routeDirection)
+  );
+}
+
 export function meetsMinimumScore(score: number): boolean {
   return score >= MIN_SCORE;
 }

@@ -31,6 +31,11 @@ export class TravelIntentsController {
     return this.travelIntentsService.findMine(user.id);
   }
 
+  @Get(':id')
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.travelIntentsService.findOneOrThrow(id, user.id);
+  }
+
   @Patch(':id/cancel')
   cancel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.travelIntentsService.cancel(id, user.id);

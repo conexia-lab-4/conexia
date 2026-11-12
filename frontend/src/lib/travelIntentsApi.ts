@@ -12,6 +12,7 @@ export interface TravelIntent {
   departureTime: string;
   arrivalTime: string;
   status: TravelIntentStatus;
+  roundTripId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,4 +59,35 @@ export async function getMyTravelIntents(): Promise<TravelIntent[]> {
   }
 
   return response.json();
+}
+
+export async function getTravelIntent(id: string): Promise<TravelIntent> {
+  const response = await authFetch(`/travel-intents/${encodeURIComponent(id)}`);
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'No pudimos cargar tu intención de viaje',
+      ),
+    );
+  }
+
+  return response.json();
+}
+
+export async function deleteTravelIntent(id: string): Promise<void> {
+  const response = await authFetch(
+    `/travel-intents/${encodeURIComponent(id)}/cancel`,
+    { method: 'PATCH' },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        'No pudimos eliminar tu intención de viaje',
+      ),
+    );
+  }
 }

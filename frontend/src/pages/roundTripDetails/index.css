@@ -1,0 +1,68 @@
+.round-trip-detail__status {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 30px;
+  background: #eeeeee;
+  color: var(--color-grey-500);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.round-trip-detail__status--confirmed {
+  background: var(--color-badge-mint-bg);
+  color: var(--color-badge-mint-text);
+}
+
+.round-trip-detail__status--proposed {
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
+
+.round-trip-detail__joint {
+  font-size: var(--fs-h6);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary-700);
+}
+
+.round-trip-detail__person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.round-trip-detail__person-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.round-trip-detail__score {
+  flex-shrink: 0;
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary-700);
+}
+
+.round-trip-detail__link {
+  padding: 8px;
+  color: var(--color-primary-700);
+  text-align: center;
+  text-decoration: none;
+}
+
+.round-trip-detail__notice {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--color-badge-mint-bg);
+  color: var(--color-badge-mint-text);
+  text-align: center;
+}

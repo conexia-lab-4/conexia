@@ -7,17 +7,19 @@ import {
 import { GeoService, type Coordinates } from '../geo/geo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  Prisma,
   TravelIntentStatus,
-  RouteDirection,
+  type TravelIntent,
 } from '../../generated/prisma/client';
 import { CreateTravelIntentDto } from './dto/create-travel-intent.dto';
 import { MatchingService } from '../matching/matching.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { KpiEventType, Metric } from '../metrics/metric-names';
 import {
-  loadCampusEnd,
-  placeRouteEnds,
-  type RouteEnd,
+  legRouteData,
+  resolveCampusRoute,
+  type CampusRoute,
+  type RouteLeg,
 } from '../universities/campus-route';
 
 @Injectable()
@@ -30,10 +32,31 @@ export class TravelIntentsService {
   ) {}
 
   async create(userId: string, dto: CreateTravelIntentDto) {
-    const departureTime = new Date(dto.departureTime);
-    const arrivalTime = new Date(dto.arrivalTime);
+    const leg: RouteLeg = {
+      routeDirection: dto.routeDirection,
+      departureTime: new Date(dto.departureTime),
+      arrivalTime: new Date(dto.arrivalTime),
+    };
+    const route = await this.prepareIntents(userId, dto, [leg]);
+    const [intent] = await this.prisma.$transaction((tx) =>
+      this.createIntents(tx, userId, route, [leg]),
+    );
 
-    if (departureTime <= new Date()) {
+    await this.matching.matchIntent(intent.id);
+
+    return intent;
+  }
+
+  // Valida los horarios de cada tramo y resuelve la ruta. Si algo falla no se
+  // crea ninguna intención. Lo comparten las intenciones simples y los
+  // paquetes de ida y vuelta
+  async prepareIntents(
+    userId: string,
+    dto: CreateTravelIntentDto,
+    legs: RouteLeg[],
+  ): Promise<CampusRoute> {
+    const now = new Date();
+    if (legs.some((leg) => leg.departureTime <= now)) {
       throw new BadRequestException(
         'El horario de salida tiene que ser posterior a ahora',
       );
@@ -42,54 +65,45 @@ export class TravelIntentsService {
     await this.expireOverdue(userId);
 
     // Se chequea antes de geocodificar para no gastar requests al proveedor
-    const overlapping = await this.prisma.travelIntent.findFirst({
-      where: {
-        userId,
-        status: TravelIntentStatus.ACTIVE,
-        departureTime: { lt: arrivalTime },
-        arrivalTime: { gt: departureTime },
-      },
-    });
+    for (const leg of legs) {
+      const overlapping = await this.prisma.travelIntent.findFirst({
+        where: {
+          userId,
+          status: TravelIntentStatus.ACTIVE,
+          departureTime: { lt: leg.arrivalTime },
+          arrivalTime: { gt: leg.departureTime },
+        },
+      });
 
-    if (overlapping) {
-      throw new ConflictException(
-        'Ya tenés una intención de viaje activa en ese horario',
-      );
+      if (overlapping) {
+        throw new ConflictException(
+          'Ya tenés una intención de viaje activa en ese horario',
+        );
+      }
     }
 
-    const campusEnd = await loadCampusEnd(this.prisma, dto.campusId);
-
-    // Solo se geocodifica la dirección de la casa; el extremo de la
-    // universidad usa las coordenadas de la sede. Si no se resuelve, no se
-    // persiste la intención
-    const homeAddress =
-      dto.routeDirection === RouteDirection.TO_CAMPUS
-        ? dto.origin
-        : dto.destination;
-    const homeEnd: RouteEnd = {
-      label: homeAddress,
-      coords: await this.geocodeOrThrow(homeAddress),
-    };
-    const { origin, destination } = placeRouteEnds(
-      dto.routeDirection,
-      campusEnd,
-      homeEnd,
+    return resolveCampusRoute(this.prisma, dto, (address) =>
+      this.geocodeOrThrow(address),
     );
+  }
 
-    const intent = await this.prisma.$transaction(async (tx) => {
+  // Crea los tramos dentro de una transacción, en orden. El matching se corre
+  // después, cuando la transacción ya se confirmó
+  async createIntents(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    route: CampusRoute,
+    legs: RouteLeg[],
+    roundTripId?: string,
+  ) {
+    const intents: TravelIntent[] = [];
+
+    for (const leg of legs) {
       const created = await tx.travelIntent.create({
         data: {
           userId,
-          origin: origin.label,
-          originLat: origin.coords.lat,
-          originLng: origin.coords.lng,
-          destination: destination.label,
-          destinationLat: destination.coords.lat,
-          destinationLng: destination.coords.lng,
-          campusId: dto.campusId,
-          routeDirection: dto.routeDirection,
-          departureTime,
-          arrivalTime,
+          ...legRouteData(route, leg),
+          ...(roundTripId && { roundTripId }),
         },
       });
 
@@ -99,24 +113,23 @@ export class TravelIntentsService {
         tx,
       );
 
-      return created;
-    });
+      intents.push(created);
+    }
 
-    await this.matching.matchIntent(intent.id);
-
-    return intent;
+    return intents;
   }
 
   async findMine(userId: string) {
     await this.expireOverdue(userId);
 
+    // Una intención cumplida ya es un viaje: se ve en la lista de viajes
     return this.prisma.travelIntent.findMany({
-      where: { userId },
+      where: { userId, status: { not: TravelIntentStatus.FULFILLED } },
       orderBy: { departureTime: 'asc' },
     });
   }
 
-  async cancel(id: string, userId: string) {
+  async findOneOrThrow(id: string, userId: string) {
     await this.expireOverdue(userId);
 
     const intent = await this.prisma.travelIntent.findUnique({ where: { id } });
@@ -124,6 +137,18 @@ export class TravelIntentsService {
     // Una intención ajena se responde igual que una inexistente
     if (!intent || intent.userId !== userId) {
       throw new NotFoundException('La intención de viaje no existe');
+    }
+
+    return intent;
+  }
+
+  async cancel(id: string, userId: string) {
+    const intent = await this.findOneOrThrow(id, userId);
+
+    if (intent.status === TravelIntentStatus.FULFILLED) {
+      throw new ConflictException(
+        'Ya te sumaste a un viaje con esta intención, así que no se puede eliminar',
+      );
     }
 
     if (intent.status !== TravelIntentStatus.ACTIVE) {

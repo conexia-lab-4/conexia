@@ -5,6 +5,10 @@ import { NavBar } from '../../components/navbar';
 import { TextField } from '../../components/textfield';
 import { TimeField } from '../../components/timefield';
 import { Button } from '../../components/button';
+import {
+  TripTypeSelector,
+  type TripType,
+} from '../../components/triptypeselector';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCalendar } from '../../assets/icons/IconCalendar';
@@ -13,7 +17,11 @@ import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
 import { IconClock } from '../../assets/icons/IconClock';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
-import { getProfile, type ProfileResponse } from '../../lib/profileApi';
+import {
+  getProfile,
+  upsertProfile,
+  type ProfileResponse,
+} from '../../lib/profileApi';
 import { getSubjects } from '../../lib/subjectsApi';
 import { createTrip, type RouteDirection } from '../../lib/tripsApi';
 import { createTravelIntent } from '../../lib/travelIntentsApi';
@@ -30,14 +38,39 @@ import {
   toLocalDate,
   type ScheduleOption,
 } from './tripDates';
+import {
+  buildRoundTripPayload,
+  validateReturnLeg,
+  type ReturnLegForm,
+} from './roundTripPayload';
+import { createRoundTrip } from '../../lib/roundTripsApi';
+import { ChoiceCards } from '../../components/choicecards';
+import { IconArrowsLeftRight } from '../../assets/icons/IconArrowsLeftRight';
+import { IconSliders } from '../../assets/icons/IconSliders';
+import { LegPreferences } from './legPreferences';
+import { describeTravelTime } from './travelTime';
+import { IconInfo } from '../../assets/icons/IconInfo';
+import { PreferencesSummary } from './preferencesSummary';
+import { TripSummaryCard } from './tripSummaryCard';
+import { PublishSuccess, type PublishedKind } from './publishSuccess';
+import {
+  defaultLegPreferences,
+  validateLegPreferences,
+  type LegPreferencesValue,
+} from './legPreferencesModel';
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type Step = 1 | 2 | 3;
 type PublishMode = 'trip' | 'intent';
+type PreferenceScope = 'BOTH' | 'PER_LEG';
 
 interface PublishTripProps {
   mode?: PublishMode;
+}
+
+interface PublishTripFlowProps extends PublishTripProps {
+  onRestart: () => void;
 }
 
 interface TripForm {
@@ -59,17 +92,19 @@ const EMPTY_FORM: TripForm = {
   arrivalTime: '',
 };
 
+const EMPTY_RETURN: ReturnLegForm = {
+  date: '',
+  departureTime: '',
+  arrivalTime: '',
+};
+
 const TRIP_STEPS: { id: Step; label: string }[] = [
   { id: 1, label: 'Ruta y horario' },
   { id: 2, label: 'Preferencias' },
   { id: 3, label: 'Revisar' },
 ];
 
-// La intención no tiene preferencias: se saltea el paso 2
-const INTENT_STEPS: { id: Step; label: string }[] = [
-  { id: 1, label: 'Ruta y horario' },
-  { id: 3, label: 'Revisar' },
-];
+const NO_UNIVERSITY_MESSAGE = 'Completá tu universidad en Mi Perfil.';
 
 // Perfiles anteriores al catálogo: se reconoce la universidad por su nombre
 function getProfileUniversityId(profile: ProfileResponse | null) {
@@ -102,8 +137,25 @@ function formFromSchedule(form: TripForm, option: ScheduleOption): TripForm {
   };
 }
 
+// La vuelta sale el mismo día; con una clase elegida, sale al terminarla
+function returnLegFromSchedule(
+  date: string,
+  option: ScheduleOption | null,
+): ReturnLegForm {
+  if (!option) return { ...EMPTY_RETURN, date };
+  const leg = formFromSchedule(
+    { ...EMPTY_FORM, direction: 'FROM_CAMPUS' },
+    option,
+  );
+  return {
+    date,
+    departureTime: leg.departureTime,
+    arrivalTime: leg.arrivalTime,
+  };
+}
+
 function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
-  if (!hasUniversity) return 'Completá tu universidad en Mi Perfil.';
+  if (!hasUniversity) return NO_UNIVERSITY_MESSAGE;
   if (!form.home.trim()) {
     return form.direction === 'TO_CAMPUS'
       ? 'Ingresá desde dónde salís.'
@@ -125,20 +177,32 @@ function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
   return null;
 }
 
-function formatSeats(seats: number): string {
-  return `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`;
-}
-
-export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
+function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isIntent = mode === 'intent';
-  const steps = isIntent ? INTENT_STEPS : TRIP_STEPS;
+  const steps = TRIP_STEPS;
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<TripForm>(EMPTY_FORM);
+  const [tripType, setTripType] = useState<TripType>('ONE_WAY');
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [returnLeg, setReturnLeg] = useState<ReturnLegForm>(EMPTY_RETURN);
+  const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
+  // Mientras no se elija a mano, la fecha de la vuelta sigue a la de la ida
+  const [isReturnDateCustom, setIsReturnDateCustom] = useState(false);
+  const [scope, setScope] = useState<PreferenceScope>('BOTH');
+  const [bothPrefs, setBothPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
+  const [outboundPrefs, setOutboundPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
+  const [returnPrefs, setReturnPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null,
   );
@@ -148,6 +212,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [campusesFailed, setCampusesFailed] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [published, setPublished] = useState<PublishedKind | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -176,6 +241,10 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               ?.id ?? null,
         };
         setProfile(profileData);
+        const defaults = defaultLegPreferences(profileData);
+        setBothPrefs(defaults);
+        setOutboundPrefs(defaults);
+        setReturnPrefs(defaults);
         setCampuses(campusOptions);
         setCampusesFailed(campusLoadFailed);
         setScheduleOptions(options);
@@ -196,7 +265,6 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
   const selectedSchedule =
     scheduleOptions.find((option) => option.id === selectedScheduleId) ?? null;
-  const seats = profile?.availableSeats ?? 0;
   const hasUniversity = Boolean(getProfileUniversityId(profile));
   const universityName = profile?.university ?? null;
   const selectedCampus = campuses.find((campus) => campus.id === form.campusId);
@@ -206,29 +274,77 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const toCampus = form.direction === 'TO_CAMPUS';
   const origin = toCampus ? form.home.trim() : campusLabel;
   const destination = toCampus ? campusLabel : form.home.trim();
+  const outboundTravel = describeTravelTime(
+    form.date,
+    form.departureTime,
+    form.arrivalTime,
+  );
+  const returnTravel =
+    tripType === 'ROUND_TRIP'
+      ? describeTravelTime(
+          returnLeg.date,
+          returnLeg.departureTime,
+          returnLeg.arrivalTime,
+        )
+      : undefined;
+  const toTravelLabel = (time?: string) =>
+    time ? `Tiempo de viaje: ${time}` : undefined;
+  const bothTravelLabel =
+    outboundTravel && returnTravel
+      ? `Ida: ${outboundTravel} · Vuelta: ${returnTravel}`
+      : toTravelLabel(outboundTravel);
+  const campusStop = {
+    title: universityName ?? 'Universidad',
+    detail: selectedCampus?.name ?? '',
+  };
+  const homeStop = { title: 'Casa', detail: form.home.trim() };
+  const outboundStops = toCampus
+    ? { origin: homeStop, destination: campusStop }
+    : { origin: campusStop, destination: homeStop };
+  const isRoundTrip = tripType === 'ROUND_TRIP';
+  const isPerLeg = isRoundTrip && scope === 'PER_LEG';
 
   const setField = <K extends keyof TripForm>(key: K, value: TripForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setStepError(null);
   };
 
-  // Cambiar fecha u horarios a mano deja de asociar el viaje a la cursada
   const setScheduleField = (
     key: 'date' | 'departureTime' | 'arrivalTime',
     value: string,
   ) => {
     setField(key, value);
     setSelectedScheduleId(null);
+    if (key === 'date' && tripType === 'ROUND_TRIP' && !isReturnDateCustom) {
+      setReturnLeg((prev) => ({ ...prev, date: value }));
+    }
+  };
+  const setReturnField = (key: keyof ReturnLegForm, value: string) => {
+    setReturnLeg((prev) => ({ ...prev, [key]: value }));
+    if (key === 'date') setIsReturnDateCustom(true);
+    setStepError(null);
+  };
+
+  const handleTripTypeChange = (type: TripType) => {
+    setTripType(type);
+    setIsReturnDateCustom(false);
+    // Sin vuelta no queda ningún dato de la vuelta guardado
+    setReturnLeg(
+      type === 'ROUND_TRIP'
+        ? returnLegFromSchedule(form.date, selectedSchedule)
+        : EMPTY_RETURN,
+    );
+    setStepError(null);
   };
 
   const handleSwapDirection = () => {
-    setForm((prev) => {
-      const direction: RouteDirection =
-        prev.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
-      const next = { ...prev, direction };
-      // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
-      return selectedSchedule ? formFromSchedule(next, selectedSchedule) : next;
-    });
+    const direction: RouteDirection =
+      form.direction === 'TO_CAMPUS' ? 'FROM_CAMPUS' : 'TO_CAMPUS';
+    const next = { ...form, direction };
+    // Si hay una clase elegida, los horarios se recalculan para el nuevo sentido
+    setForm(selectedSchedule ? formFromSchedule(next, selectedSchedule) : next);
+    // La vuelta solo se ofrece cuando la ida va hacia la sede
+    if (direction === 'FROM_CAMPUS') handleTripTypeChange('ONE_WAY');
     setStepError(null);
   };
 
@@ -237,7 +353,12 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       setSelectedScheduleId(null);
       return;
     }
-    setForm((prev) => formFromSchedule(prev, option));
+    const next = formFromSchedule(form, option);
+    setForm(next);
+    if (tripType === 'ROUND_TRIP') {
+      setReturnLeg(returnLegFromSchedule(next.date, option));
+      setIsReturnDateCustom(false);
+    }
     setSelectedScheduleId(option.id);
     setStepError(null);
   };
@@ -246,20 +367,45 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     setStepError(null);
     if (step === 1) {
       navigate(-1);
-    } else if (isIntent) {
-      setStep(1);
     } else {
       setStep((prev) => (prev - 1) as Step);
     }
   };
 
   const handleNextFromRoute = () => {
-    const error = validateRoute(form, hasUniversity);
+    const error =
+      validateRoute(form, hasUniversity) ??
+      (tripType === 'ROUND_TRIP'
+        ? validateReturnLeg(form.direction, form, returnLeg)
+        : null);
     if (error) {
       setStepError(error);
       return;
     }
-    setStep(isIntent ? 3 : 2);
+    setStep(2);
+  };
+
+  const handleScopeChange = (next: PreferenceScope) => {
+    // Al personalizar por tramo, los dos tramos arrancan con los valores actuales
+    if (next === 'PER_LEG' && scope === 'BOTH') {
+      setOutboundPrefs(bothPrefs);
+      setReturnPrefs(bothPrefs);
+    }
+    setScope(next);
+    setStepError(null);
+  };
+
+  const handleNextFromPreferences = () => {
+    const error =
+      tripType === 'ROUND_TRIP' && scope === 'PER_LEG'
+        ? (validateLegPreferences(outboundPrefs) ??
+          validateLegPreferences(returnPrefs))
+        : validateLegPreferences(bothPrefs);
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStep(3);
   };
 
   const handlePublish = async () => {
@@ -273,6 +419,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       return;
     }
 
+    // Se revisa de nuevo la vuelta: el form queda en el state, no se pierde nada
+    if (isRoundTrip) {
+      const returnError = validateReturnLeg(form.direction, form, returnLeg);
+      if (returnError) {
+        setStep(1);
+        setStepError(returnError);
+        return;
+      }
+    }
+
     const payload = {
       origin,
       destination,
@@ -282,17 +438,55 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       arrivalTime: toLocalDate(form.date, form.arrivalTime).toISOString(),
     };
 
+    // Solo "Ambos viajes" (o solo ida) actualiza el perfil; por tramo es
+    // solo para este viaje. Las intenciones no tienen preferencias
+    const prefsToSave = !isIntent && !isPerLeg ? bothPrefs : null;
+    const detour =
+      prefsToSave && prefsToSave.detourKm !== ''
+        ? Number(prefsToSave.detourKm)
+        : null;
+    const seatsChanged =
+      prefsToSave !== null && prefsToSave.seats !== profile?.availableSeats;
+    const detourChanged =
+      detour !== null && detour !== profile?.detourToleranceKm;
+    const previousSeats = profile?.availableSeats ?? null;
+    let seatsSaved = false;
+
     setIsPublishing(true);
     setStepError(null);
     try {
-      if (isIntent) {
+      // Los asientos se guardan antes de publicar: el backend los toma del
+      // perfil como capacidad del viaje. Si la publicación falla, se restituyen
+      if (prefsToSave && seatsChanged) {
+        await upsertProfile({
+          hasCar: true,
+          availableSeats: prefsToSave.seats,
+        });
+        seatsSaved = true;
+      }
+
+      if (isRoundTrip) {
+        await createRoundTrip(
+          buildRoundTripPayload(
+            payload,
+            isIntent ? 'INTENT' : 'TRIP',
+            returnLeg,
+          ),
+        );
+      } else if (isIntent) {
         await createTravelIntent(payload);
-        navigate('/trips', { state: { intentCreated: true } });
       } else {
         await createTrip(payload);
-        navigate('/home', { state: { tripPublished: true } });
       }
     } catch (err) {
+      if (seatsSaved && previousSeats !== null) {
+        await upsertProfile({
+          hasCar: true,
+          availableSeats: previousSeats,
+        }).catch((revertError) =>
+          console.error('No pudimos restituir los asientos:', revertError),
+        );
+      }
       // Si una dirección no se reconoce, se corrige en el paso 1:
       // el form queda en el state, así que no se pierden los datos
       if (isIntent) setStep(1);
@@ -303,9 +497,32 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             ? 'No pudimos publicar tu intención de viaje.'
             : 'No pudimos publicar el viaje.',
       );
-    } finally {
       setIsPublishing(false);
+      return;
     }
+
+    // El desvío no interviene en la publicación: se guarda recién ahora que
+    // salió bien. Si falla, el viaje ya está publicado y no se avisa error
+    if (prefsToSave && detourChanged) {
+      await upsertProfile({
+        hasCar: true,
+        availableSeats: prefsToSave.seats,
+        detourToleranceKm: detour ?? undefined,
+      }).catch((saveError) =>
+        console.error('No pudimos guardar el desvío en el perfil:', saveError),
+      );
+    }
+
+    setPublished(
+      isIntent
+        ? isRoundTrip
+          ? 'ROUND_INTENT'
+          : 'INTENT'
+        : isRoundTrip
+          ? 'ROUND_TRIP'
+          : 'TRIP',
+    );
+    setIsPublishing(false);
   };
 
   const renderHomeField = (label: string) => (
@@ -315,9 +532,18 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       placeholder="Ej. Av. Corrientes 1234"
       value={form.home}
       onChange={(e) => setField('home', e.target.value)}
-      leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+      leftIcon={<IconMapPin size={20} color="var(--color-primary-500)" />}
     />
   );
+
+  // Sin sedes la lista no se abre: el campo explica por qué
+  const campusHelperText = !hasUniversity
+    ? NO_UNIVERSITY_MESSAGE
+    : campusesFailed
+      ? 'No pudimos cargar las sedes.'
+      : campuses.length === 0
+        ? 'Tu universidad todavía no tiene sedes disponibles.'
+        : selectedCampus?.address;
 
   // La universidad es la del perfil: solo se elige entre sus sedes
   const renderCampusField = (label: string) => (
@@ -326,14 +552,14 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         variant={campusesFailed ? 'error' : 'filled'}
         label={label}
         placeholder="Elegí una sede"
-        helperText={campusesFailed ? 'No pudimos cargar las sedes.' : undefined}
+        helperText={campusHelperText}
         value={campusLabel}
         readOnly
         role="combobox"
-        aria-expanded={isCampusOpen}
+        aria-expanded={isCampusOpen && campuses.length > 0}
         onClick={() => setIsCampusOpen((open) => !open)}
         onBlur={() => setTimeout(() => setIsCampusOpen(false), 150)}
-        leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+        leftIcon={<IconMapPin size={20} color="var(--color-primary-500)" />}
         rightIcon={<IconChevronDown size={20} color="var(--color-grey-400)" />}
       />
       {isCampusOpen && campuses.length > 0 && (
@@ -360,8 +586,66 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     </div>
   );
 
+  const renderDateField = (
+    ariaLabel: string,
+    date: string,
+    isOpen: boolean,
+    setOpen: (open: boolean) => void,
+    onPick: (date: string) => void,
+  ) => (
+    <div className="publish-trip__combobox">
+      <TextField
+        variant="filled"
+        aria-label={ariaLabel}
+        placeholder="Elegí una fecha"
+        value={date ? formatDateLabel(date) : ''}
+        readOnly
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => setOpen(!isOpen)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        leftIcon={<IconCalendar size={20} color="var(--color-primary-800)" />}
+        rightIcon={<IconChevronDown size={20} color="var(--color-grey-400)" />}
+      />
+      {isOpen && (
+        <ul className="publish-trip__combobox-list" role="listbox">
+          {getDateOptions().map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={date === option}
+                className="publish-trip__combobox-option text-body-2"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onPick(option);
+                  setOpen(false);
+                }}
+              >
+                {formatDateLabel(option)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   const canPublish =
     status === 'ready' && (isIntent || Boolean(profile?.hasCar));
+
+  if (published) {
+    return (
+      <div className="publish-trip">
+        <PublishSuccess
+          kind={published}
+          onSeeTrips={() => navigate('/trips')}
+          onPublishAnother={onRestart}
+        />
+        <NavBar activeItem="viajes" />
+      </div>
+    );
+  }
 
   return (
     <div className="publish-trip">
@@ -444,10 +728,21 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         <>
           {selectedSchedule && (
             <div className="publish-trip__banner text-body-3">
-              <IconCalendar size={20} color="var(--color-primary-700)" />
+              <IconCalendar size={20} color="var(--color-primary-500)" />
               Pre-completamos estos datos según tu rutina de cursada. Podés
               modificarlos.
             </div>
+          )}
+
+          <TripTypeSelector
+            value={tripType}
+            onChange={handleTripTypeChange}
+            roundTripDisabled={!toCampus}
+            disabledNote="La vuelta solo se ofrece si tu viaje va hacia la sede."
+          />
+
+          {tripType === 'ROUND_TRIP' && (
+            <span className="publish-trip__leg-pill text-body-2-bold">Ida</span>
           )}
 
           <section className="publish-trip__route">
@@ -472,45 +767,15 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
           <section className="publish-trip__field">
             <h2 className="publish-trip__field-title text-body-1-bold">
               <IconCalendar size={20} color="var(--color-primary-700)" />
-              Fecha
+              {tripType === 'ROUND_TRIP' ? 'Fecha de ida' : 'Fecha'}
             </h2>
-            <div className="publish-trip__combobox">
-              <TextField
-                variant="filled"
-                aria-label="Fecha del viaje"
-                placeholder="Elegí una fecha"
-                value={form.date ? formatDateLabel(form.date) : ''}
-                readOnly
-                role="combobox"
-                aria-expanded={isDateOpen}
-                onClick={() => setIsDateOpen((open) => !open)}
-                onBlur={() => setTimeout(() => setIsDateOpen(false), 150)}
-                rightIcon={
-                  <IconChevronDown size={20} color="var(--color-grey-400)" />
-                }
-              />
-              {isDateOpen && (
-                <ul className="publish-trip__combobox-list" role="listbox">
-                  {getDateOptions().map((date) => (
-                    <li key={date}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={form.date === date}
-                        className="publish-trip__combobox-option text-body-2"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          setScheduleField('date', date);
-                          setIsDateOpen(false);
-                        }}
-                      >
-                        {formatDateLabel(date)}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {renderDateField(
+              'Fecha del viaje',
+              form.date,
+              isDateOpen,
+              setIsDateOpen,
+              (date) => setScheduleField('date', date),
+            )}
           </section>
 
           <section className="publish-trip__times">
@@ -549,35 +814,116 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             </p>
           )}
 
-          <section className="publish-trip__suggestions">
-            <h2 className="publish-trip__suggestions-title text-body-3">
-              <IconCalendar size={18} color="var(--color-primary-700)" />
+          <section className="publish-trip__schedule">
+            <button
+              type="button"
+              className="publish-trip__schedule-toggle text-body-2-bold"
+              aria-expanded={isScheduleOpen}
+              onClick={() => setIsScheduleOpen((open) => !open)}
+            >
+              <IconCalendar size={20} color="var(--color-primary-800)" />
               Tus horarios de cursada
-            </h2>
-            {scheduleOptions.length > 0 ? (
-              <div className="publish-trip__chips">
-                {scheduleOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    aria-pressed={option.id === selectedScheduleId}
-                    className={`publish-trip__chip text-body-3${
-                      option.id === selectedScheduleId
-                        ? ' publish-trip__chip--selected'
-                        : ''
-                    }`}
-                    onClick={() => handleSelectSchedule(option)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="publish-trip__muted text-body-3">
-                No tenés horarios cargados. Podés completar el viaje a mano.
-              </p>
-            )}
+              <IconChevronDown size={20} color="var(--color-grey-400)" />
+            </button>
+            {isScheduleOpen &&
+              (scheduleOptions.length > 0 ? (
+                <div className="publish-trip__chips">
+                  {scheduleOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={option.id === selectedScheduleId}
+                      className={`publish-trip__chip text-body-3${
+                        option.id === selectedScheduleId
+                          ? ' publish-trip__chip--selected'
+                          : ''
+                      }`}
+                      onClick={() => handleSelectSchedule(option)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="publish-trip__muted text-body-3">
+                  No tenés horarios cargados. Podés completar el viaje a mano.
+                </p>
+              ))}
           </section>
+
+          {tripType === 'ROUND_TRIP' && (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+
+              <section className="publish-trip__route">
+                <div className="publish-trip__route-row">
+                  <span className="publish-trip__dot publish-trip__dot--origin" />
+                  <TextField
+                    variant="filled"
+                    label="Desde"
+                    value={campusLabel}
+                    readOnly
+                    leftIcon={
+                      <IconMapPin size={20} color="var(--color-primary-500)" />
+                    }
+                  />
+                </div>
+                <div className="publish-trip__route-row">
+                  <span className="publish-trip__dot publish-trip__dot--destination" />
+                  <TextField
+                    variant="filled"
+                    label="Hasta"
+                    value={form.home}
+                    readOnly
+                    leftIcon={
+                      <IconMapPin size={20} color="var(--color-primary-500)" />
+                    }
+                  />
+                </div>
+              </section>
+
+              <section className="publish-trip__field">
+                <h2 className="publish-trip__field-title text-body-1-bold">
+                  <IconCalendar size={20} color="var(--color-primary-700)" />
+                  Fecha de vuelta
+                </h2>
+                {renderDateField(
+                  'Fecha de la vuelta',
+                  returnLeg.date,
+                  isReturnDateOpen,
+                  setIsReturnDateOpen,
+                  (date) => setReturnField('date', date),
+                )}
+              </section>
+
+              <section className="publish-trip__times">
+                <div className="publish-trip__field">
+                  <h2 className="publish-trip__field-title text-body-1-bold">
+                    <IconClock size={20} color="var(--color-primary-700)" />
+                    Salida
+                  </h2>
+                  <TimeField
+                    value={returnLeg.departureTime}
+                    onChange={(value) => setReturnField('departureTime', value)}
+                    ariaLabel="Horario de salida de la vuelta"
+                  />
+                </div>
+                <div className="publish-trip__field">
+                  <h2 className="publish-trip__field-title text-body-1-bold">
+                    <IconClock size={20} color="var(--color-primary-700)" />
+                    Llegada
+                  </h2>
+                  <TimeField
+                    value={returnLeg.arrivalTime}
+                    onChange={(value) => setReturnField('arrivalTime', value)}
+                    ariaLabel="Horario de llegada de la vuelta"
+                  />
+                </div>
+              </section>
+            </>
+          )}
 
           {stepError && (
             <p className="publish-trip__error text-body-3">{stepError}</p>
@@ -594,41 +940,96 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         </>
       )}
 
-      {canPublish && !isIntent && step === 2 && (
+      {canPublish && step === 2 && (
         <>
           <div className="publish-trip__heading">
-            <h2 className="text-h6">Preferencias del viaje</h2>
+            <h2 className="text-h6">
+              {isIntent
+                ? 'Preferencias de tu búsqueda'
+                : 'Preferencias del viaje'}
+            </h2>
             <p className="publish-trip__muted text-body-3">
-              Estas preferencias ayudan a encontrar estudiantes compatibles.
+              {isIntent
+                ? 'Contanos cuánto podés esperar para encontrar conductores compatibles.'
+                : 'Estas preferencias ayudan a encontrar estudiantes compatibles.'}
             </p>
           </div>
 
-          <section className="publish-trip__card">
-            <div className="publish-trip__pref">
-              <span className="publish-trip__pref-icon">
-                <IconCar size={20} color="var(--color-primary-700)" />
+          {tripType === 'ROUND_TRIP' && (
+            <ChoiceCards
+              title="Personalizar preferencias"
+              value={scope}
+              onChange={handleScopeChange}
+              options={[
+                {
+                  value: 'BOTH',
+                  label: 'Ambos viajes',
+                  icon: (
+                    <IconArrowsLeftRight
+                      size={20}
+                      color="var(--color-primary-700)"
+                    />
+                  ),
+                },
+                {
+                  value: 'PER_LEG',
+                  label: 'Por tramo',
+                  icon: (
+                    <IconSliders size={20} color="var(--color-primary-700)" />
+                  ),
+                },
+              ]}
+            />
+          )}
+
+          {tripType === 'ROUND_TRIP' && scope === 'PER_LEG' ? (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Ida
               </span>
-              <div className="publish-trip__pref-text">
-                <span className="text-body-2-bold">Asientos disponibles</span>
-                <span className="publish-trip__muted text-body-3">
-                  Ofrecés {formatSeats(seats)}, según tu perfil.
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="publish-trip__link text-body-3"
-              onClick={() => navigate('/profile')}
-            >
-              Cambiar en Mi Perfil
-            </button>
-          </section>
+              <LegPreferences
+                waitOnly={isIntent}
+                value={outboundPrefs}
+                travelLabel={toTravelLabel(outboundTravel)}
+                onChange={(next) => {
+                  setOutboundPrefs(next);
+                  setStepError(null);
+                }}
+              />
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+              <LegPreferences
+                waitOnly={isIntent}
+                value={returnPrefs}
+                travelLabel={toTravelLabel(returnTravel)}
+                onChange={(next) => {
+                  setReturnPrefs(next);
+                  setStepError(null);
+                }}
+              />
+            </>
+          ) : (
+            <LegPreferences
+              waitOnly={isIntent}
+              value={bothPrefs}
+              travelLabel={bothTravelLabel}
+              onChange={(next) => {
+                setBothPrefs(next);
+                setStepError(null);
+              }}
+            />
+          )}
+
+          {stepError && (
+            <p className="publish-trip__error text-body-3">{stepError}</p>
+          )}
 
           <Button
             type="button"
             variant="fulfilled"
             size="large-wide"
-            onClick={() => setStep(3)}
+            onClick={handleNextFromPreferences}
           >
             Siguiente
           </Button>
@@ -646,59 +1047,56 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             </p>
           </div>
 
-          <section className="publish-trip__card">
-            <div className="publish-trip__summary-route">
-              <div className="publish-trip__summary-stop">
-                <span className="publish-trip__dot publish-trip__dot--origin" />
-                <span className="text-body-2-bold">{origin}</span>
-              </div>
-              <div className="publish-trip__summary-stop">
-                <span className="publish-trip__dot publish-trip__dot--destination" />
-                <span className="text-body-2-bold">{destination}</span>
-              </div>
-            </div>
+          {isRoundTrip && (
+            <span className="publish-trip__leg-pill text-body-2-bold">Ida</span>
+          )}
+          <TripSummaryCard
+            origin={outboundStops.origin}
+            destination={outboundStops.destination}
+            date={form.date}
+            departureTime={form.departureTime}
+            arrivalTime={form.arrivalTime}
+            note={
+              selectedSchedule
+                ? `(Cursada: ${selectedSchedule.subjectName})`
+                : undefined
+            }
+          />
+          {isPerLeg && (
+            <PreferencesSummary value={outboundPrefs} waitOnly={isIntent} />
+          )}
 
-            <div className="publish-trip__summary-grid">
-              <div className="publish-trip__summary-item">
-                <IconCalendar size={20} color="var(--color-primary-700)" />
-                <div>
-                  <span className="text-body-2-bold">Fecha</span>
-                  <span className="publish-trip__muted text-body-3">
-                    {formatDateLabel(form.date)}
-                  </span>
-                </div>
-              </div>
-              <div className="publish-trip__summary-item">
-                <IconClock size={20} color="var(--color-primary-700)" />
-                <div>
-                  <span className="text-body-2-bold">Horario</span>
-                  <span className="publish-trip__muted text-body-3">
-                    {form.departureTime} → {form.arrivalTime}
-                  </span>
-                  {selectedSchedule && (
-                    <span className="publish-trip__muted text-body-3">
-                      (Cursada: {selectedSchedule.subjectName})
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
+          {isRoundTrip && (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+              <TripSummaryCard
+                origin={{ title: campusStop.title, detail: campusStop.detail }}
+                destination={homeStop}
+                date={returnLeg.date}
+                departureTime={returnLeg.departureTime}
+                arrivalTime={returnLeg.arrivalTime}
+              />
+              {isPerLeg && (
+                <PreferencesSummary value={returnPrefs} waitOnly={isIntent} />
+              )}
+            </>
+          )}
 
-          {!isIntent && (
-            <section className="publish-trip__card">
-              <h3 className="text-body-1-bold">Preferencias</h3>
-              <div className="publish-trip__summary-pref">
-                <span className="text-body-3">Asientos disponibles</span>
-                <span className="text-body-3">{seats}</span>
-              </div>
-            </section>
+          {!isPerLeg && (
+            <PreferencesSummary value={bothPrefs} waitOnly={isIntent} />
           )}
 
           <div className="publish-trip__banner text-body-3">
+            <IconInfo size={20} color="var(--color-primary-600)" />
             {isIntent
-              ? 'Tu intención quedará activa para que conductores con un recorrido compatible puedan encontrarte.'
-              : 'Tu viaje se publicará para que otros estudiantes puedan verlo y solicitar unirse.'}
+              ? isRoundTrip
+                ? 'Tus intenciones de ida y de vuelta quedarán activas para que conductores con un recorrido compatible puedan encontrarte.'
+                : 'Tu intención quedará activa para que conductores con un recorrido compatible puedan encontrarte.'
+              : isRoundTrip
+                ? 'Se publicarán tu viaje de ida y tu viaje de vuelta para que otros estudiantes puedan verlos y solicitar unirse.'
+                : 'Tu viaje se publicará para que otros estudiantes puedan verlo y solicitar unirse.'}
           </div>
 
           {stepError && (
@@ -715,7 +1113,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             {isPublishing
               ? 'Publicando...'
               : isIntent
-                ? 'Publicar intención'
+                ? 'Publicar búsqueda'
                 : 'Publicar viaje'}
           </Button>
           <button
@@ -730,5 +1128,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
       <NavBar activeItem="viajes" />
     </div>
+  );
+}
+
+export function PublishTrip(props: PublishTripProps) {
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <PublishTripFlow
+      key={attempt}
+      {...props}
+      onRestart={() => setAttempt((n) => n + 1)}
+    />
   );
 }

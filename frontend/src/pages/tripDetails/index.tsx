@@ -5,6 +5,8 @@ import { NavBar } from '../../components/navbar';
 import { Button } from '../../components/button';
 import { RouteTimeline } from '../../components/routetimeline';
 import { Avatar } from '../../components/avatar';
+import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
+import { TripFuelEstimate } from '../../components/fuelestimate';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCheck } from '../../assets/icons/IconCheck';
@@ -12,22 +14,29 @@ import { IconClock } from '../../assets/icons/IconClock';
 import { IconCar } from '../../assets/icons/IconCar';
 import { IconPhone } from '../../assets/icons/IconPhone';
 import {
+  deleteTrip,
   getTrip,
   joinTrip,
   leaveTrip,
   type TripDetail,
   type TripPassenger,
+  UnavailableError,
 } from '../../lib/tripsApi';
 import {
   formatSeats,
   formatTime,
+  formatTimeLeft,
   formatTripDateTime,
   getPersonName,
 } from '../../lib/tripFormat';
 import './index.css';
 
-type LoadStatus = 'loading' | 'ready' | 'error';
+type LoadStatus = 'loading' | 'ready' | 'unavailable' | 'error';
 type ParticipationAction = 'join' | 'leave';
+
+// El backend vuelve a validar este plazo al eliminar
+const DELETE_NOTICE_MS = 24 * 60 * 60 * 1000;
+const COUNTDOWN_REFRESH_MS = 30_000;
 
 function getSeatsLabel(availableSeats: number): string {
   if (availableSeats <= 0) return 'Sin lugares libres';
@@ -52,6 +61,18 @@ export function TripDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => setNow(Date.now()),
+      COUNTDOWN_REFRESH_MS,
+    );
+    return () => clearInterval(interval);
+  }, []);
 
   const loadTrip = useCallback(() => {
     getTrip(id)
@@ -61,6 +82,10 @@ export function TripDetailPage() {
       })
       .catch((error: Error) => {
         console.error('Error al cargar el viaje:', error);
+        if (error instanceof UnavailableError) {
+          setStatus('unavailable');
+          return;
+        }
         setLoadError(error.message);
         setStatus('error');
       });
@@ -104,8 +129,37 @@ export function TripDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!trip || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteTrip(trip.id);
+      navigate('/trips', { replace: true });
+    } catch (error) {
+      // Se cierra el diálogo: el error queda a la vista junto al botón, que se
+      // actualiza con el estado nuevo del viaje
+      setIsDeleteOpen(false);
+      setDeleteError(
+        error instanceof Error ? error.message : 'No pudimos eliminar el viaje',
+      );
+      // Pudo sumarse alguien mientras tanto: se refresca lo que se muestra
+      try {
+        setTrip(await getTrip(trip.id));
+      } catch (refreshError) {
+        console.error('Error al actualizar el viaje:', refreshError);
+      }
+      setIsDeleting(false);
+    }
+  };
+
   const isDriver = trip?.isDriver ?? false;
   const isFull = trip !== null && trip.availableSeats <= 0;
+  const hasPassengers = (trip?.passengers.length ?? 0) > 0;
+  const deleteTimeLeft = trip
+    ? new Date(trip.departureTime).getTime() - DELETE_NOTICE_MS - now
+    : 0;
+  const isDeleteLocked = hasPassengers && deleteTimeLeft < 0;
 
   const driverProfile = trip?.driver.studentProfile;
   const car = [driverProfile?.carModel, driverProfile?.carColor]
@@ -143,6 +197,20 @@ export function TripDetailPage() {
           >
             Reintentar
           </button>
+        </div>
+      )}
+
+      {status === 'unavailable' && (
+        <div className="trip-detail__status">
+          <p>Este viaje ya no está disponible.</p>
+          <Button
+            type="button"
+            variant="outlined"
+            size="medium"
+            onClick={() => navigate('/trips')}
+          >
+            Volver a Viajes
+          </Button>
         </div>
       )}
 
@@ -214,6 +282,8 @@ export function TripDetailPage() {
             </dl>
           </section>
 
+          <TripFuelEstimate tripId={trip.id} />
+
           <section className="trip-detail__card">
             <div className="trip-detail__card-header">
               <h2 className="trip-detail__card-title">Pasajeros confirmados</h2>
@@ -254,23 +324,56 @@ export function TripDetailPage() {
           </section>
 
           <div className="trip-detail__actions">
+            {deleteError && (
+              <p className="trip-detail__error text-body-3" role="alert">
+                {deleteError}
+              </p>
+            )}
+
             {actionError && (
               <p className="trip-detail__error text-body-3" role="alert">
                 {actionError}
               </p>
             )}
 
+            {(isDriver || trip.isParticipant) && (
+              <Button
+                type="button"
+                variant="fulfilled"
+                size="large-wide"
+                onClick={() => navigate(`/chats/${trip.id}`)}
+              >
+                Abrir chat del viaje
+              </Button>
+            )}
+
             {isDriver ? (
-              <p className="trip-detail__muted trip-detail__driver-note">
-                Sos el conductor de este viaje
-              </p>
+              <>
+                <p className="trip-detail__muted trip-detail__driver-note">
+                  Sos el conductor de este viaje
+                </p>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="large-wide"
+                  disabled={isDeleteLocked}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setIsDeleteOpen(true);
+                  }}
+                >
+                  Eliminar viaje
+                </Button>
+                {hasPassengers && (
+                  <p className="trip-detail__delete-note">
+                    {isDeleteLocked
+                      ? 'Con pasajeros, solo se puede eliminar hasta 24 horas antes de la salida'
+                      : `Podés eliminarlo durante ${formatTimeLeft(deleteTimeLeft)}`}
+                  </p>
+                )}
+              </>
             ) : (
               <>
-                {/* Sin funcionalidad por ahora: el chat queda para otro ticket */}
-                <Button type="button" variant="fulfilled" size="large-wide">
-                  Enviar mensaje al conductor
-                </Button>
-
                 {trip.isHistorical && (
                   <p className="trip-detail__muted trip-detail__driver-note">
                     Este viaje ya salió
@@ -307,6 +410,20 @@ export function TripDetailPage() {
             )}
           </div>
         </>
+      )}
+
+      {isDeleteOpen && (
+        <DeleteScheduleDialog
+          title="¿Eliminar este viaje?"
+          message={
+            hasPassengers
+              ? 'Sus pasajeros van a dejar de verlo y el chat del viaje se va a borrar. Esta acción no se puede deshacer.'
+              : 'El viaje y su chat se van a borrar. Esta acción no se puede deshacer.'
+          }
+          isDeleting={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setIsDeleteOpen(false)}
+        />
       )}
 
       <NavBar activeItem="viajes" />

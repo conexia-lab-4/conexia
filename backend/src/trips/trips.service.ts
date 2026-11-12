@@ -13,6 +13,8 @@ import { type TripScope } from './dto/list-my-trips.dto';
 import {
   Prisma,
   RouteDirection,
+  TravelIntentStatus,
+  TravelMatchStatus,
   type Trip,
 } from '../../generated/prisma/client';
 import { MatchingService } from '../matching/matching.service';
@@ -23,11 +25,20 @@ import {
   DisplayNamesService,
   type PublicUser,
 } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
 import {
+  legRouteData,
   loadCampusEnd,
   placeRouteEnds,
+  resolveCampusRoute,
+  type CampusRoute,
   type RouteEnd,
+  type RouteLeg,
 } from '../universities/campus-route';
+import { NotificationEventsService } from '../notifications/notification-events.service';
+
+// Con pasajeros, un viaje solo se puede eliminar con esta anticipación
+const DELETE_NOTICE_MS = 24 * 60 * 60 * 1000;
 
 type PassengerLocation = {
   pickupAddress: string | null;
@@ -47,6 +58,11 @@ const HIDDEN_LOCATION: PassengerLocation = {
   dropoffLng: null,
 };
 
+export interface TripDraft {
+  capacity: number;
+  route: CampusRoute;
+}
+
 type TripWithPeople = {
   driverId: string;
   capacity: number;
@@ -63,9 +79,31 @@ export class TripsService {
     private readonly matching: MatchingService,
     private readonly metrics: MetricsService,
     private readonly displayNames: DisplayNamesService,
+    private readonly chat: ChatService,
+    private readonly notificationEvents: NotificationEventsService,
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
+    const draft = await this.prepareTrips(userId, dto);
+    const [trip] = await this.prisma.$transaction((tx) =>
+      this.createTrips(tx, userId, draft, [
+        {
+          routeDirection: dto.routeDirection,
+          departureTime: new Date(dto.departureTime),
+          arrivalTime: new Date(dto.arrivalTime),
+        },
+      ]),
+    );
+
+    await this.matching.matchTrip(trip.id);
+
+    return trip;
+  }
+
+  // Valida que el usuario pueda publicar y resuelve la ruta. Si la dirección
+  // no se resuelve, no se crea ningún viaje. Lo comparten los viajes simples
+  // y los paquetes de ida y vuelta
+  async prepareTrips(userId: string, dto: CreateTripDto): Promise<TripDraft> {
     const profile = await this.prisma.studentProfile.findUnique({
       where: { userId },
     });
@@ -76,40 +114,33 @@ export class TripsService {
       );
     }
 
-    const campusEnd = await loadCampusEnd(this.prisma, dto.campusId);
-
-    // Solo se geocodifica la dirección de la casa; el extremo de la
-    // universidad usa las coordenadas de la sede. Si la dirección no se
-    // resuelve, no se crea el viaje
-    const homeAddress =
-      dto.routeDirection === RouteDirection.TO_CAMPUS
-        ? dto.origin
-        : dto.destination;
-    const homeEnd: RouteEnd = {
-      label: homeAddress,
-      coords: await this.geocodeOrThrow(homeAddress),
+    return {
+      capacity: profile.availableSeats ?? 0,
+      route: await resolveCampusRoute(this.prisma, dto, (address) =>
+        this.geocodeOrThrow(address),
+      ),
     };
-    const { origin, destination } = placeRouteEnds(
-      dto.routeDirection,
-      campusEnd,
-      homeEnd,
-    );
+  }
 
-    const trip = await this.prisma.$transaction(async (tx) => {
+  // Crea los tramos dentro de una transacción, en orden. El matching se corre
+  // después, cuando la transacción ya se confirmó
+  async createTrips(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    draft: TripDraft,
+    legs: RouteLeg[],
+    roundTripId?: string,
+  ) {
+    const trips: Prisma.TripGetPayload<{ include: { passengers: true } }>[] =
+      [];
+
+    for (const leg of legs) {
       const created = await tx.trip.create({
         data: {
           driverId: userId,
-          origin: origin.label,
-          originLat: origin.coords.lat,
-          originLng: origin.coords.lng,
-          destination: destination.label,
-          destinationLat: destination.coords.lat,
-          destinationLng: destination.coords.lng,
-          campusId: dto.campusId,
-          routeDirection: dto.routeDirection,
-          departureTime: new Date(dto.departureTime),
-          arrivalTime: new Date(dto.arrivalTime),
-          capacity: profile.availableSeats ?? 0,
+          ...legRouteData(draft.route, leg),
+          capacity: draft.capacity,
+          ...(roundTripId && { roundTripId }),
         },
         include: { passengers: true },
       });
@@ -120,12 +151,10 @@ export class TripsService {
         tx,
       );
 
-      return created;
-    });
+      trips.push(created);
+    }
 
-    await this.matching.matchTrip(trip.id);
-
-    return trip;
+    return trips;
   }
 
   async findUpcoming(userId: string) {
@@ -253,6 +282,8 @@ export class TripsService {
     });
 
     await this.matching.matchTrip(updated.id);
+    // El listado de chats muestra destino y horario del viaje
+    await this.chat.syncParticipants(updated.id);
 
     return this.presentTrip(updated, userId);
   }
@@ -264,8 +295,12 @@ export class TripsService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
+      // Con el ingreso confirmado se avisa, antes del resto de los pasos
+      await this.notificationEvents.tripJoined(tripId, userId, passenger.id);
+
       // El viaje pudo quedar lleno: se recalculan sus sugerencias pendientes
       await this.matching.matchTrip(tripId);
+      await this.chat.syncParticipants(tripId);
 
       return passenger;
     } catch (error) {
@@ -298,7 +333,104 @@ export class TripsService {
       throw new NotFoundException('No participás de este viaje');
     }
 
+    // Con la salida confirmada se avisa al conductor y a quienes siguen
+    await this.notificationEvents.tripLeft(tripId, userId, new Date());
+
     await this.matching.matchTrip(tripId);
+    // Quien sale pierde acceso al chat del viaje
+    await this.chat.syncParticipants(tripId);
+  }
+
+  async remove(tripId: string, userId: string) {
+    try {
+      const { reactivatedIntentIds, cancelled } =
+        await this.prisma.$transaction(
+          async (tx) => {
+            const trip = await tx.trip.findUnique({
+              where: { id: tripId },
+              include: { passengers: { select: { userId: true } } },
+            });
+
+            if (!trip) {
+              throw new NotFoundException('El viaje no existe');
+            }
+
+            if (trip.driverId !== userId) {
+              throw new ForbiddenException(
+                'Solo el conductor puede eliminar el viaje',
+              );
+            }
+
+            const now = new Date();
+            const hasPassengers = trip.passengers.length > 0;
+            if (
+              hasPassengers &&
+              trip.departureTime.getTime() - now.getTime() < DELETE_NOTICE_MS
+            ) {
+              throw new ConflictException(
+                'Con pasajeros, el viaje solo se puede eliminar hasta 24 horas antes de la salida',
+              );
+            }
+
+            const acceptedMatches = await tx.travelMatch.findMany({
+              where: {
+                tripId,
+                status: TravelMatchStatus.ACCEPTED,
+                travelIntent: {
+                  userId: {
+                    in: trip.passengers.map((passenger) => passenger.userId),
+                  },
+                  status: TravelIntentStatus.FULFILLED,
+                  arrivalTime: { gt: now },
+                },
+              },
+              select: { travelIntentId: true },
+            });
+            const intentIds = acceptedMatches.map(
+              (match) => match.travelIntentId,
+            );
+
+            // Pasajeros y matches del viaje se borran en cascada
+            await tx.trip.delete({ where: { id: tripId } });
+
+            // Quien aceptó un match se queda sin viaje: vuelve a estar buscando
+            await tx.travelIntent.updateMany({
+              where: { id: { in: intentIds } },
+              data: { status: TravelIntentStatus.ACTIVE },
+            });
+
+            return {
+              reactivatedIntentIds: intentIds,
+              // Quiénes participaban, guardado antes de que el viaje desaparezca
+              cancelled: {
+                tripId,
+                origin: trip.origin,
+                destination: trip.destination,
+                passengerIds: trip.passengers.map(
+                  (passenger) => passenger.userId,
+                ),
+              },
+            };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+
+      // El viaje ya se eliminó: se avisa a quienes participaban
+      await this.notificationEvents.tripCancelled(cancelled);
+
+      for (const intentId of reactivatedIntentIds) {
+        await this.matching.matchIntent(intentId);
+      }
+      await this.chat.deleteConversation(tripId);
+    } catch (error) {
+      if (isSerializationConflict(error)) {
+        throw new ConflictException(
+          'No pudimos eliminar el viaje, intentá de nuevo',
+        );
+      }
+
+      throw error;
+    }
   }
 
   // Origen y destino a guardar al editar. Si el viaje tiene sede, el extremo

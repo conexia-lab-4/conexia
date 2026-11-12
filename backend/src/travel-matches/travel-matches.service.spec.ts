@@ -5,6 +5,8 @@ import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TravelMatchesService } from './travel-matches.service';
 import { DisplayNamesService } from '../firebase/display-names.service';
+import { ChatService } from '../chat/chat.service';
+import { NotificationEventsService } from '../notifications/notification-events.service';
 
 describe('TravelMatchesService', () => {
   let service: TravelMatchesService;
@@ -22,6 +24,8 @@ describe('TravelMatchesService', () => {
   };
   let matchingMock: { matchTrip: jest.Mock };
   let metricsMock: { increment: jest.Mock; recordEvents: jest.Mock };
+  let chatMock: { syncParticipants: jest.Mock };
+  let notificationEventsMock: { tripJoined: jest.Mock };
 
   const userId = 'pasajero-1';
   const future = new Date('2026-10-05T09:00:00.000Z');
@@ -102,11 +106,17 @@ describe('TravelMatchesService', () => {
       increment: jest.fn(),
       recordEvents: jest.fn().mockResolvedValue(1),
     };
+    chatMock = { syncParticipants: jest.fn().mockResolvedValue(undefined) };
+    notificationEventsMock = {
+      tripJoined: jest.fn().mockResolvedValue(undefined),
+    };
     service = new TravelMatchesService(
       prismaMock as unknown as PrismaService,
       matchingMock as unknown as MatchingService,
       metricsMock as unknown as MetricsService,
       {} as unknown as DisplayNamesService,
+      chatMock as unknown as ChatService,
+      notificationEventsMock as unknown as NotificationEventsService,
     );
   });
 
@@ -163,10 +173,101 @@ describe('TravelMatchesService', () => {
     );
   });
 
+  it('aceptar un tramo no toca la otra intención de su paquete', async () => {
+    await service.accept('match-1', userId);
+
+    // Solo se cumple esta intención y solo se invalidan sus propias
+    // sugerencias: la del otro tramo sigue activa y buscando
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.travelIntent.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'intent-1' } }),
+    );
+    expect(prismaMock.travelMatch.updateMany).toHaveBeenCalledTimes(1);
+    const [invalidation] = prismaMock.travelMatch.updateMany.mock.calls[0] as [
+      { where: { travelIntentId: string } },
+    ];
+    expect(invalidation.where.travelIntentId).toBe('intent-1');
+  });
+
+  it('avisa el ingreso al aceptar el match, con el id de su participación', async () => {
+    await service.accept('match-1', userId);
+
+    expect(notificationEventsMock.tripJoined).toHaveBeenCalledWith(
+      'trip-1',
+      userId,
+      'p-1',
+    );
+  });
+
+  it('no avisa si el match no se puede aceptar', async () => {
+    prismaMock.trip.findFirst.mockResolvedValue({ id: 'otro-viaje' });
+
+    await expect(service.accept('match-1', userId)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(notificationEventsMock.tripJoined).not.toHaveBeenCalled();
+  });
+
   it('recalcula las sugerencias del viaje después de aceptar', async () => {
     await service.accept('match-1', userId);
 
     expect(matchingMock.matchTrip).toHaveBeenCalledWith('trip-1');
+  });
+
+  it('suma al pasajero al chat del viaje después de aceptar', async () => {
+    await service.accept('match-1', userId);
+
+    expect(chatMock.syncParticipants).toHaveBeenCalledWith('trip-1');
+  });
+
+  it.each([
+    ['otra sede', { campusId: 'ua-caba', routeDirection: 'TO_CAMPUS' }],
+    [
+      'el sentido contrario',
+      { campusId: 'ua-pilar', routeDirection: 'FROM_CAMPUS' },
+    ],
+  ])(
+    'rechaza aceptar una sugerencia vieja de %s y la invalida',
+    async (_case, tripRoute) => {
+      const match = buildMatch();
+      prismaMock.travelMatch.findUnique.mockResolvedValue({
+        ...match,
+        trip: { ...match.trip, ...tripRoute },
+        travelIntent: {
+          ...match.travelIntent,
+          campusId: 'ua-pilar',
+          routeDirection: 'TO_CAMPUS',
+        },
+      });
+
+      await expect(service.accept('match-1', userId)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaMock.travelMatch.update).toHaveBeenCalledWith({
+        where: { id: 'match-1' },
+        data: { status: 'INVALIDATED' },
+      });
+      expect(prismaMock.tripPassenger.create).not.toHaveBeenCalled();
+      expect(prismaMock.travelIntent.update).not.toHaveBeenCalled();
+      expect(matchingMock.matchTrip).not.toHaveBeenCalled();
+    },
+  );
+
+  it('acepta una sugerencia de un viaje anterior al catálogo', async () => {
+    const match = buildMatch();
+    prismaMock.travelMatch.findUnique.mockResolvedValue({
+      ...match,
+      trip: { ...match.trip, campusId: null, routeDirection: null },
+      travelIntent: {
+        ...match.travelIntent,
+        campusId: 'ua-pilar',
+        routeDirection: 'TO_CAMPUS',
+      },
+    });
+
+    await service.accept('match-1', userId);
+
+    expect(prismaMock.tripPassenger.create).toHaveBeenCalled();
   });
 
   it('responde 404 si el match no existe', async () => {

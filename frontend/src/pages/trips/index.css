@@ -1,4 +1,5 @@
 .trips {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -9,11 +10,25 @@
 }
 
 .trips__header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   padding-top: 48px;
+}
+
+.trips__chats-link {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
 }
 
 .trips__header-text {

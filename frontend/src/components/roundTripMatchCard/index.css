@@ -1,0 +1,102 @@
+.round-trip-match-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  background: var(--color-white);
+  border: 1px solid #eeeeee;
+  border-radius: 20px;
+  box-sizing: border-box;
+  color: inherit;
+  font-family: var(--font-primary);
+  text-decoration: none;
+}
+
+.round-trip-match-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.round-trip-match-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-black);
+}
+
+.round-trip-match-card__joint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.round-trip-match-card__muted {
+  color: var(--color-grey-400);
+}
+
+.round-trip-match-card__leg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid #eeeeee;
+}
+
+.round-trip-match-card__pill {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 56px;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 30px;
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
+
+.round-trip-match-card__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary-200);
+  color: var(--color-primary-500);
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-bold);
+}
+
+.round-trip-match-card__name {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-black);
+  overflow-wrap: anywhere;
+}
+
+.round-trip-match-card__score {
+  flex-shrink: 0;
+  color: var(--color-grey-500);
+}
+
+.round-trip-match-card__pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-grey-500);
+}
+
+@media (max-width: 360px) {
+  .round-trip-match-card {
+    padding: 12px;
+  }
+
+  .round-trip-match-card__leg {
+    gap: 8px;
+  }
+}
