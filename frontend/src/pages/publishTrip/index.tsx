@@ -35,11 +35,21 @@ import {
   type ScheduleOption,
 } from './tripDates';
 import { validateReturnLeg, type ReturnLegForm } from './roundTripPayload';
+import { ChoiceCards } from '../../components/choicecards';
+import { IconArrowsLeftRight } from '../../assets/icons/IconArrowsLeftRight';
+import { IconSliders } from '../../assets/icons/IconSliders';
+import { LegPreferences } from './legPreferences';
+import {
+  defaultLegPreferences,
+  validateLegPreferences,
+  type LegPreferencesValue,
+} from './legPreferencesModel';
 import './index.css';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type Step = 1 | 2 | 3;
 type PublishMode = 'trip' | 'intent';
+type PreferenceScope = 'BOTH' | 'PER_LEG';
 
 interface PublishTripProps {
   mode?: PublishMode;
@@ -155,10 +165,6 @@ function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
   return null;
 }
 
-function formatSeats(seats: number): string {
-  return `${seats} ${seats === 1 ? 'asiento' : 'asientos'}`;
-}
-
 export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -173,6 +179,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [returnLeg, setReturnLeg] = useState<ReturnLegForm>(EMPTY_RETURN);
   const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
+  const [scope, setScope] = useState<PreferenceScope>('BOTH');
+  const [bothPrefs, setBothPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
+  const [outboundPrefs, setOutboundPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
+  const [returnPrefs, setReturnPrefs] = useState<LegPreferencesValue>(
+    defaultLegPreferences(null),
+  );
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null,
   );
@@ -210,6 +226,10 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
               ?.id ?? null,
         };
         setProfile(profileData);
+        const defaults = defaultLegPreferences(profileData);
+        setBothPrefs(defaults);
+        setOutboundPrefs(defaults);
+        setReturnPrefs(defaults);
         setCampuses(campusOptions);
         setCampusesFailed(campusLoadFailed);
         setScheduleOptions(options);
@@ -318,6 +338,29 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       return;
     }
     setStep(isIntent ? 3 : 2);
+  };
+
+  const handleScopeChange = (next: PreferenceScope) => {
+    // Al personalizar por tramo, los dos tramos arrancan con los valores actuales
+    if (next === 'PER_LEG' && scope === 'BOTH') {
+      setOutboundPrefs(bothPrefs);
+      setReturnPrefs(bothPrefs);
+    }
+    setScope(next);
+    setStepError(null);
+  };
+
+  const handleNextFromPreferences = () => {
+    const error =
+      tripType === 'ROUND_TRIP' && scope === 'PER_LEG'
+        ? (validateLegPreferences(outboundPrefs) ??
+          validateLegPreferences(returnPrefs))
+        : validateLegPreferences(bothPrefs);
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStep(3);
   };
 
   const handlePublish = async () => {
@@ -777,32 +820,75 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             </p>
           </div>
 
-          <section className="publish-trip__card">
-            <div className="publish-trip__pref">
-              <span className="publish-trip__pref-icon">
-                <IconCar size={20} color="var(--color-primary-700)" />
+          {tripType === 'ROUND_TRIP' && (
+            <ChoiceCards
+              title="Personalizar preferencias"
+              value={scope}
+              onChange={handleScopeChange}
+              options={[
+                {
+                  value: 'BOTH',
+                  label: 'Ambos viajes',
+                  icon: (
+                    <IconArrowsLeftRight
+                      size={20}
+                      color="var(--color-primary-700)"
+                    />
+                  ),
+                },
+                {
+                  value: 'PER_LEG',
+                  label: 'Por tramo',
+                  icon: (
+                    <IconSliders size={20} color="var(--color-primary-700)" />
+                  ),
+                },
+              ]}
+            />
+          )}
+
+          {tripType === 'ROUND_TRIP' && scope === 'PER_LEG' ? (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Ida
               </span>
-              <div className="publish-trip__pref-text">
-                <span className="text-body-2-bold">Asientos disponibles</span>
-                <span className="publish-trip__muted text-body-3">
-                  Ofrecés {formatSeats(seats)}, según tu perfil.
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="publish-trip__link text-body-3"
-              onClick={() => navigate('/profile')}
-            >
-              Cambiar en Mi Perfil
-            </button>
-          </section>
+              <LegPreferences
+                value={outboundPrefs}
+                onChange={(next) => {
+                  setOutboundPrefs(next);
+                  setStepError(null);
+                }}
+              />
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+              <LegPreferences
+                value={returnPrefs}
+                onChange={(next) => {
+                  setReturnPrefs(next);
+                  setStepError(null);
+                }}
+              />
+            </>
+          ) : (
+            <LegPreferences
+              value={bothPrefs}
+              onChange={(next) => {
+                setBothPrefs(next);
+                setStepError(null);
+              }}
+            />
+          )}
+
+          {stepError && (
+            <p className="publish-trip__error text-body-3">{stepError}</p>
+          )}
 
           <Button
             type="button"
             variant="fulfilled"
             size="large-wide"
-            onClick={() => setStep(3)}
+            onClick={handleNextFromPreferences}
           >
             Siguiente
           </Button>

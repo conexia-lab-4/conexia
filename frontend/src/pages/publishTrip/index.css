@@ -518,3 +518,81 @@
   font-weight: var(--fw-regular);
   color: var(--color-grey-300);
 }
+
+/* Preferencias del viaje */
+.leg-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preference-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.preference-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.preference-card__tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-primary-200);
+}
+
+.preference-card__texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.preference-card__title,
+.preference-card__description {
+  margin: 0;
+}
+
+.preference-card__title {
+  color: var(--color-grey-500);
+}
+
+.preference-card__description {
+  color: var(--color-grey-400);
+}
+
+.preference-card__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preference-card__chip {
+  flex: 1 1 auto;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-grey-200);
+  border-radius: 18px;
+  background: var(--color-white);
+  color: var(--color-grey-500);
+  font-family: var(--font-primary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.preference-card__chip--selected {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
