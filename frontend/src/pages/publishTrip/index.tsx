@@ -17,7 +17,11 @@ import { IconCheck } from '../../assets/icons/IconCheck';
 import { IconChevronDown } from '../../assets/icons/IconChevronDown';
 import { IconClock } from '../../assets/icons/IconClock';
 import { IconMapPin } from '../../assets/icons/IconMapPin';
-import { getProfile, type ProfileResponse } from '../../lib/profileApi';
+import {
+  getProfile,
+  upsertProfile,
+  type ProfileResponse,
+} from '../../lib/profileApi';
 import { getSubjects } from '../../lib/subjectsApi';
 import { createTrip, type RouteDirection } from '../../lib/tripsApi';
 import { createTravelIntent } from '../../lib/travelIntentsApi';
@@ -34,7 +38,12 @@ import {
   toLocalDate,
   type ScheduleOption,
 } from './tripDates';
-import { validateReturnLeg, type ReturnLegForm } from './roundTripPayload';
+import {
+  buildRoundTripPayload,
+  validateReturnLeg,
+  type ReturnLegForm,
+} from './roundTripPayload';
+import { createRoundTrip } from '../../lib/roundTripsApi';
 import { ChoiceCards } from '../../components/choicecards';
 import { IconArrowsLeftRight } from '../../assets/icons/IconArrowsLeftRight';
 import { IconSliders } from '../../assets/icons/IconSliders';
@@ -406,6 +415,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       return;
     }
 
+    // Se revisa de nuevo la vuelta: el form queda en el state, no se pierde nada
+    if (isRoundTrip) {
+      const returnError = validateReturnLeg(form.direction, form, returnLeg);
+      if (returnError) {
+        setStep(1);
+        setStepError(returnError);
+        return;
+      }
+    }
+
     const payload = {
       origin,
       destination,
@@ -415,14 +434,47 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       arrivalTime: toLocalDate(form.date, form.arrivalTime).toISOString(),
     };
 
+    // Solo "Ambos viajes" (o solo ida) actualiza el perfil; por tramo es
+    // solo para este viaje. Las intenciones no tienen preferencias
+    const prefsToSave = !isIntent && !isPerLeg ? bothPrefs : null;
+    const detour =
+      prefsToSave && prefsToSave.detourKm !== ''
+        ? Number(prefsToSave.detourKm)
+        : null;
+    const profileChanged =
+      prefsToSave !== null &&
+      (prefsToSave.seats !== profile?.availableSeats ||
+        (detour !== null && detour !== profile?.detourToleranceKm));
+
     setIsPublishing(true);
     setStepError(null);
     try {
-      if (isIntent) {
+      if (prefsToSave && profileChanged) {
+        const savedProfile = await upsertProfile({
+          hasCar: true,
+          availableSeats: prefsToSave.seats,
+          ...(detour !== null ? { detourToleranceKm: detour } : {}),
+        });
+        setProfile(savedProfile);
+      }
+
+      if (isRoundTrip) {
+        await createRoundTrip(
+          buildRoundTripPayload(
+            payload,
+            isIntent ? 'INTENT' : 'TRIP',
+            returnLeg,
+          ),
+        );
+      } else if (isIntent) {
         await createTravelIntent(payload);
-        navigate('/trips', { state: { intentCreated: true } });
       } else {
         await createTrip(payload);
+      }
+
+      if (isIntent) {
+        navigate('/trips', { state: { intentCreated: true } });
+      } else {
         navigate('/home', { state: { tripPublished: true } });
       }
     } catch (err) {
