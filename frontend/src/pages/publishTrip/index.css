@@ -772,3 +772,46 @@
 .preferences-summary__label {
   flex: 1;
 }
+
+/* Pantalla de éxito */
+.publish-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 0 16px;
+  text-align: center;
+}
+
+.publish-success__halo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: var(--color-primary-200);
+}
+
+.publish-success__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+}
+
+.publish-success__body {
+  margin: 0;
+  color: var(--color-grey-500);
+}
+
+.publish-success__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}

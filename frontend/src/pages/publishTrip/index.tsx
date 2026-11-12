@@ -52,6 +52,7 @@ import { describeTravelTime } from './travelTime';
 import { IconInfo } from '../../assets/icons/IconInfo';
 import { PreferencesSummary } from './preferencesSummary';
 import { TripSummaryCard } from './tripSummaryCard';
+import { PublishSuccess, type PublishedKind } from './publishSuccess';
 import {
   defaultLegPreferences,
   validateLegPreferences,
@@ -66,6 +67,10 @@ type PreferenceScope = 'BOTH' | 'PER_LEG';
 
 interface PublishTripProps {
   mode?: PublishMode;
+}
+
+interface PublishTripFlowProps extends PublishTripProps {
+  onRestart: () => void;
 }
 
 interface TripForm {
@@ -178,7 +183,7 @@ function validateRoute(form: TripForm, hasUniversity: boolean): string | null {
   return null;
 }
 
-export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
+function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isIntent = mode === 'intent';
@@ -211,6 +216,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [campusesFailed, setCampusesFailed] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [published, setPublished] = useState<PublishedKind | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -472,11 +478,15 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         await createTrip(payload);
       }
 
-      if (isIntent) {
-        navigate('/trips', { state: { intentCreated: true } });
-      } else {
-        navigate('/home', { state: { tripPublished: true } });
-      }
+      setPublished(
+        isIntent
+          ? isRoundTrip
+            ? 'ROUND_INTENT'
+            : 'INTENT'
+          : isRoundTrip
+            ? 'ROUND_TRIP'
+            : 'TRIP',
+      );
     } catch (err) {
       // Si una dirección no se reconoce, se corrige en el paso 1:
       // el form queda en el state, así que no se pierden los datos
@@ -601,6 +611,19 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
   const canPublish =
     status === 'ready' && (isIntent || Boolean(profile?.hasCar));
+
+  if (published) {
+    return (
+      <div className="publish-trip">
+        <PublishSuccess
+          kind={published}
+          onSeeTrips={() => navigate('/trips')}
+          onPublishAnother={onRestart}
+        />
+        <NavBar activeItem="viajes" />
+      </div>
+    );
+  }
 
   return (
     <div className="publish-trip">
@@ -1072,5 +1095,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
       <NavBar activeItem="viajes" />
     </div>
+  );
+}
+
+export function PublishTrip(props: PublishTripProps) {
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <PublishTripFlow
+      key={attempt}
+      {...props}
+      onRestart={() => setAttempt((n) => n + 1)}
+    />
   );
 }
