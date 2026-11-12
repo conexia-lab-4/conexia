@@ -104,12 +104,6 @@ const TRIP_STEPS: { id: Step; label: string }[] = [
   { id: 3, label: 'Revisar' },
 ];
 
-// La intención no tiene preferencias: se saltea el paso 2
-const INTENT_STEPS: { id: Step; label: string }[] = [
-  { id: 1, label: 'Ruta y horario' },
-  { id: 3, label: 'Revisar' },
-];
-
 const NO_UNIVERSITY_MESSAGE = 'Completá tu universidad en Mi Perfil.';
 
 // Perfiles anteriores al catálogo: se reconoce la universidad por su nombre
@@ -187,7 +181,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isIntent = mode === 'intent';
-  const steps = isIntent ? INTENT_STEPS : TRIP_STEPS;
+  const steps = TRIP_STEPS;
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
@@ -367,8 +361,6 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
     setStepError(null);
     if (step === 1) {
       navigate(-1);
-    } else if (isIntent) {
-      setStep(1);
     } else {
       setStep((prev) => (prev - 1) as Step);
     }
@@ -384,7 +376,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
       setStepError(error);
       return;
     }
-    setStep(isIntent ? 3 : 2);
+    setStep(2);
   };
 
   const handleScopeChange = (next: PreferenceScope) => {
@@ -918,12 +910,18 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
         </>
       )}
 
-      {canPublish && !isIntent && step === 2 && (
+      {canPublish && step === 2 && (
         <>
           <div className="publish-trip__heading">
-            <h2 className="text-h6">Preferencias del viaje</h2>
+            <h2 className="text-h6">
+              {isIntent
+                ? 'Preferencias de tu búsqueda'
+                : 'Preferencias del viaje'}
+            </h2>
             <p className="publish-trip__muted text-body-3">
-              Estas preferencias ayudan a encontrar estudiantes compatibles.
+              {isIntent
+                ? 'Contanos cuánto podés esperar para encontrar conductores compatibles.'
+                : 'Estas preferencias ayudan a encontrar estudiantes compatibles.'}
             </p>
           </div>
 
@@ -960,6 +958,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
                 Ida
               </span>
               <LegPreferences
+                waitOnly={isIntent}
                 value={outboundPrefs}
                 travelLabel={toTravelLabel(outboundTravel)}
                 onChange={(next) => {
@@ -971,6 +970,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
                 Vuelta
               </span>
               <LegPreferences
+                waitOnly={isIntent}
                 value={returnPrefs}
                 travelLabel={toTravelLabel(returnTravel)}
                 onChange={(next) => {
@@ -981,6 +981,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
             </>
           ) : (
             <LegPreferences
+              waitOnly={isIntent}
               value={bothPrefs}
               travelLabel={bothTravelLabel}
               onChange={(next) => {

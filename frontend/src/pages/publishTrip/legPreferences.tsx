@@ -49,12 +49,15 @@ interface LegPreferencesProps {
   onChange: (value: LegPreferencesValue) => void;
   // Tiempo de viaje del tramo; sin él no se muestra el recuadro de la ruta
   travelLabel?: string;
+  // Solo el tiempo de espera (la búsqueda de viaje no tiene desvío ni asientos)
+  waitOnly?: boolean;
 }
 
 export function LegPreferences({
   value,
   onChange,
   travelLabel,
+  waitOnly = false,
 }: LegPreferencesProps) {
   const update = (patch: Partial<LegPreferencesValue>) =>
     onChange({ ...value, ...patch });
@@ -100,76 +103,82 @@ export function LegPreferences({
         )}
       </PreferenceCard>
 
-      <PreferenceCard
-        icon={<IconRoute size={20} color="var(--color-primary-600)" />}
-        title="Desvío máximo"
-        description="Cuántos km podés desviarte de tu ruta para buscar pasajeros."
-      >
-        <TextField
-          variant="filled"
-          aria-label="Desvío máximo en kilómetros"
-          placeholder="Ej. 2"
-          inputMode="numeric"
-          value={value.detourKm}
-          onChange={(e) =>
-            update({ detourKm: parseNumericInput(e.target.value) })
-          }
-          rightIcon={
-            <NumberStepper
-              onIncrement={() =>
-                update({ detourKm: String((Number(value.detourKm) || 0) + 1) })
+      {!waitOnly && (
+        <>
+          <PreferenceCard
+            icon={<IconRoute size={20} color="var(--color-primary-600)" />}
+            title="Desvío máximo"
+            description="Cuántos km podés desviarte de tu ruta para buscar pasajeros."
+          >
+            <TextField
+              variant="filled"
+              aria-label="Desvío máximo en kilómetros"
+              placeholder="Ej. 2"
+              inputMode="numeric"
+              value={value.detourKm}
+              onChange={(e) =>
+                update({ detourKm: parseNumericInput(e.target.value) })
               }
-              onDecrement={() =>
-                update({
-                  detourKm: String(
-                    Math.max(0, (Number(value.detourKm) || 0) - 1),
-                  ),
-                })
+              rightIcon={
+                <NumberStepper
+                  onIncrement={() =>
+                    update({
+                      detourKm: String((Number(value.detourKm) || 0) + 1),
+                    })
+                  }
+                  onDecrement={() =>
+                    update({
+                      detourKm: String(
+                        Math.max(0, (Number(value.detourKm) || 0) - 1),
+                      ),
+                    })
+                  }
+                  incrementLabel="Aumentar tolerancia de desvío"
+                  decrementLabel="Disminuir tolerancia de desvío"
+                />
               }
-              incrementLabel="Aumentar tolerancia de desvío"
-              decrementLabel="Disminuir tolerancia de desvío"
             />
-          }
-        />
-        {travelLabel && (
-          <div className="route-info">
-            <RouteIllustration />
-            <div className="route-info__texts">
-              <p className="route-info__title text-body-2-bold">
-                Tu ruta original
-              </p>
-              <p className="route-info__body text-body-3">{travelLabel}</p>
-            </div>
-          </div>
-        )}
-      </PreferenceCard>
+            {travelLabel && (
+              <div className="route-info">
+                <RouteIllustration />
+                <div className="route-info__texts">
+                  <p className="route-info__title text-body-2-bold">
+                    Tu ruta original
+                  </p>
+                  <p className="route-info__body text-body-3">{travelLabel}</p>
+                </div>
+              </div>
+            )}
+          </PreferenceCard>
 
-      <PreferenceCard
-        icon={<IconArmchair size={20} color="var(--color-primary-600)" />}
-        title="Asientos disponibles"
-        description="Cuántos lugares ofrecés en este viaje."
-      >
-        <TextField
-          variant="filled"
-          aria-label="Asientos disponibles"
-          placeholder="Ej. 2"
-          inputMode="numeric"
-          value={value.seats ? String(value.seats) : ''}
-          onChange={(e) =>
-            update({ seats: Number(parseNumericInput(e.target.value)) })
-          }
-          rightIcon={
-            <NumberStepper
-              onIncrement={() => update({ seats: value.seats + 1 })}
-              onDecrement={() =>
-                update({ seats: Math.max(1, value.seats - 1) })
+          <PreferenceCard
+            icon={<IconArmchair size={20} color="var(--color-primary-600)" />}
+            title="Asientos disponibles"
+            description="Cuántos lugares ofrecés en este viaje."
+          >
+            <TextField
+              variant="filled"
+              aria-label="Asientos disponibles"
+              placeholder="Ej. 2"
+              inputMode="numeric"
+              value={value.seats ? String(value.seats) : ''}
+              onChange={(e) =>
+                update({ seats: Number(parseNumericInput(e.target.value)) })
               }
-              incrementLabel="Aumentar asientos"
-              decrementLabel="Disminuir asientos"
+              rightIcon={
+                <NumberStepper
+                  onIncrement={() => update({ seats: value.seats + 1 })}
+                  onDecrement={() =>
+                    update({ seats: Math.max(1, value.seats - 1) })
+                  }
+                  incrementLabel="Aumentar asientos"
+                  decrementLabel="Disminuir asientos"
+                />
+              }
             />
-          }
-        />
-      </PreferenceCard>
+          </PreferenceCard>
+        </>
+      )}
     </div>
   );
 }
