@@ -6,6 +6,7 @@ import { Button } from '../../components/button';
 import { RouteTimeline } from '../../components/routetimeline';
 import { Avatar } from '../../components/avatar';
 import { DeleteScheduleDialog } from '../../components/deletescheduledialog';
+import { TripFuelEstimate } from '../../components/fuelestimate';
 import ConexiaLoader from '../../components/ConexiaLoader';
 import { IconBack } from '../../assets/icons/IconBack';
 import { IconCheck } from '../../assets/icons/IconCheck';
@@ -280,6 +281,8 @@ export function TripDetailPage() {
               )}
             </dl>
           </section>
+
+          <TripFuelEstimate tripId={trip.id} />
 
           <section className="trip-detail__card">
             <div className="trip-detail__card-header">
