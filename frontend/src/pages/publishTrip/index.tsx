@@ -191,6 +191,8 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [returnLeg, setReturnLeg] = useState<ReturnLegForm>(EMPTY_RETURN);
   const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
+  // Mientras no se elija a mano, la fecha de la vuelta sigue a la de la ida
+  const [isReturnDateCustom, setIsReturnDateCustom] = useState(false);
   const [scope, setScope] = useState<PreferenceScope>('BOTH');
   const [bothPrefs, setBothPrefs] = useState<LegPreferencesValue>(
     defaultLegPreferences(null),
@@ -307,22 +309,25 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
     setStepError(null);
   };
 
-  // Cambiar fecha u horarios a mano deja de asociar el viaje a la cursada
   const setScheduleField = (
     key: 'date' | 'departureTime' | 'arrivalTime',
     value: string,
   ) => {
     setField(key, value);
     setSelectedScheduleId(null);
+    if (key === 'date' && tripType === 'ROUND_TRIP' && !isReturnDateCustom) {
+      setReturnLeg((prev) => ({ ...prev, date: value }));
+    }
   };
-
   const setReturnField = (key: keyof ReturnLegForm, value: string) => {
     setReturnLeg((prev) => ({ ...prev, [key]: value }));
+    if (key === 'date') setIsReturnDateCustom(true);
     setStepError(null);
   };
 
   const handleTripTypeChange = (type: TripType) => {
     setTripType(type);
+    setIsReturnDateCustom(false);
     // Sin vuelta no queda ningún dato de la vuelta guardado
     setReturnLeg(
       type === 'ROUND_TRIP'
@@ -352,6 +357,7 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
     setForm(next);
     if (tripType === 'ROUND_TRIP') {
       setReturnLeg(returnLegFromSchedule(next.date, option));
+      setIsReturnDateCustom(false);
     }
     setSelectedScheduleId(option.id);
     setStepError(null);
