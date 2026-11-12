@@ -8,6 +8,7 @@ export interface Trip {
   departureTime: string;
   arrivalTime: string;
   capacity: number;
+  roundTripId: string | null;
   createdAt: string;
   updatedAt: string;
 }
