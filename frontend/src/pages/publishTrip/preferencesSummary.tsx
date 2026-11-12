@@ -9,25 +9,34 @@ import {
 
 interface PreferencesSummaryProps {
   value: LegPreferencesValue;
+  // Solo el tiempo de espera (la búsqueda de viaje no tiene desvío ni asientos)
+  waitOnly?: boolean;
 }
 
-export function PreferencesSummary({ value }: PreferencesSummaryProps) {
+export function PreferencesSummary({
+  value,
+  waitOnly = false,
+}: PreferencesSummaryProps) {
   const rows = [
     {
       icon: <IconClock size={16} color="var(--color-primary-600)" />,
       label: 'Tiempo de espera',
       value: formatWaitTime(value),
     },
-    {
-      icon: <IconRoute size={16} color="var(--color-primary-600)" />,
-      label: 'Desvío máximo',
-      value: value.detourKm === '' ? '-' : `${value.detourKm} km`,
-    },
-    {
-      icon: <IconArmchair size={16} color="var(--color-primary-600)" />,
-      label: 'Asientos disponibles',
-      value: String(value.seats),
-    },
+    ...(waitOnly
+      ? []
+      : [
+          {
+            icon: <IconRoute size={16} color="var(--color-primary-600)" />,
+            label: 'Desvío máximo',
+            value: value.detourKm === '' ? '-' : `${value.detourKm} km`,
+          },
+          {
+            icon: <IconArmchair size={16} color="var(--color-primary-600)" />,
+            label: 'Asientos disponibles',
+            value: String(value.seats),
+          },
+        ]),
   ];
 
   return (

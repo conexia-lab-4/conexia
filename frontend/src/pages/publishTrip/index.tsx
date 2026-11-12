@@ -1032,8 +1032,8 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
                 : undefined
             }
           />
-          {!isIntent && isPerLeg && (
-            <PreferencesSummary value={outboundPrefs} />
+          {isPerLeg && (
+            <PreferencesSummary value={outboundPrefs} waitOnly={isIntent} />
           )}
 
           {isRoundTrip && (
@@ -1048,13 +1048,15 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
                 departureTime={returnLeg.departureTime}
                 arrivalTime={returnLeg.arrivalTime}
               />
-              {!isIntent && isPerLeg && (
-                <PreferencesSummary value={returnPrefs} />
+              {isPerLeg && (
+                <PreferencesSummary value={returnPrefs} waitOnly={isIntent} />
               )}
             </>
           )}
 
-          {!isIntent && !isPerLeg && <PreferencesSummary value={bothPrefs} />}
+          {!isPerLeg && (
+            <PreferencesSummary value={bothPrefs} waitOnly={isIntent} />
+          )}
 
           <div className="publish-trip__banner text-body-3">
             <IconInfo size={20} color="var(--color-primary-600)" />
