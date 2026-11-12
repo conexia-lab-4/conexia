@@ -20,6 +20,7 @@ import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import { NotificationBell } from '../../components/notificationbell';
 import { RoundTripGroup } from '../../components/roundtripcard';
 import { useMyRoundTrips } from '../../hooks/useRoundTrips';
+import { isFullyConfirmed } from '../../lib/roundTripFilters';
 import type {
   RoundTripKind,
   RoundTripWithMatches,
@@ -157,7 +158,11 @@ export function Trips() {
   const packageItems = (kind: RoundTripKind, renderCard: RenderLegCard) =>
     isGrouped
       ? roundTrips
-          .filter((roundTrip) => roundTrip.kind === kind)
+          .filter(
+            (roundTrip) =>
+              roundTrip.kind === kind &&
+              !(roundTrip.kind === 'INTENT' && isFullyConfirmed(roundTrip)),
+          )
           .map((roundTrip) => ({
             key: roundTrip.id,
             time: getRoundTripStart(roundTrip),

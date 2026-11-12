@@ -10,6 +10,7 @@ import { NotificationBell } from '../../components/notificationbell';
 import { IconSearch } from '../../assets/icons/IconSearch';
 import { IconUsersThree } from '../../assets/icons/IconUsersThree';
 import { useMyRoundTrips } from '../../hooks/useRoundTrips';
+import { isFullyConfirmed } from '../../lib/roundTripFilters';
 import { getMatches, type Match } from '../../lib/matchesApi';
 import matchesIllustration from '../../assets/images/matches-header.png';
 import './index.css';
@@ -55,7 +56,7 @@ export function Matches() {
   // Matches lista conductores para quien busca viaje: solo paquetes de
   // búsqueda con al menos una coincidencia. Si la consulta de paquetes falla,
   // se ve la lista simple de siempre
-  const matchPackages = useMemo(
+  const intentPackages = useMemo(
     () =>
       roundTripsStatus === 'ready'
         ? roundTrips.filter(
@@ -67,15 +68,22 @@ export function Matches() {
     [roundTrips, roundTripsStatus],
   );
 
-  // Las coincidencias de una tarjeta de paquete no se repiten en la lista
+  // Con los dos tramos confirmados la tarjeta del paquete se oculta
+  const matchPackages = useMemo(
+    () => intentPackages.filter((roundTrip) => !isFullyConfirmed(roundTrip)),
+    [intentPackages],
+  );
+
+  // Las coincidencias de un paquete no se repiten en la lista simple, ni
+  // siquiera cuando el paquete ya está confirmado y su tarjeta se ocultó
   const groupedMatchIds = useMemo(
     () =>
       new Set(
-        matchPackages.flatMap((roundTrip) =>
+        intentPackages.flatMap((roundTrip) =>
           roundTrip.legs.flatMap((leg) => (leg.match ? [leg.match.id] : [])),
         ),
       ),
-    [matchPackages],
+    [intentPackages],
   );
 
   const query = search.trim().toLowerCase();
