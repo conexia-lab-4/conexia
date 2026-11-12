@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { NavBar } from '../../components/navbar';
@@ -19,6 +19,11 @@ import { TravelIntentCard } from '../../components/travelintentcard';
 import { QuickActionsDrawer } from '../../components/quickactionsdrawer';
 import { NotificationBell } from '../../components/notificationbell';
 import { RoundTripGroup } from '../../components/roundtripcard';
+import { useMyRoundTrips } from '../../hooks/useRoundTrips';
+import type {
+  RoundTripKind,
+  RoundTripWithMatches,
+} from '../../lib/roundTripsApi';
 import {
   getMyTravelIntents,
   type TravelIntent,
@@ -31,7 +36,6 @@ const TABS: { scope: TripScope; label: string }[] = [
   { scope: 'history', label: 'Historial' },
 ];
 
-// Lo que comparten los viajes y las intenciones para agruparse
 interface LegItem {
   id: string;
   roundTripId: string | null;
@@ -44,55 +48,22 @@ interface ListItem {
   node: ReactNode;
 }
 
-const timeOf = (item: LegItem) => new Date(item.departureTime).getTime();
-
 function toListItem<T extends LegItem>(
   item: T,
   render: (item: T) => ReactNode,
 ): ListItem {
-  return { key: item.id, time: timeOf(item), node: render(item) };
+  return {
+    key: item.id,
+    time: new Date(item.departureTime).getTime(),
+    node: render(item),
+  };
 }
 
-// Los tramos de un mismo paquete van juntos en un bloque. Con un solo tramo
-// (el otro se eliminó o ya salió) se ve como una tarjeta suelta
-function groupLegs<T extends LegItem>(
-  items: T[],
-  render: (item: T) => ReactNode,
-): ListItem[] {
-  const groups = new Map<string, T[]>();
-  const result: ListItem[] = [];
-
-  for (const item of items) {
-    if (!item.roundTripId) {
-      result.push(toListItem(item, render));
-      continue;
-    }
-    groups.set(item.roundTripId, [
-      ...(groups.get(item.roundTripId) ?? []),
-      item,
-    ]);
-  }
-
-  groups.forEach((legs, roundTripId) => {
-    const sorted = [...legs].sort((a, b) => timeOf(a) - timeOf(b));
-    if (sorted.length === 1) {
-      result.push(toListItem(sorted[0], render));
-      return;
-    }
-    result.push({
-      key: roundTripId,
-      time: timeOf(sorted[0]),
-      node: (
-        <RoundTripGroup roundTripId={roundTripId}>
-          {sorted.map((leg) => (
-            <Fragment key={leg.id}>{render(leg)}</Fragment>
-          ))}
-        </RoundTripGroup>
-      ),
-    });
-  });
-
-  return result.sort((a, b) => a.time - b.time);
+// Un paquete se ubica en la lista según su primer tramo
+function getRoundTripStart(roundTrip: RoundTripWithMatches): number {
+  return Math.min(
+    ...roundTrip.legs.map((leg) => new Date(leg.departureTime).getTime()),
+  );
 }
 
 const renderTrip = (trip: TripDetail) => <TripListCard trip={trip} />;
@@ -111,6 +82,11 @@ export function Trips() {
   const [intents, setIntents] = useState<TravelIntent[]>([]);
   const [hasCar, setHasCar] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const {
+    roundTrips,
+    status: roundTripsStatus,
+    retry: retryRoundTrips,
+  } = useMyRoundTrips();
   const [intentCreated] = useState(
     () => (location.state as { intentCreated?: boolean } | null)?.intentCreated,
   );
@@ -166,11 +142,53 @@ export function Trips() {
   };
 
   const isHistory = scope === 'history';
-  // El historial se muestra tramo por tramo; los próximos, agrupados
-  const tripItems = isHistory
-    ? trips.map((trip) => toListItem(trip, renderTrip))
-    : groupLegs(trips, renderTrip);
-  const intentItems = groupLegs(intents, renderIntent);
+  // Los paquetes se agrupan cuando ya se cargaron. Si fallan, todo se ve como
+  // tarjetas sueltas y se ofrece reintentar
+  const isGrouped = !isHistory && roundTripsStatus === 'ready';
+  const isLoading =
+    status === 'loading' || (!isHistory && roundTripsStatus === 'loading');
+
+  // Solo se agrupan los tramos de paquetes propios: el pasajero de un viaje
+  // ajeno lo ve como cualquier otro, porque no puede abrir ese paquete
+  const ownedIds = new Set(roundTrips.map((roundTrip) => roundTrip.id));
+  const isOwnedLeg = (item: LegItem) =>
+    isGrouped && item.roundTripId !== null && ownedIds.has(item.roundTripId);
+
+  const packageItems = (kind: RoundTripKind, renderCard: RenderLegCard) =>
+    isGrouped
+      ? roundTrips
+          .filter((roundTrip) => roundTrip.kind === kind)
+          .map((roundTrip) => ({
+            key: roundTrip.id,
+            time: getRoundTripStart(roundTrip),
+            node: (
+              <RoundTripGroup roundTrip={roundTrip} renderLeg={renderCard} />
+            ),
+          }))
+      : [];
+
+  const tripItems: ListItem[] = [
+    ...trips
+      .filter((trip) => !isOwnedLeg(trip))
+      .map((trip) => toListItem(trip, renderTrip)),
+    ...packageItems('TRIP', (leg) => {
+      const trip = trips.find((item) => item.id === leg.tripId);
+      return trip ? renderTrip(trip) : null;
+    }),
+  ];
+  const intentItems: ListItem[] = [
+    ...intents
+      .filter((intent) => !isOwnedLeg(intent))
+      .map((intent) => toListItem(intent, renderIntent)),
+    ...packageItems('INTENT', (leg) => {
+      const intent = intents.find((item) => item.id === leg.travelIntentId);
+      return intent ? renderIntent(intent) : null;
+    }),
+  ];
+  if (isGrouped) {
+    tripItems.sort((a, b) => a.time - b.time);
+    intentItems.sort((a, b) => a.time - b.time);
+  }
 
   return (
     <div className="trips">
@@ -210,7 +228,7 @@ export function Trips() {
         ))}
       </div>
 
-      {status === 'loading' && (
+      {isLoading && (
         <div className="trips__status loading-area">
           <ConexiaLoader />
         </div>
@@ -229,12 +247,25 @@ export function Trips() {
         </div>
       )}
 
-      {status === 'ready' && (
+      {status === 'ready' && !isLoading && (
         <>
           <PublishTripCard
             hasCar={hasCar}
             onPublish={() => setIsDrawerOpen(true)}
           />
+
+          {!isHistory && roundTripsStatus === 'error' && (
+            <div className="trips__status trips__status--error">
+              <p>No pudimos agrupar tus viajes de ida y vuelta.</p>
+              <button
+                type="button"
+                className="trips__retry-button"
+                onClick={retryRoundTrips}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
 
           {!isHistory && intentItems.length > 0 && (
             <section className="trips__list-section">
@@ -286,3 +317,5 @@ export function Trips() {
     </div>
   );
 }
+
+type RenderLegCard = (leg: RoundTripWithMatches['legs'][number]) => ReactNode;

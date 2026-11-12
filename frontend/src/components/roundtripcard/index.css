@@ -30,6 +30,68 @@
   border-radius: 0;
 }
 
-.round-trip-group .trip-list-card + .trip-list-card {
+.round-trip-group__info + .trip-list-card {
   border-top: 1px solid #eeeeee;
+}
+
+.round-trip-group__info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.round-trip-group__status,
+.round-trip-group__score {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 30px;
+  background: #eeeeee;
+  color: var(--color-grey-500);
+  font-size: var(--fs-body-3);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.round-trip-group__status--confirmed,
+.round-trip-group__score--confirmed {
+  background: var(--color-badge-mint-bg);
+  color: var(--color-badge-mint-text);
+}
+
+.round-trip-group__status--proposed,
+.round-trip-group__score {
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
+
+.round-trip-group__score--confirmed {
+  background: var(--color-badge-mint-bg);
+  color: var(--color-badge-mint-text);
+}
+
+.round-trip-group__person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-grey-500);
+  overflow-wrap: anywhere;
+}
+
+.round-trip-group__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary-200);
+  color: var(--color-primary-500);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
 }

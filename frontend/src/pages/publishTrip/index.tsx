@@ -445,21 +445,24 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
       prefsToSave && prefsToSave.detourKm !== ''
         ? Number(prefsToSave.detourKm)
         : null;
-    const profileChanged =
-      prefsToSave !== null &&
-      (prefsToSave.seats !== profile?.availableSeats ||
-        (detour !== null && detour !== profile?.detourToleranceKm));
+    const seatsChanged =
+      prefsToSave !== null && prefsToSave.seats !== profile?.availableSeats;
+    const detourChanged =
+      detour !== null && detour !== profile?.detourToleranceKm;
+    const previousSeats = profile?.availableSeats ?? null;
+    let seatsSaved = false;
 
     setIsPublishing(true);
     setStepError(null);
     try {
-      if (prefsToSave && profileChanged) {
-        const savedProfile = await upsertProfile({
+      // Los asientos se guardan antes de publicar: el backend los toma del
+      // perfil como capacidad del viaje. Si la publicación falla, se restituyen
+      if (prefsToSave && seatsChanged) {
+        await upsertProfile({
           hasCar: true,
           availableSeats: prefsToSave.seats,
-          ...(detour !== null ? { detourToleranceKm: detour } : {}),
         });
-        setProfile(savedProfile);
+        seatsSaved = true;
       }
 
       if (isRoundTrip) {
@@ -475,17 +478,15 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
       } else {
         await createTrip(payload);
       }
-
-      setPublished(
-        isIntent
-          ? isRoundTrip
-            ? 'ROUND_INTENT'
-            : 'INTENT'
-          : isRoundTrip
-            ? 'ROUND_TRIP'
-            : 'TRIP',
-      );
     } catch (err) {
+      if (seatsSaved && previousSeats !== null) {
+        await upsertProfile({
+          hasCar: true,
+          availableSeats: previousSeats,
+        }).catch((revertError) =>
+          console.error('No pudimos restituir los asientos:', revertError),
+        );
+      }
       // Si una dirección no se reconoce, se corrige en el paso 1:
       // el form queda en el state, así que no se pierden los datos
       if (isIntent) setStep(1);
@@ -496,9 +497,32 @@ function PublishTripFlow({ mode = 'trip', onRestart }: PublishTripFlowProps) {
             ? 'No pudimos publicar tu intención de viaje.'
             : 'No pudimos publicar el viaje.',
       );
-    } finally {
       setIsPublishing(false);
+      return;
     }
+
+    // El desvío no interviene en la publicación: se guarda recién ahora que
+    // salió bien. Si falla, el viaje ya está publicado y no se avisa error
+    if (prefsToSave && detourChanged) {
+      await upsertProfile({
+        hasCar: true,
+        availableSeats: prefsToSave.seats,
+        detourToleranceKm: detour ?? undefined,
+      }).catch((saveError) =>
+        console.error('No pudimos guardar el desvío en el perfil:', saveError),
+      );
+    }
+
+    setPublished(
+      isIntent
+        ? isRoundTrip
+          ? 'ROUND_INTENT'
+          : 'INTENT'
+        : isRoundTrip
+          ? 'ROUND_TRIP'
+          : 'TRIP',
+    );
+    setIsPublishing(false);
   };
 
   const renderHomeField = (label: string) => (
