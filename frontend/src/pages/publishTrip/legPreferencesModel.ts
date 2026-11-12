@@ -34,3 +34,8 @@ export function validateLegPreferences(
   if (value.seats < 1) return 'Ofrecé al menos un asiento.';
   return null;
 }
+
+export function formatWaitTime(value: LegPreferencesValue): string {
+  if (value.wait === 'custom') return `${value.customWait} min`;
+  return value.wait === '60' ? '1 h' : `${value.wait} min`;
+}

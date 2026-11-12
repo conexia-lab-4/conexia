@@ -40,6 +40,9 @@ import { IconArrowsLeftRight } from '../../assets/icons/IconArrowsLeftRight';
 import { IconSliders } from '../../assets/icons/IconSliders';
 import { LegPreferences } from './legPreferences';
 import { describeTravelTime } from './travelTime';
+import { IconInfo } from '../../assets/icons/IconInfo';
+import { PreferencesSummary } from './preferencesSummary';
+import { TripSummaryCard } from './tripSummaryCard';
 import {
   defaultLegPreferences,
   validateLegPreferences,
@@ -251,7 +254,6 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
 
   const selectedSchedule =
     scheduleOptions.find((option) => option.id === selectedScheduleId) ?? null;
-  const seats = profile?.availableSeats ?? 0;
   const hasUniversity = Boolean(getProfileUniversityId(profile));
   const universityName = profile?.university ?? null;
   const selectedCampus = campuses.find((campus) => campus.id === form.campusId);
@@ -280,6 +282,16 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
     outboundTravel && returnTravel
       ? `Ida: ${outboundTravel} · Vuelta: ${returnTravel}`
       : toTravelLabel(outboundTravel);
+  const campusStop = {
+    title: universityName ?? 'Universidad',
+    detail: selectedCampus?.name ?? '',
+  };
+  const homeStop = { title: 'Casa', detail: form.home.trim() };
+  const outboundStops = toCampus
+    ? { origin: homeStop, destination: campusStop }
+    : { origin: campusStop, destination: homeStop };
+  const isRoundTrip = tripType === 'ROUND_TRIP';
+  const isPerLeg = isRoundTrip && scope === 'PER_LEG';
 
   const setField = <K extends keyof TripForm>(key: K, value: TripForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -929,59 +941,54 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             </p>
           </div>
 
-          <section className="publish-trip__card">
-            <div className="publish-trip__summary-route">
-              <div className="publish-trip__summary-stop">
-                <span className="publish-trip__dot publish-trip__dot--origin" />
-                <span className="text-body-2-bold">{origin}</span>
-              </div>
-              <div className="publish-trip__summary-stop">
-                <span className="publish-trip__dot publish-trip__dot--destination" />
-                <span className="text-body-2-bold">{destination}</span>
-              </div>
-            </div>
-
-            <div className="publish-trip__summary-grid">
-              <div className="publish-trip__summary-item">
-                <IconCalendar size={20} color="var(--color-primary-700)" />
-                <div>
-                  <span className="text-body-2-bold">Fecha</span>
-                  <span className="publish-trip__muted text-body-3">
-                    {formatDateLabel(form.date)}
-                  </span>
-                </div>
-              </div>
-              <div className="publish-trip__summary-item">
-                <IconClock size={20} color="var(--color-primary-700)" />
-                <div>
-                  <span className="text-body-2-bold">Horario</span>
-                  <span className="publish-trip__muted text-body-3">
-                    {form.departureTime} → {form.arrivalTime}
-                  </span>
-                  {selectedSchedule && (
-                    <span className="publish-trip__muted text-body-3">
-                      (Cursada: {selectedSchedule.subjectName})
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {!isIntent && (
-            <section className="publish-trip__card">
-              <h3 className="text-body-1-bold">Preferencias</h3>
-              <div className="publish-trip__summary-pref">
-                <span className="text-body-3">Asientos disponibles</span>
-                <span className="text-body-3">{seats}</span>
-              </div>
-            </section>
+          {isRoundTrip && (
+            <span className="publish-trip__leg-pill text-body-2-bold">Ida</span>
+          )}
+          <TripSummaryCard
+            origin={outboundStops.origin}
+            destination={outboundStops.destination}
+            date={form.date}
+            departureTime={form.departureTime}
+            arrivalTime={form.arrivalTime}
+            note={
+              selectedSchedule
+                ? `(Cursada: ${selectedSchedule.subjectName})`
+                : undefined
+            }
+          />
+          {!isIntent && isPerLeg && (
+            <PreferencesSummary value={outboundPrefs} />
           )}
 
+          {isRoundTrip && (
+            <>
+              <span className="publish-trip__leg-pill text-body-2-bold">
+                Vuelta
+              </span>
+              <TripSummaryCard
+                origin={{ title: campusStop.title, detail: campusStop.detail }}
+                destination={homeStop}
+                date={returnLeg.date}
+                departureTime={returnLeg.departureTime}
+                arrivalTime={returnLeg.arrivalTime}
+              />
+              {!isIntent && isPerLeg && (
+                <PreferencesSummary value={returnPrefs} />
+              )}
+            </>
+          )}
+
+          {!isIntent && !isPerLeg && <PreferencesSummary value={bothPrefs} />}
+
           <div className="publish-trip__banner text-body-3">
+            <IconInfo size={20} color="var(--color-primary-600)" />
             {isIntent
-              ? 'Tu intención quedará activa para que conductores con un recorrido compatible puedan encontrarte.'
-              : 'Tu viaje se publicará para que otros estudiantes puedan verlo y solicitar unirse.'}
+              ? isRoundTrip
+                ? 'Tus intenciones de ida y de vuelta quedarán activas para que conductores con un recorrido compatible puedan encontrarte.'
+                : 'Tu intención quedará activa para que conductores con un recorrido compatible puedan encontrarte.'
+              : isRoundTrip
+                ? 'Se publicarán tu viaje de ida y tu viaje de vuelta para que otros estudiantes puedan verlos y solicitar unirse.'
+                : 'Tu viaje se publicará para que otros estudiantes puedan verlo y solicitar unirse.'}
           </div>
 
           {stepError && (

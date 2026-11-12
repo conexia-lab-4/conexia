@@ -631,3 +631,144 @@
 .route-info__body {
   color: var(--color-grey-400);
 }
+
+/* Resumen del viaje (Revisar) */
+.trip-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.trip-summary__route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trip-summary__stops {
+  display: flex;
+  flex: 1 1 0;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trip-summary__timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 0 20px;
+}
+
+.trip-summary__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.trip-summary__dot--origin {
+  background: var(--color-success-500);
+}
+
+.trip-summary__dot--destination {
+  background: var(--color-primary-500);
+}
+
+.trip-summary__line {
+  flex: 1;
+  min-height: 24px;
+  border-left: 2px dashed var(--color-primary-400);
+}
+
+.trip-summary__stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.trip-summary__stop {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: var(--color-grey-500);
+  overflow-wrap: anywhere;
+}
+
+.trip-summary__detail {
+  color: var(--color-grey-400);
+}
+
+.trip-summary__car {
+  flex-shrink: 1;
+  width: 120px;
+  max-width: 40%;
+  height: auto;
+}
+
+.trip-summary__divider {
+  height: 1px;
+  background: var(--color-grey-200);
+}
+
+.trip-summary__facts {
+  display: flex;
+  gap: 12px;
+}
+
+.trip-summary__item {
+  display: flex;
+  flex: 1 1 0;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trip-summary__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--color-grey-500);
+}
+
+.trip-summary__vertical-divider {
+  width: 1px;
+  background: var(--color-grey-200);
+}
+
+/* Resumen de preferencias (Revisar) */
+.preferences-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.preferences-summary__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-grey-500);
+}
+
+.preferences-summary__header h3 {
+  margin: 0;
+}
+
+.preferences-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-grey-500);
+}
+
+.preferences-summary__label {
+  flex: 1;
+}
