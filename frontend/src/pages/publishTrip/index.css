@@ -129,10 +129,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
   background: var(--color-primary-200);
-  color: var(--color-primary-900);
+  color: var(--color-primary-800);
 }
 
 .publish-trip__banner svg {
@@ -171,7 +171,7 @@
 
 .publish-trip__swap {
   position: absolute;
-  top: 58%;
+  top: 52%;
   right: 5px;
   z-index: 2;
   display: flex;
@@ -276,22 +276,35 @@
 }
 
 /* Horarios de cursada */
-.publish-trip__suggestions {
+.publish-trip__schedule {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  background: var(--color-primary-200);
 }
 
-.publish-trip__suggestions-title {
+.publish-trip__schedule-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--color-primary-900);
-  font-weight: var(--fw-semibold);
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-grey-200);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-grey-500);
+  font-family: var(--font-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.publish-trip__schedule-toggle svg:last-child {
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+
+.publish-trip__schedule-toggle[aria-expanded='true'] svg:last-child {
+  transform: rotate(180deg);
 }
 
 .publish-trip__chips {
@@ -301,11 +314,11 @@
 }
 
 .publish-trip__chip {
-  padding: 8px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--color-grey-200);
-  border-radius: 999px;
+  border-radius: 18px;
   background: var(--color-white);
-  color: var(--color-black);
+  color: var(--color-grey-500);
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -314,11 +327,10 @@
 
 .publish-trip__chip--selected {
   border-color: var(--color-primary-500);
-  background: var(--color-primary-100);
+  background: var(--color-primary-200);
   color: var(--color-primary-700);
   font-weight: var(--fw-semibold);
 }
-
 /* Preferencias */
 .publish-trip__pref {
   display: flex;
@@ -430,4 +442,79 @@
   height: 56px;
   border-radius: 50%;
   background: var(--color-primary-200);
+}
+
+/* Etiqueta de tramo */
+.publish-trip__leg-pill {
+  align-self: flex-start;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
+
+/* Campos con el look del Figma */
+.publish-trip .textfield--filled .textfield__field,
+.publish-trip .textfield--error .textfield__field {
+  min-height: 44px;
+  padding: 0 14px;
+  border-color: var(--color-grey-200);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.publish-trip .textfield--error .textfield__field {
+  border-color: var(--color-error-500);
+}
+
+.publish-trip__route .textfield .textfield__field {
+  min-height: 60px;
+}
+
+.publish-trip .textfield__label {
+  font-size: var(--fs-body-1);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-body-1);
+  color: var(--color-grey-500);
+}
+
+.publish-trip .textfield__input {
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-body-2);
+  color: var(--color-grey-500);
+}
+
+.publish-trip .textfield__input::placeholder {
+  font-weight: var(--fw-regular);
+  color: var(--color-grey-300);
+}
+
+.publish-trip .textfield__helper {
+  color: var(--color-grey-400);
+}
+
+.publish-trip .textfield--error .textfield__helper {
+  color: var(--color-error-500);
+}
+
+/* Selector de hora con el look del Figma */
+.publish-trip .time-field__trigger {
+  min-height: 44px;
+  padding: 12px 14px;
+  gap: 12px;
+  border-color: var(--color-grey-200);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.publish-trip .time-field__value {
+  font-size: var(--fs-body-2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-grey-500);
+}
+
+.publish-trip .time-field__value--placeholder {
+  font-weight: var(--fw-regular);
+  color: var(--color-grey-300);
 }

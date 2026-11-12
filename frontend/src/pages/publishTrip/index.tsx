@@ -146,6 +146,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<TripForm>(EMPTY_FORM);
   const [tripType, setTripType] = useState<TripType>('ONE_WAY');
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null,
   );
@@ -322,7 +323,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       placeholder="Ej. Av. Corrientes 1234"
       value={form.home}
       onChange={(e) => setField('home', e.target.value)}
-      leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+      leftIcon={<IconMapPin size={20} color="var(--color-primary-500)" />}
     />
   );
 
@@ -333,7 +334,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
       ? 'No pudimos cargar las sedes.'
       : campuses.length === 0
         ? 'Tu universidad todavía no tiene sedes disponibles.'
-        : undefined;
+        : selectedCampus?.address;
 
   // La universidad es la del perfil: solo se elige entre sus sedes
   const renderCampusField = (label: string) => (
@@ -349,7 +350,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         aria-expanded={isCampusOpen && campuses.length > 0}
         onClick={() => setIsCampusOpen((open) => !open)}
         onBlur={() => setTimeout(() => setIsCampusOpen(false), 150)}
-        leftIcon={<IconMapPin size={18} color="var(--color-primary-600)" />}
+        leftIcon={<IconMapPin size={20} color="var(--color-primary-500)" />}
         rightIcon={<IconChevronDown size={20} color="var(--color-grey-400)" />}
       />
       {isCampusOpen && campuses.length > 0 && (
@@ -460,7 +461,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
         <>
           {selectedSchedule && (
             <div className="publish-trip__banner text-body-3">
-              <IconCalendar size={20} color="var(--color-primary-700)" />
+              <IconCalendar size={20} color="var(--color-primary-500)" />
               Pre-completamos estos datos según tu rutina de cursada. Podés
               modificarlos.
             </div>
@@ -472,6 +473,10 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             roundTripDisabled={!toCampus}
             disabledNote="La vuelta solo se ofrece si tu viaje va hacia la sede."
           />
+
+          {tripType === 'ROUND_TRIP' && (
+            <span className="publish-trip__leg-pill text-body-2-bold">Ida</span>
+          )}
 
           <section className="publish-trip__route">
             <div className="publish-trip__route-row">
@@ -495,7 +500,7 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
           <section className="publish-trip__field">
             <h2 className="publish-trip__field-title text-body-1-bold">
               <IconCalendar size={20} color="var(--color-primary-700)" />
-              Fecha
+              {tripType === 'ROUND_TRIP' ? 'Fecha de ida' : 'Fecha'}
             </h2>
             <div className="publish-trip__combobox">
               <TextField
@@ -508,6 +513,9 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
                 aria-expanded={isDateOpen}
                 onClick={() => setIsDateOpen((open) => !open)}
                 onBlur={() => setTimeout(() => setIsDateOpen(false), 150)}
+                leftIcon={
+                  <IconCalendar size={20} color="var(--color-primary-800)" />
+                }
                 rightIcon={
                   <IconChevronDown size={20} color="var(--color-grey-400)" />
                 }
@@ -572,34 +580,41 @@ export function PublishTrip({ mode = 'trip' }: PublishTripProps) {
             </p>
           )}
 
-          <section className="publish-trip__suggestions">
-            <h2 className="publish-trip__suggestions-title text-body-3">
-              <IconCalendar size={18} color="var(--color-primary-700)" />
+          <section className="publish-trip__schedule">
+            <button
+              type="button"
+              className="publish-trip__schedule-toggle text-body-2-bold"
+              aria-expanded={isScheduleOpen}
+              onClick={() => setIsScheduleOpen((open) => !open)}
+            >
+              <IconCalendar size={20} color="var(--color-primary-800)" />
               Tus horarios de cursada
-            </h2>
-            {scheduleOptions.length > 0 ? (
-              <div className="publish-trip__chips">
-                {scheduleOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    aria-pressed={option.id === selectedScheduleId}
-                    className={`publish-trip__chip text-body-3${
-                      option.id === selectedScheduleId
-                        ? ' publish-trip__chip--selected'
-                        : ''
-                    }`}
-                    onClick={() => handleSelectSchedule(option)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="publish-trip__muted text-body-3">
-                No tenés horarios cargados. Podés completar el viaje a mano.
-              </p>
-            )}
+              <IconChevronDown size={20} color="var(--color-grey-400)" />
+            </button>
+            {isScheduleOpen &&
+              (scheduleOptions.length > 0 ? (
+                <div className="publish-trip__chips">
+                  {scheduleOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={option.id === selectedScheduleId}
+                      className={`publish-trip__chip text-body-3${
+                        option.id === selectedScheduleId
+                          ? ' publish-trip__chip--selected'
+                          : ''
+                      }`}
+                      onClick={() => handleSelectSchedule(option)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="publish-trip__muted text-body-3">
+                  No tenés horarios cargados. Podés completar el viaje a mano.
+                </p>
+              ))}
           </section>
 
           {stepError && (
